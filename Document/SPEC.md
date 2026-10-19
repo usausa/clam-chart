@@ -28,6 +28,7 @@ API の命名・構成は既存の Clam シリーズに揃え、描画は templa
 14. [プロジェクト構成・テスト・サンプル](#14-プロジェクト構成テストサンプル)
 15. [ロードマップ](#15-ロードマップ)
 16. [未決事項](#16-未決事項)
+- [付録 A. 参考資料](#付録-a-参考資料)
 
 ---
 
@@ -809,7 +810,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
                        ValueKey="amount"
                        LabelKey="name"
                        CenterLabel="合計"
-                       SelectionMode="Single"
+                       SelectionMode="Item"
                        SelectedItem="{Binding SelectedCategory}" />
 ```
 
@@ -1215,7 +1216,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 ## 11. ウィジェット利用
 
-チャート主体の画面だけでなく、他の画面の一部として「ウィジェット」的に置けることを ClamChart の独自性とする。そのための仕組みを 6 つ用意する。  
+チャート主体の画面だけでなく、他の画面の一部として「ウィジェット」的に置けることを ClamChart の独自性とする。そのために、サイズ適応・一覧での軽さ・重ね合わせ・状態表示・View を使わない描画の仕組みを用意する。  
 
 ### 11.1 密度（Density）
 
@@ -1297,7 +1298,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 **パターン C: 他の Clam コントロールと重ねる**  
 
-ClamGauge の中央の下にスパークラインを置く、ClamCalendar の日付セルの上に… といった重ね方も、上記の約束により下のコントロールの描画・操作を妨げない。  
+ClamGauge の中央の値の下にスパークラインを重ねるなど、他の Clam コントロールの上に置いても、上記の約束により下のコントロールの描画・操作を妨げない。  
 
 ### 11.4 状態表示（読み込み中・空データ）
 
@@ -1351,20 +1352,187 @@ ClamGrid の列にセル描画のフック（例: `GridColumn.CellPainter`）が
 
 ## 12. パフォーマンスと品質
 
-（執筆中）
+### 12.1 目標値
+
+中位の Android 端末（Pixel 6a 相当）、Release ビルドでの目標とする。  
+
+| シナリオ | 目標 |
+|---|---|
+| 線 3 本 × 1,000 点のアニメーション中 | 1 フレームの描画 8 ms 以内（60 fps） |
+| 10,000 点（`Downsampling = Auto`） | 1 フレームの描画 8 ms 以内 |
+| `CollectionView` 100 行にスパークライン | スクロールでフレーム落ちなし、描画 1 回あたりの割り当てゼロ |
+| ストリーミング（1 秒ごとに追加・削除、60 点） | 補間しながら 60 fps |
+| アイドル | 再描画 0 回 |
+| ダッシュボード（6 コントロール）の初回表示 | 登場アニメーションを含め 60 fps |
+
+### 12.2 実装の工夫
+
+| 項目 | 方法 |
+|---|---|
+| パス・ペイント | `SKPath.Rewind()` と `SKPaint` の使い回し（`PaintCache`）。描画ごとに作らない |
+| 文字 | SkiaExtension の `FontResolver` の計測キャッシュ。目盛りラベルの文字列は値・書式・カルチャをキーにキャッシュ |
+| 配列 | スナップショット・補間用の `double[]` は `ArrayPool<double>` から借りて使い回す |
+| 間引き | 点数が描画幅の 2 倍を超えたら LTTB（Largest-Triangle-Three-Buckets）で描画用に間引く |
+| ヘアライン | `StrokeWidth = 0`（物理 1px）と座標のピクセル吸着でにじみを防ぐ |
+| レイヤー | `SaveLayer` はくり抜き・グローなど必要な箇所に限る |
+| 診断 | `FrameRendered` で描画時間と点数を取得できる |
+
+### 12.3 品質基準
+
+| 項目 | 基準 |
+|---|---|
+| ビルド | 警告ゼロ（`AnalysisMode All`、StyleCop、`Nullable` の警告はエラー） |
+| トリミング / AOT | トリミングを有効にした Example の発行でトリミング・AOT 警告ゼロ |
+| 単体テスト | `Layout/` / `Input/` / `Data/` / `Animation/` の純粋なロジックを網羅する |
+| 描画テスト | `SKSurface` へのスモーク描画とピクセル検査（背景が透明であること、くり抜きが透明であること、閾値の色の境目など） |
+| 例外 | 不正なプロパティ値は代入時に `ArgumentOutOfRangeException` 等（Clam 共通）。描画中は例外を投げない |
+
+---
 
 ## 13. template-maui からの流用
 
-（執筆中）
+template-maui の自前描画は Microsoft.Maui.Graphics（`GraphicsView` / `IDrawable`、`DrawingControl` / `DrawingObject`）と SkiaSharp が混在している。ClamChart では**ロジックとデザインの知見を流用し、描画は `SKCanvasView` に、データの受け渡しは命令的 API から Bindable プロパティに置き換える**。  
+
+### 13.1 流用するもの
+
+| template-maui | 流用する内容 | ClamChart での行き先 |
+|---|---|---|
+| `Graphics/Drawing/ChartDrawing`（Line / Bar / Donut / Stacked / Scatter / Heat） | Nice Scale の軸計算、ラベルの自動間引き、タップのヒット判定とツールチップ、非選択の減光、同種・同点数のときのモーフ、要素ごとのずらし（`ElementProgress`） | `Layout/NiceScale`、`Layout/LabelThinning`、`Animation/SnapshotInterpolator`、`ClamChartView` / `ClamPieChartView` |
+| `Controls/StatControl` ＋ `StatDataSet` | ヘッダー（ラベル・値）＋流れるスパークラインのカード、追加間隔に合わせた流れのアニメーション | `ClamStatView`、ストリーミングの更新アニメーション |
+| `Shell/DiagnosticPanel` の `MemorySparkline` | 面＋線の小型推移 | `ClamSparklineView` |
+| `Controls/GlowRing` | ぼかしによる光彩の描き方（`DrawGlowArc`） | `ClamRadialBarView` の光彩、`LineSeries.GlowRadius` |
+| `Graphics/Drawing/ActivityDrawing` | 区切り表示の進捗リング | `ClamRadialBarView.SegmentCount` |
+| `Controls/WeatherControls` の `SegmentBar` | 区切り表示の棒 | `ClamBarGaugeView.DisplayMode = Segmented` |
+| `Controls/RangeBar` | 最小〜最大のグラデーション棒＋マーカー | `RangeBarSeries`（P3） |
+| `Graphics/Drawing/LoadDrawing` | リングバッファの棒の流れ、値に応じた縦グラデーション | `BarSeries` のストリーミング、閾値の塗り分け |
+| `Graphics/Drawing/PulseRingDrawing`、`SeriesSegmentView` の波紋 | 広がって消える輪 | ライブ表示の波紋 |
+| `Controls/TimerDial` の警告表示 | `repeat` 付き `Animate` による脈動 | 警告の脈動 |
+| `Controls/SocialControls` のカウントアップ | 数字のカウントアップ、`Loaded` / `Unloaded` での開始・停止 | `ClamStatView`、中央値 |
+| `Controls/KitControls` の `KitSleepBand` | 状態の帯表示 | `ClamStateTimelineView`（将来候補） |
+| `Graphics/Drawing/ColorTreeMapDrawing` | ツリーマップの配置 | `ClamTreemapView`（将来候補） |
+| `DrawingObject.ExportPng()` | 画像出力 | `RenderToImage` / `SaveAsPngAsync` |
+| `DrawingControl.android.cs` | ドラッグ中の `RequestDisallowInterceptTouchEvent` | Clam 共通のプラットフォームブリッジに統一 |
+
+### 13.2 置き換えるもの
+
+| template-maui の方式 | ClamChart の方式 | 理由 |
+|---|---|---|
+| `GraphicsView` + `IDrawable` | `SKCanvasView` を継承 | Clam シリーズとの統一、SkiaExtension のフォントフォールバック、シェーダー・フィルターの利用 |
+| `ShowLine(…)` などの命令的 API、ViewModel が描画オブジェクトを保持 | Bindable プロパティ＋`ItemsSource` | MVVM で ViewModel が描画を知らなくてよい |
+| CLR プロパティ・定数の色 | Bindable プロパティ＋`ChartStyle` | スタイル・テーマ・ダークモードの切り替え |
+| `System.Timers.Timer` / `PeriodicTimer` によるアニメーション | MAUI の `Animate` | UI スレッドで完結し、スレッド間の競合がない |
+| 1 項目 1 View（`SeriesSegmentView`） | 1 キャンバス＋`CategoryWidth` | View 数を増やさない |
+
+### 13.3 template-maui の画面での置き換え候補
+
+ClamChart の完成後、template-maui の次の画面は ClamChart に置き換えられる。置き換えはサンプルの充実と API の検証を兼ねる。  
+
+| 画面 | 現在 | 置き換え |
+|---|---|---|
+| View / Chart | `ChartDrawing`（Line, Bar, Donut, Stacked, Scatter, Heat） | `ClamChartView`、`ClamPieChartView`、`ClamHeatmapView`（Candle は対象外） |
+| View / Sf Chart | Syncfusion Toolkit | 比較用として残す |
+| UI / Kit | `ChartDrawing`（歩数の棒、心拍の線）、`GlowRing` | `ClamChartView`、`ClamRadialBarView` |
+| UI / Money | `ChartDrawing`（残高の線、週の棒） | `ClamChartView`、`ClamStatView` |
+| UI / Habit | `GlowRing` | `ClamRadialBarView` |
+| Network / Realtime | `StatControl` × 3 | `ClamStatView` |
+| UI / Weather | `SeriesSegmentView`、`SegmentBar`、`RangeBar` | `ClamChartView`（`CategoryWidth`）、`ClamBarGaugeView`、`RangeBarSeries` |
+
+---
 
 ## 14. プロジェクト構成・テスト・サンプル
 
-（執筆中）
+### 14.1 リポジトリ構成
+
+既存の Clam リポジトリと同じ構成にする。  
+
+| パス | 内容 |
+|---|---|
+| `ClamChart/` | ライブラリ（[4.4](#44-ファイル構成)） |
+| `ClamChart.Tests/` | 単体テスト（`net10.0`、xUnit v3、Microsoft Testing Platform） |
+| `Example/` | サンプルアプリ（`net10.0-android`） |
+| `Document/` | `SPEC.md`（本書）、`API.md`、スクリーンショット |
+| `ClamChart.slnx` / `ClamChart.ExcludeExample.slnx` | ソリューション（Example / Library / Tests / Solution Items） |
+
+ライブラリの csproj は ClamGauge と同じ設定（`net10.0;net10.0-android`、`IsTrimmable`、`IsAotCompatible`、`*.android.cs` の条件付きコンパイル）とし、パッケージ情報は次のとおり。  
+
+| 項目 | 値 |
+|---|---|
+| `PackageId` / `Title` | `ClamChart` |
+| `Description` | `MAUI charts for dashboards and widgets rendered with SkiaSharp` |
+| `PackageTags` | `maui chart graph sparkline dashboard skiasharp android` |
+
+### 14.2 単体テスト
+
+| 対象 | 主な観点 |
+|---|---|
+| `NiceScale` / `TickGenerator` | 1・2・5 の倍数、負の値、0 を含める、極小・極大、日時の間隔の自動選択（分〜年） |
+| `LabelThinning` | 重なりの検出と間引き、両端の保持 |
+| `StackCalculator` | 通常・100% 積み上げ、正負の混在、非表示シリーズ |
+| `PieLayout` | 角度の合計、`MaxSlices` / `OthersThreshold` による「その他」、隙間、並べ替えと色の対応 |
+| `DensityResolver` | 境界値での切り替え |
+| `Downsampler` | LTTB の端点保持、点数、極値の保持 |
+| `SnapshotInterpolator` | 値の補間、末尾追加・先頭削除、途中からの再補間 |
+| `ChartGestureController` | タップ、長押し、縦方向の譲渡、2 本目の指での取り消し（時刻を明示して駆動） |
+| `ChartAccessorCollection<T>` | 型ごとの登録と取得、型の不一致の例外 |
+| 閾値 | 値 → 色・レベルの解決、`NegativeInfinity` の基準色 |
+| ヒット判定 | 点・棒・スライス・凡例、拡張されたヒット領域 |
+| 描画 | スモーク描画、透明背景、くり抜きの透明、閾値の境目の色 |
+
+### 14.3 サンプルアプリ
+
+既存の Example と同じ骨格（Smart.Mvvm、Smart.Navigation、BunnyTail.DependencyInjection、`ViewId` によるメニュー、F1〜F4 のファンクションボタン）とする。  
+
+| `ViewId` | 内容 |
+|---|---|
+| `ChartMenu` | メニュー |
+| `ChartLine` | 線・面・スムーズ・ステップ、トラックボールとスクラブ表示 |
+| `ChartBar` | 集合・積み上げ・100%・横棒ランキング、選択 |
+| `ChartTimeSeries` | 日時軸、表示範囲の切り替え（1D / 1W / 1M） |
+| `ChartLive` | ストリーミング、ライブ表示の波紋 |
+| `ChartPie` | 円・ドーナツ・半円、選択と中央値 |
+| `ChartSparkline` | `CollectionView` の行にスパークライン |
+| `ChartDashboard` | KPI・ラジアルバー・バーゲージ・推移を並べたダッシュボード、ライト／ダーク切り替え |
+| `ChartOverlay` | カード背景への敷き込み、画像の上への重ね合わせ、タッチ透過の確認 |
+| `ChartDensity` | サイズを変えたときの密度の変化 |
+
+---
 
 ## 15. ロードマップ
 
-（執筆中）
+| フェーズ | バージョン | 内容 | 完了条件 |
+|---|---|---|---|
+| 1 | 0.1 | 基盤（`ChartViewBase`、スナップショット・レイアウト・アニメーター・ジェスチャー）、`ClamChartView`（線・面・棒、積み上げ・横棒、3 種の軸、凡例、データラベル、選択、トラックボール、密度）、`ClamPieChartView`、`ClamSparklineView`、`ChartStyles.Light` / `Dark`、`TouchMode`、Example（Line / Bar / TimeSeries / Pie / Sparkline / Density） | 12 章の目標値（ダッシュボード以外）を満たす、API.md と README を整備 |
+| 2 | 0.2 | `ClamStatView`、`ClamBarGaugeView`、`ClamRadialBarView`、`ScatterSeries`、閾値の表示・塗り分け、注釈、`TrackingGroup`、`EdgeToEdge`・オーバーレイ用プリセット、`IsBusy`、`RenderToImage` / `ChartDrawing.DrawSparkline`、`Downsampling`、`CategoryWidth`、触覚、アクセシビリティの自動説明、ライブ表示・警告の脈動・光彩、Example（Live / Dashboard / Overlay） | ダッシュボードの目標値を満たす、template-maui の Kit / Money / Realtime 画面を置き換えて検証 |
+| 3 | 0.3〜 | `ClamRadarChartView`、`ClamHeatmapView`、`BubbleSeries`、`RangeBarSeries`、State timeline・ツリーマップの検討、ClamGrid のスパークライン列 | 個別に決定 |
+
+---
 
 ## 16. 未決事項
 
-（執筆中）
+判断が必要な点と、本書での推奨案。  
+
+| # | 論点 | 選択肢 | 推奨 |
+|:-:|---|---|---|
+| 1 | パッケージの分け方 | ① `ClamChart` 1 つ ② `ClamChart` ＋ `ClamChart.Widgets` | ①。依存が同じで、分けても軽くならない |
+| 2 | 直交座標チャートの名前 | ① `ClamChartView` ② `ClamCartesianChartView` | ①。最もよく使うコントロールを短い名前にする |
+| 3 | `ClamPieChartView.InnerRadius` の既定値 | ① `0.6`（ドーナツ） ② `0`（円） | ①。中央に値を出せ、ダッシュボードで使いやすい |
+| 4 | シリーズ・軸の基底 | ① `Element`（論理子、`BindingContext` 継承、`x:Name` 可） ② `BindableObject` | ①。シリーズ内でのバインドが自然に書ける |
+| 5 | タッチ透過（`HitOnly` / `PassThrough`）の実現方法 | ① `Touch` の `Pressed` で `Handled = false` を返し、Android の通常の配送で下の View に渡す ② 状況に応じて `InputTransparent` を切り替える | ①を試作で検証し、MAUI のラッパー View（ジェスチャー認識器付き）でも下へ届くか確認する。届かない場合は ②。`PassThrough` は常に `InputTransparent` 相当で確実に実現できる |
+| 6 | `ChartStyle` の共有範囲 | ① ClamChart 内のみ ② 色トークンを Clam ファミリー共通にする | まずは ①。ClamGauge は平坦なプロパティ方式のため、共通化は別途検討 |
+| 7 | `ClamStatView` の置き場所 | ① ClamChart ② 別ライブラリ | ①。傾向線・閾値・スタイルを共有するため |
+| 8 | 直線型の単一ゲージ（温度計型など） | ① ClamGauge の拡張 ② ClamChart の `ClamBarGaugeView` で代用 | ①。1 つの値を精密に読む計器は ClamGauge の役割 |
+| 9 | バージョン番号 | ① 0.x から開始 ② ファミリーに合わせ 2.x から | ①。API が固まるまで 0.x とする |
+| 10 | iOS 対応 | ① Android のみ（既存と同じ） ② iOS も対象 | ①。描画は Skia なので、タッチのブリッジとモーション軽減の読み取りを追加すれば対応できる設計にしておく |
+
+---
+
+## 付録 A. 参考資料
+
+| 資料 | 内容 |
+|---|---|
+| 添付の調査メモ（chart.md） | Grafana / Syncfusion / Telerik / Microcharts / LiveCharts2 の対応状況、プロパティ・イベント・アニメーションの傾向 |
+| [Syncfusion Toolkit for .NET MAUI のオープンソース化](https://visualstudiomagazine.com/articles/2024/10/23/syncfusion-open-sources-14-controls-for-net-maui.aspx?p=1) | MIT ライセンスの OSS 版（Cartesian / Circular / Polar / Funnel / Pyramid） |
+| [Syncfusion の 2025 年 9 月の発表](https://www.globenewswire.com/news-release/2025/09/16/3151035/0/en/syncfusion-introduces-premium-net-maui-controls-upgrade-new-open-source-controls-and-live-webinar.html) | OSS 版への Sparkline / Sunburst の追加 |
+| [Microcharts.Maui（NuGet）](https://packages.nuget.org/packages/Microcharts.Maui) | 最新は 1.0.0。コントリビューター募集中の記載あり |
+| usausa/clam-gauge、clam-grid、clam-calendar | API・構成・命名の規約（本書の P7） |
+| usausa/template-maui | 自前描画の実装（13 章） |
