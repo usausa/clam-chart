@@ -8,7 +8,7 @@
 | 前提 | .NET 10 / .NET MAUI 10.0.110 / SkiaSharp 4.153.1 / SkiaExtension 1.2.0、Android 優先（API 30 以上） |
 
 本書は Clam シリーズ（ClamCalendar / ClamGrid / ClamGauge）の新ライブラリ **ClamChart** について、作成するチャート・プロパティ・アニメーション・インタラクション・差別化方針を定める仕様書である。  
-API の命名・構成は既存の Clam シリーズに揃え、描画は template-maui の自前描画（GraphicsView / Drawing フレームワーク）ではなく **SkiaSharp の `SKCanvasView` を継承したコントロール**として実装する。  
+API の命名・構成は既存の Clam シリーズに揃え、描画は template-maui の自前描画（GraphicsView / Drawing フレームワーク）ではなく **SkiaSharp の `SKCanvasView` を継承したコントロール**として実装する。Grafana 風のダッシュボード表現は template-avalonia-linux の実装も参考にする。  
 
 ## 目次
 
@@ -24,11 +24,12 @@ API の命名・構成は既存の Clam シリーズに揃え、描画は templa
 10. [エフェクト](#10-エフェクト)
 11. [ウィジェット利用](#11-ウィジェット利用)
 12. [パフォーマンスと品質](#12-パフォーマンスと品質)
-13. [template-maui からの流用](#13-template-maui-からの流用)
+13. [既存テンプレートからの流用](#13-既存テンプレートからの流用)
 14. [プロジェクト構成・テスト・サンプル](#14-プロジェクト構成テストサンプル)
 15. [ロードマップ](#15-ロードマップ)
-16. [未決事項](#16-未決事項)
+16. [決定事項と未決事項](#16-決定事項と未決事項)
 - [付録 A. 参考資料](#付録-a-参考資料)
+- [付録 B. 補足](#付録-b-補足)
 
 ---
 
@@ -133,7 +134,7 @@ Clam ファミリー全体で、Grafana の主要パネルをスマートフォ�
 
 | Grafana パネル | Clam での対応 | 備考 |
 |---|---|---|
-| Time series | `ClamChartView`（`LineSeries` / `AreaSeries` + `DateTimeAxis`） | 本ライブラリの中核 |
+| Time series | `ClamChartView`（`LineSeries` / `AreaSeries` + `DateTimeAxis`） | 本ライブラリの中核。左右 2 軸にも対応 |
 | Bar chart | `ClamChartView`（`BarSeries`） | 積み上げ・横棒を含む |
 | Pie chart | `ClamPieChartView` | ドーナツ・半円を含む |
 | Stat | `ClamStatView` | 値＋差分＋背景スパークライン |
@@ -184,7 +185,7 @@ Clam ファミリー全体で、Grafana の主要パネルをスマートフォ�
 | 3D・ベベル・反射などの装飾 | 可読性が下がり、描画コストが高い |
 | データ点のドラッグ編集 | 用途が限定的 |
 | ツールチップの `DataTemplate`（MAUI View の重ね合わせ） | 1 キャンバス方針（P1）に反する。代わりに追跡位置を VM に返し（D4）、アプリ側の任意の UI で表示できるようにする |
-| 第 2 Y 軸（2 軸チャート） | 尺度の異なる値を 1 枚に重ねると誤読を招く。尺度の異なる指標は小さなチャートを縦に並べ、トラックボールの同期（[9.4](#94-トラックボールの同期)）で読み合わせる |
+| 3 本以上の Y 軸 | 左右 2 本（主軸＋第 2 軸、[7.1.8](#718-第-2-y-軸)）までとする。それ以上はチャートを縦に並べ、トラックボールの同期（[9.4](#94-トラックボールの同期)）で読み合わせる |
 | 漏斗・ピラミッド・サンバースト | 汎用ダッシュボードでの優先度が低い。必要になればフェーズ 3 以降で再検討 |
 | ツリーマップ・State timeline | template-maui に実装例（`ColorTreeMapDrawing` / `KitSleepBand`）があり需要はあるため、フェーズ 3 以降の候補として残す |
 
@@ -204,7 +205,7 @@ classDiagram
     ChartViewBase <|-- ClamBarGaugeView
     ChartViewBase <|-- ClamRadialBarView
     ClamChartView o-- "0..*" ChartSeries : Series
-    ClamChartView o-- "2" ChartAxis : XAxis / YAxis
+    ClamChartView o-- "2..3" ChartAxis : XAxis / YAxis / SecondaryYAxis
     ClamChartView o-- "0..*" ChartAnnotation : Annotations
     ChartSeries <|-- LineSeries
     LineSeries <|-- AreaSeries
@@ -241,7 +242,8 @@ classDiagram
 | `ContentPadding` | `Thickness?` | `null` | ✓ | 描画内容の外側の余白。`null` は密度に応じた既定値（Full 8 / Compact 4 / Minimal 0） | 1 |
 | `EdgeToEdge` | `bool` | `false` | ✓ | プロット領域を View の端まで広げる（カード背景用、[11.3](#113-重ね合わせオーバーレイ)） | 2 |
 | `Culture` | `CultureInfo?` | `null` | ✓ | 数値・日付の書式。`null` は `CultureInfo.CurrentCulture` | 1 |
-| `AnimationDuration` | `int` | `450` | ✓ | アニメーションの長さ（ms）。`0` で無効 | 1 |
+| `AnimationEnabled` | `bool` | `true` | ✓ | `false` で登場・更新・選択・常時のすべてのアニメーションを無効にし、常に最終状態を描く（[8.5](#85-無効化とモーション軽減)） | 1 |
+| `AnimationDuration` | `int` | `450` | ✓ | アニメーションの長さ（ms）。`0` でも無効 | 1 |
 | `AnimationEasing` | `Easing` | `Easing.CubicOut` | ✓ | イージング | 1 |
 | `EntranceAnimation` | `ChartEntranceAnimation` | `Auto` | ✓ | 登場アニメーション（[8.2](#82-登場アニメーション)） | 1 |
 | `UpdateAnimationEnabled` | `bool` | `true` | ✓ | データ更新時に値を補間する | 1 |
@@ -562,7 +564,7 @@ public sealed partial class DashboardViewModel : AppViewModelBase
 | `TooltipBackground`, `TooltipTextColor`, `TooltipBorderColor` | `Color` | `#F0FCFCFB`, `#0B0B0B`, `#1A0B0B0B` | ツールチップ（半透明の面＋ヘアラインの縁） |
 | `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `6` | ツールチップ |
 | `TrackballLineColor` | `Color` | `#898781` | トラックボールの縦線 |
-| `TrackColor` | `Color` | `#ECEBE6` | バーゲージ・ラジアルバーの未到達部分 |
+| `TrackColor` | `Color?` | `null` | バーゲージ・ラジアルバーの未到達部分。`null` は要素の色を不透明度 18% にした同系色（template-avalonia-linux の `RingGauge` と同じく、色相を揃えて状態が全体で読めるようにする） |
 | `DimmedOpacity` | `double` | `0.35` | 選択時に他要素へ掛ける不透明度 |
 | `PressedOverlayColor` | `Color` | `#0F000000` | タップ中の押下表示 |
 | `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | 読み込み中のスケルトン |
@@ -603,6 +605,16 @@ public sealed partial class DashboardViewModel : AppViewModelBase
 | 散布図は 3 色まで | 点が混在する散布図・バブルは、全組み合わせで区別できる先頭 3 色までを推奨とし、超える場合は「その他」にまとめる |
 | 文字にデータ色を使わない | 凡例・ラベル・値の文字はインク色。識別は横に置く色付きマーカーで行う |
 | 状態色は別枠 | 閾値の既定色は状態色（Good / Warning / Serious / Critical）を使い、シリーズ色と混ぜない |
+
+用途に応じて、既定パレット以外も用意する。  
+
+| パレット | 内容 | 向いている場面 |
+|---|---|---|
+| `ChartPalettes.Default` | 上表の 8 色（検証済み） | 既定。種類の異なるシリーズの識別 |
+| `ChartPalettes.Grafana` | Grafana のクラシックパレットに近い 6 色相（緑 `#73BF69`、黄 `#FADE2A`、青 `#5794F2`、橙 `#FF9830`、赤 `#F2495C`、紫 `#B877D9`）。template-avalonia-linux の `ChartColors.axaml` と同じ | ダークテーマのキオスク・監視ダッシュボード |
+| `ChartPalettes.Shades(ChartHue hue, int count)` | 1 つの色相の明→暗の段階を `count` 色ぶん作る（足りなければ段階を補間し、循環させない） | 同種のシリーズの集まり（CPU コアごとの使用率、センサーごとの温度など）。個々の識別は凡例の表（[7.1.5](#715-凡例データラベルツールチップ)）で行う |
+
+`Grafana` と `Shades` は色覚多様性の検証を前提としないため、凡例の表やラベルと組み合わせて使う。  
 
 ### 6.5 プリセット
 
@@ -672,12 +684,16 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 |---|---|---|:-:|---|:-:|
 | `Series` | `IList<ChartSeries>` | 空の `ObservableCollection` | ✓ | シリーズ（XAML の内容プロパティ）。描画順は並び順 | 1 |
 | `XAxis`, `YAxis` | `ChartAxis?` | `null` | ✓ | 軸。`null` は X の型から自動選択（Y は `NumericAxis`） | 1 |
+| `SecondaryYAxis` | `NumericAxis?` | `null` | ✓ | 第 2 Y 軸（右側）。`YAxis = Secondary` のシリーズがあり、これが `null` なら自動で作る（[7.1.8](#718-第-2-y-軸)） | 2 |
 | `Orientation` | `ChartOrientation` | `Vertical` | ✓ | `Horizontal` で X と Y を入れ替える（横棒・ランキング） | 1 |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | 全シリーズ共通のアクセサ | 1 |
 | `XKey` | `string?` | `null` | ✓ | 全シリーズ共通の X のキー | 1 |
 | `StackMode` | `ChartStackMode` | `Normal` | ✓ | `Normal` / `Percent`（100% 積み上げ）。`StackGroup` が同じシリーズに適用 | 1 |
 | `LegendVisible` | `bool?` | `null` | ✓ | `null` はシリーズが 2 本以上かつ密度 `Full` のとき表示（1 本なら凡例は不要） | 1 |
 | `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | `Top` / `Bottom` / `Left` / `Right` | 1 |
+| `LegendMode` | `ChartLegendMode` | `List` | ✓ | `List`（マーカー＋名前を並べる） / `Table`（名前と集計値の表、Grafana の凡例の表） | 2 |
+| `LegendValues` | `ChartLegendValues` | `None` | ✓ | `Table` の列。フラグ: `Last` / `Min` / `Max` / `Mean` | 2 |
+| `LegendWidth` | `double` | `180` | ✓ | `Left` / `Right` に置いたときの幅。プロット領域がこの 2 倍より狭くなる場合は凡例を隠す | 2 |
 | `LegendToggleEnabled` | `bool` | `false` | ✓ | 凡例タップでシリーズの表示を切り替える | 1 |
 | `DataLabelsMode` | `ChartDataLabelsMode` | `None` | ✓ | `None` / `Last` / `MinMax` / `All`。全点へのラベルは非推奨 | 1 |
 | `SelectionMode` | `ChartSelectionMode` | `None` | ✓ | `None` / `Item`（1 つの点・棒） / `Category`（同じ X の全シリーズ） | 1 |
@@ -703,6 +719,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | データ（[5.1](#51-データの渡し方)） | 1 |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | シリーズ個別のアクセサ（チャートより優先） | 1 |
 | `XKey`, `YKey` | `string?` | `null` | ✓ | 値のキー。`XKey` の `null` はチャートの `XKey` | 1 |
+| `YAxis` | `ChartAxisTarget` | `Primary` | ✓ | `Primary`（左の主軸） / `Secondary`（右の第 2 軸） | 2 |
 | `ValueSelector` | `Func<object, double?>?` | `null` | | コードから Y を渡す場合 | 1 |
 | `Color` | `Color?` | `null` | ✓ | `null` はパレットの「シリーズの位置」番目の色 | 1 |
 | `IsVisible` | `bool` | `true` | ✓ TwoWay | 表示。非表示でも色の割り当ては変えない | 1 |
@@ -765,7 +782,8 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | 軸 | 固有のプロパティ | 説明 | P |
 |---|---|---|:-:|
 | `NumericAxis` | `Minimum`, `Maximum`（`double?`）、`Interval`（`double?`）、`IncludeZero`（`bool?`） | 範囲・間隔の `null` は Nice Scale（1・2・5 の倍数）で自動決定。既定の書式はコンパクト表記 | 1 |
-| `DateTimeAxis` | `Minimum`, `Maximum`（`DateTime?`）、`IntervalType`（`Auto` / `Minutes` / `Hours` / `Days` / `Weeks` / `Months` / `Years`）、`Interval`（`double?`） | 既定の書式は範囲から自動（1 日未満 `HH:mm`、2 か月未満 `M/d`、それ以上 `yyyy/M`）。日付が変わる目盛りだけ日付を添える（P2） | 1 |
+| `DateTimeAxis` | `Minimum`, `Maximum`（`DateTime?`）、`IntervalType`（`Auto` / `Seconds` / `Minutes` / `Hours` / `Days` / `Weeks` / `Months` / `Years`）、`Interval`（`double?`） | `Auto` の間隔は、ラベルの幅が収まる最小の段階を 1・2・5・10・15・30 秒、1・2・5・10・15・30 分、1・3・6・12 時間、1 日… から選ぶ（template-avalonia-linux の `ChartHelper` と同じ考え方）。既定の書式は間隔から自動（1 分未満 `HH:mm:ss`、1 日未満 `HH:mm`、2 か月未満 `M/d`、それ以上 `yyyy/M`）。日付が変わる目盛りだけ日付を添える（P2） | 1 |
+| `DateTimeAxis`（ライブ表示） | `WindowSize`（`TimeSpan?`）、`EndTime`（`DateTime?`） | 直近の一定時間を表示する時間窓。`EndTime` の `null` は最新の点の時刻。データが窓に満たないうちは右寄せで描き、左側は空ける（Grafana・template-avalonia-linux の `SeriesChart` と同じ見え方） | 2 |
 | `CategoryAxis` | `LabelPlacement`（`BetweenTicks` / `OnTicks`）、`CategoryWidth`（`double?`） | カテゴリは全シリーズの X を出現順に統合する。`CategoryWidth` を指定すると幅が「カテゴリ数 × 幅」になり、横 `ScrollView` に入れて時間別の天気のように横に長いチャートを作れる（P2） | 1 |
 
 表示範囲の切り替え（1 日 / 1 週 / 1 か月など）は、ViewModel から `Minimum` / `Maximum` をバインドで変える。範囲の変化は軸ごと補間して滑らかに切り替える。  
@@ -774,7 +792,8 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 | 要素 | 仕様 |
 |---|---|
-| 凡例 | 色付きの小さな丸（線シリーズは短い線）＋インク色の文字。幅が足りなければ折り返し、2 行を超える分は「+N」に省略 |
+| 凡例（`List`） | 色付きの小さな丸（線シリーズは短い線）＋インク色の文字。幅が足りなければ折り返し、2 行を超える分は「+N」に省略 |
+| 凡例（`Table`） | 見出し行（`Name`、`Last` など）＋シリーズごとの行。名前は省略記号で切り詰め、値は右揃え。収まらない行は「+N」に省略。多数の同種シリーズ（CPU コア 8 本など）を `Shades` パレットと組み合わせて識別する |
 | データラベル | `DataLabelsMode` で選んだ点のみ。棒は端、線は終点に置く。収まらないラベルは描かない（切り詰めない） |
 | ツールチップ | 指の上側に表示し、画面端では反対側へ回り込む。X のラベル＋シリーズごとに「● 名前 値」。指で隠れないよう、指から 48 DIP 以上離す |
 
@@ -796,6 +815,44 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | データラベル | `DataLabelsMode` | `Last` まで | なし |
 | マーカー | `MarkerMode` | 最後の点のみ | 最後の点のみ |
 | タッチ | 選択・トラックボール | 選択・トラックボール | チャート全体のタップのみ（`ChartTapped`） |
+
+#### 7.1.8 第 2 Y 軸
+
+温度（°C）と湿度（%）のように単位・尺度の異なる 2 つの指標を、同じ時間軸で 1 枚に重ねる（Grafana の右軸と同じ）。シリーズごとに `YAxis = Secondary` を指定すると右側の第 2 軸に対応付ける。面と線の組み合わせ（湿度を面、温度を線）にも対応する。  
+
+```xml
+<clam:ClamChartView HeightRequest="220"
+                    XKey="time"
+                    ValueAccessors="{x:Static models:WeatherSample.Accessors}">
+    <clam:ClamChartView.YAxis>
+        <clam:NumericAxis Title="気温" LabelFormat="{}{0:0}°C" />
+    </clam:ClamChartView.YAxis>
+    <clam:ClamChartView.SecondaryYAxis>
+        <clam:NumericAxis Title="湿度" Minimum="0" Maximum="100" LabelFormat="{}{0:0}%" />
+    </clam:ClamChartView.SecondaryYAxis>
+    <!-- 背面: 湿度を面で右軸に -->
+    <clam:AreaSeries Title="湿度" ItemsSource="{Binding Samples}" YKey="humidity" YAxis="Secondary" />
+    <!-- 前面: 気温を線で左軸に -->
+    <clam:LineSeries Title="気温" ItemsSource="{Binding Samples}" YKey="temperature" />
+</clam:ClamChartView>
+```
+
+2 軸は読み違えやすいため、次の規則で「どの線がどちらの軸か」を常に分かるようにする。  
+
+| 規則 | 内容 |
+|---|---|
+| 軸は左右 2 本まで | 主軸（左）と第 2 軸（右）。`Orientation = Horizontal` では下と上 |
+| 軸と系列の対応表示 | 軸タイトルの横に、その軸に属するシリーズの色付きマーカーを置く。凡例・ツールチップにも単位付きの値を表示する |
+| 単位の明示 | 2 軸のときは各軸の `LabelFormat` に単位を含めることを推奨（例: `{0:0}°C`、`{0:0}%`） |
+| グリッドは主軸だけ | 横のグリッド線は主軸の目盛りから引く。第 2 軸は `AlignTicks`（既定 `true`）で主軸と同じ本数の目盛りになるよう範囲を調整し、グリッド線と目盛りの位置を揃える |
+| 描画順 | シリーズの並び順。面を先（背面）、線を後（前面）に置くのが基本 |
+| 積み上げ | 同じ軸のシリーズどうしのみ |
+| 密度 | `Compact` では第 2 軸のラベルを 3 本まで、`Minimal` では両軸とも非表示（データのみ） |
+| トラックボール | 縦線上に両軸のシリーズのマーカーを表示し、ツールチップは各シリーズの単位で値を出す |
+
+| 第 2 軸固有のプロパティ（`NumericAxis`） | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `AlignTicks` | `bool` | `true` | 主軸の目盛りの本数に合わせて範囲を調整する（`Minimum` / `Maximum` を指定した場合はその範囲を優先し、目盛りだけ合わせる） |
 
 ### 7.2 `ClamPieChartView`（円・ドーナツ）
 
@@ -922,8 +979,11 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | `TrendKind` | `ChartSparklineKind` | `Area` | ✓ | `Line` / `Area` / `Bar` |
 | `TrendPlacement` | `ChartTrendPlacement` | `Bottom` | ✓ | `Bottom`（下部に帯状） / `Background`（タイル全体の背景に淡く、端まで） / `Right` |
 | `Thresholds` | `IList<ChartThreshold>` | 空 | ✓ | 状態の判定 |
-| `ColorMode` | `ChartStatColorMode` | `None` | ✓ | `None` / `Indicator`（状態アイコン＋左端の細い帯） / `Background`（背景を状態色で淡く塗る） |
-| `Layout` | `ChartStatLayout` | `Auto` | ✓ | `Auto`（縦長・横長で切り替え） / `Vertical` / `Horizontal` |
+| `ColorMode` | `ChartStatColorMode` | `None` | ✓ | `None` / `Indicator`（状態アイコン＋左端の細い帯） / `Background`（背景を状態色で淡く塗る） / `BackgroundGradient`（Grafana 風の鮮やかなグラデーション背景、下記） |
+| `Fill` | `Color?` | `null` | ✓ | `BackgroundGradient` の基準色。`null` は閾値の色、閾値もなければパレットの 1 色目 |
+| `Layout` | `ChartStatLayout` | `Auto` | ✓ | `Auto`（縦長・横長で切り替え） / `Vertical` / `Horizontal`（横長のタイル向け。タイトルを左上、値を右上に置き、傾向線を下 60% に敷く） |
+
+`ColorMode = BackgroundGradient` は template-avalonia-linux の `StatTile`（Grafana の Stat パネルの「背景グラデーション＋面グラフ」表示）と同じ見た目にする。基準色から色相を ±8°、明度を −0.15 / −0.05 ずらした左上→右下のグラデーションで背景を塗り、文字と傾向線を白で描く。監視画面・キオスクのように数値カードを主役にする画面向けで、主張が強いため既定にはしない。  
 
 値の文字にはデータ色・状態色を使わない（インク色のまま）。状態は `ColorMode` のアイコン・帯・背景で伝え、アイコンはフォントに頼らずベクターで描く（✓・▲・●）。  
 
@@ -947,7 +1007,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | `LabelKey`, `ValueKey`, `MaximumKey`, `TargetKey`, `ColorKey` | `string?` | `null` | ✓ | キー |
 | `Minimum`, `Maximum` | `double` | `0`, `100` | ✓ | 全項目共通の範囲（項目の `Maximum` が優先） |
 | `Orientation` | `ChartOrientation` | `Horizontal` | ✓ | `Horizontal`（行） / `Vertical`（列） |
-| `DisplayMode` | `ChartBarGaugeMode` | `Basic` | ✓ | `Basic` / `Gradient`（トラック全体に閾値のグラデーション） / `Segmented`（区切り表示） |
+| `DisplayMode` | `ChartBarGaugeMode` | `Basic` | ✓ | `Basic` / `Gradient`（トラック全体に閾値のグラデーション） / `Segmented`（区切り表示。Grafana の Bar gauge の LCD 表示） |
 | `SegmentCount` | `int` | `10` | ✓ | `Segmented` の区切り数。区切りの間は `SegmentGap` |
 | `BarThickness` | `double` | `8` | ✓ | 棒の太さ（DIP） |
 | `ItemSpacing` | `double` | `12` | ✓ | 項目の間隔 |
@@ -961,6 +1021,8 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | `SortMode` | `ChartSortMode` | `None` | ✓ | `None` / `Descending` / `Ascending` |
 | `MaxItems` | `int?` | `null` | ✓ | 上位 N 件のみ表示 |
 | `AutoHeight` | `bool` | `true` | ✓ | 項目数から高さを計測する（`StackLayout` に置いたとき行数に合わせて伸びる） |
+
+`Segmented` は template-avalonia-linux の `SegmentGauge` と同じく、各セルを「そのセルの位置の値」に対応する閾値の色で塗り、値に届いていないセルは同じ色を不透明度 25% で描く。閾値を超えた部分だけ色が変わるため、残量や危険域が一目で分かる。セル数は `SegmentCount`、セル幅は棒の長さから決める。  
 
 ### 7.6 `ClamRadialBarView`（ラジアルバー、フェーズ 2）
 
@@ -985,7 +1047,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | `RingThickness` | `double?` | `null` | ✓ | `null` は項目数と内径から自動 |
 | `RingSpacing` | `double` | `4` | ✓ | リングの間隔 |
 | `CapStyle` | `ChartCapStyle` | `Round` | ✓ | `Round` / `Flat` |
-| `TrackVisible` | `bool` | `true` | ✓ | 未到達部分のトラック |
+| `TrackVisible` | `bool` | `true` | ✓ | 未到達部分のトラック。色は既定でリングと同じ色相の淡い色（`TrackColor`） |
 | `SegmentCount` | `int` | `0` | ✓ | `0` は連続、1 以上で区切り表示（template-maui の `ActivityDrawing` 相当） |
 | `OverflowMode` | `ChartOverflowMode` | `Clamp` | ✓ | 上限超過: `Clamp` / `Wrap`（2 周目を重ねる） |
 | `CenterText`, `CenterLabel` | `string?` | `null` | ✓ | 中央の主テキストと補足 |
@@ -1009,6 +1071,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 ### 8.1 方針
 
 アニメーションは「何が変わったか」を伝えるためだけに使う。1 回で終わり、繰り返す動きは明示的に有効にした場合だけとする。  
+表示時のアニメーションは既定で有効だが、コントロール単位でもアプリ全体でも**完全に無効化できる**（[8.5](#85-無効化とモーション軽減)）。  
 
 | 種類 | 採用 | 既定 | 内容 |
 |---|:-:|---|---|
@@ -1066,13 +1129,27 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | 選択点のマーカーを表示する（0.6 → 1.0 倍） | 150 ms 固定 |
 | トラックボールの縦線を隣の点へ移す | 移動なし（指に即追従。遅れると指とずれて見えるため） |
 
-### 8.5 モーション軽減
+### 8.5 無効化とモーション軽減
 
-| 項目 | 仕様 |
+| 単位 | 設定 | 効果 |
+|---|---|---|
+| コントロール | `AnimationEnabled = false`（または `AnimationDuration = 0`） | そのコントロールのアニメーションをすべて無効にする |
+| 種類ごと | `EntranceAnimation = None`、`UpdateAnimationEnabled = false` | 登場だけ・更新だけを止める |
+| アプリ全体 | `ClamChartSettings.AnimationEnabled = false`（`bool`、既定 `true`） | 全 ClamChart コントロールのアニメーションを無効にする。キオスク端末・低スペック端末・スクリーンショットの自動取得向け |
+| アプリ全体（速さ） | `ClamChartSettings.AnimationScale`（`double`、既定 `1`） | すべての長さに掛ける |
+| OS 設定 | `ClamChartSettings.RespectSystemAnimationScale`（`bool`、既定 `true`） | Android の「アニメーション再生時間スケール」（`Settings.Global.ANIMATOR_DURATION_SCALE`）を読み、`0` なら無効、それ以外は長さに掛ける（`.android.cs`） |
+
+無効化したときの描き方:  
+
+| 対象 | 無効時 |
 |---|---|
-| OS 設定の尊重 | Android の「アニメーション再生時間スケール」（`Settings.Global.ANIMATOR_DURATION_SCALE`）を読み、`0` ならすべて無効、それ以外は長さに掛ける（`.android.cs`） |
-| アプリ全体の設定 | `ClamChartSettings.AnimationScale`（`double`、既定 `1`）、`ClamChartSettings.RespectSystemAnimationScale`（`bool`、既定 `true`） |
-| 個別の無効化 | `AnimationDuration = 0` |
+| 登場・更新・ストリーミング | 補間せず、最初から最終状態を描く |
+| 選択・強調・凡例の切り替え | 即座に切り替える |
+| カウントアップ | 最終値をそのまま表示 |
+| ライブ表示の波紋・警告の脈動 | 動かない静的な表示（最後の点の丸、状態の帯）にする |
+| スケルトン | きらめかない静的なプレースホルダーにする |
+
+無効時は `Animate` を一切呼ばず、常時再描画も行わない（アイドル時の再描画 0 回を保証する）。  
 
 ### 8.6 実装方針
 
@@ -1147,7 +1224,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 |---|---|
 | 位置の合わせ方 | 数値・日時軸は X の値、カテゴリ軸はカテゴリの名前 |
 | 範囲 | 同じ Window 内のみ。登録は弱参照で、破棄された View を保持しない |
-| 用途 | 尺度の異なる指標（CPU とメモリ、売上と客数）を 2 軸チャートにせず、縦に並べて読み合わせる |
+| 用途 | 3 つ以上の指標や、同じ時間軸の別パネル（CPU・メモリ・ネットワークなど）を縦に並べて読み合わせる。2 つの指標なら第 2 Y 軸（[7.1.8](#718-第-2-y-軸)）で 1 枚にまとめることもできる |
 
 ### 9.5 凡例
 
@@ -1389,11 +1466,14 @@ ClamGrid の列にセル描画のフック（例: `GridColumn.CellPainter`）が
 
 ---
 
-## 13. template-maui からの流用
+## 13. 既存テンプレートからの流用
 
-template-maui の自前描画は Microsoft.Maui.Graphics（`GraphicsView` / `IDrawable`、`DrawingControl` / `DrawingObject`）と SkiaSharp が混在している。ClamChart では**ロジックとデザインの知見を流用し、描画は `SKCanvasView` に、データの受け渡しは命令的 API から Bindable プロパティに置き換える**。  
+2 つのテンプレートの自前描画を参考にする。  
 
-### 13.1 流用するもの
+- **template-maui**: Microsoft.Maui.Graphics（`GraphicsView` / `IDrawable`、`DrawingControl` / `DrawingObject`）と SkiaSharp が混在している。ClamChart では**ロジックとデザインの知見を流用し、描画は `SKCanvasView` に、データの受け渡しは命令的 API から Bindable プロパティに置き換える**。
+- **template-avalonia-linux**: Avalonia の `Control.Render` で Grafana 風のダッシュボード（Performance 画面）を描いている。表現とレイアウトの規則を取り入れる（[13.4](#134-template-avalonia-linuxgrafana-風の描画から取り入れるもの)）。
+
+### 13.1 template-maui から流用するもの
 
 | template-maui | 流用する内容 | ClamChart での行き先 |
 |---|---|---|
@@ -1436,6 +1516,24 @@ ClamChart の完成後、template-maui の次の画面は ClamChart に置き換
 | UI / Habit | `GlowRing` | `ClamRadialBarView` |
 | Network / Realtime | `StatControl` × 3 | `ClamStatView` |
 | UI / Weather | `SeriesSegmentView`、`SegmentBar`、`RangeBar` | `ClamChartView`（`CategoryWidth`）、`ClamBarGaugeView`、`RangeBarSeries` |
+
+### 13.4 template-avalonia-linux（Grafana 風の描画）から取り入れるもの
+
+Performance 画面（Stat タイル 12 枚、CPU・温度・クロック・ディスク・ネットワークの時系列、カーネル統計の棒グラフ）と Dashboard 画面（リングゲージ）の実装から、次の表現を取り入れる。  
+
+| template-avalonia-linux | 内容 | ClamChart での行き先 |
+|---|---|---|
+| `Controls/SeriesChart` | 固定長（`Capacity`）の時間窓に右寄せで描く時系列、末尾の時刻（`Time`）と間隔（`Interval`）から時間軸を作る、欠損（NaN）で線を切る | `DateTimeAxis.WindowSize` / `EndTime`（[7.1.4](#714-軸)）、`EmptyPointMode = Gap` |
+| `SeriesChart` の凡例 | 右側に「Name / Last」の表を置き、名前は省略記号で切り詰め、狭いときは凡例ごと隠す | `LegendMode = Table`、`LegendValues`、`LegendWidth`（[7.1.2](#712-チャートのプロパティ)） |
+| `Controls/ChartHelper` | 1・2・2.5・5 の Nice Scale、`k` / `M` のコンパクト表記、ラベル幅から選ぶ時間軸の間隔、端からはみ出すラベルの省略、ピクセルに揃えたグリッド線 | `Layout/NiceScale`、`Layout/TickGenerator`、既定の数値書式（[5.6](#56-書式)） |
+| `Controls/StatTile` | 基準色から色相・明度をずらしたグラデーション背景、下 60% に敷いた面グラフ、左上のタイトルと右上の値、高さに比例する値の文字サイズ | `ClamStatView` の `ColorMode = BackgroundGradient`、`Layout = Horizontal`、`TrendPlacement = Background`（[7.4](#74-clamstatviewkpi-タイルフェーズ-2)） |
+| `Controls/BarChart` | 時間窓の棒グラフ（Run queue、Interrupts など） | `BarSeries` ＋ `DateTimeAxis.WindowSize` |
+| `Controls/SegmentGauge` | セルごとに閾値の色、届いていないセルは同色の低不透明度（LCD 表示） | `ClamBarGaugeView.DisplayMode = Segmented`（[7.5](#75-clambargaugeviewバーゲージフェーズ-2)） |
+| `Controls/RingGauge` | 270° のリング、トラックは同じ色相の暗い色、中央に値、下にラベル | `ClamRadialBarView`（`SweepAngle = 270`、`TrackColor` の既定値） |
+| `Assets/Styles/ChartColors.axaml` | Grafana のクラシックな 6 色相 × 5 段階（SuperLight〜Dark）、色相ごとの段階パレット（`ChartRedShades` 等） | `ChartPalettes.Grafana`、`ChartPalettes.Shades`（[6.4](#64-パレット)） |
+| `Views/Example/PerformanceView` | パネル見出しの左にタイトル、右に現在値。同じ時間窓・間隔をスタイルで全チャートに配る | パネルの構成例（[11.7](#117-ダッシュボードの構成例)）、`TrackingGroup` による時間軸の読み合わせ |
+
+いずれも Avalonia の `DrawingContext` による描画のため、コードは移植せず、計算規則と見た目の規則を Skia の実装に置き換えて取り込む。  
 
 ---
 
@@ -1488,6 +1586,7 @@ ClamChart の完成後、template-maui の次の画面は ClamChart に置き換
 | `ChartLine` | 線・面・スムーズ・ステップ、トラックボールとスクラブ表示 |
 | `ChartBar` | 集合・積み上げ・100%・横棒ランキング、選択 |
 | `ChartTimeSeries` | 日時軸、表示範囲の切り替え（1D / 1W / 1M） |
+| `ChartDualAxis` | 第 2 Y 軸（湿度を面で右軸、気温を線で左軸） |
 | `ChartLive` | ストリーミング、ライブ表示の波紋 |
 | `ChartPie` | 円・ドーナツ・半円、選択と中央値 |
 | `ChartSparkline` | `CollectionView` の行にスパークライン |
@@ -1501,28 +1600,40 @@ ClamChart の完成後、template-maui の次の画面は ClamChart に置き換
 
 | フェーズ | バージョン | 内容 | 完了条件 |
 |---|---|---|---|
-| 1 | 0.1 | 基盤（`ChartViewBase`、スナップショット・レイアウト・アニメーター・ジェスチャー）、`ClamChartView`（線・面・棒、積み上げ・横棒、3 種の軸、凡例、データラベル、選択、トラックボール、密度）、`ClamPieChartView`、`ClamSparklineView`、`ChartStyles.Light` / `Dark`、`TouchMode`、Example（Line / Bar / TimeSeries / Pie / Sparkline / Density） | 12 章の目標値（ダッシュボード以外）を満たす、API.md と README を整備 |
-| 2 | 0.2 | `ClamStatView`、`ClamBarGaugeView`、`ClamRadialBarView`、`ScatterSeries`、閾値の表示・塗り分け、注釈、`TrackingGroup`、`EdgeToEdge`・オーバーレイ用プリセット、`IsBusy`、`RenderToImage` / `ChartDrawing.DrawSparkline`、`Downsampling`、`CategoryWidth`、触覚、アクセシビリティの自動説明、ライブ表示・警告の脈動・光彩、Example（Live / Dashboard / Overlay） | ダッシュボードの目標値を満たす、template-maui の Kit / Money / Realtime 画面を置き換えて検証 |
+| 1 | 0.1 | 基盤（`ChartViewBase`、スナップショット・レイアウト・アニメーター（無効化の設定を含む）・ジェスチャー）、`ClamChartView`（線・面・棒、積み上げ・横棒、3 種の軸、凡例、データラベル、選択、トラックボール、密度）、`ClamPieChartView`、`ClamSparklineView`、`ChartStyles.Light` / `Dark`、`TouchMode`、Example（Line / Bar / TimeSeries / Pie / Sparkline / Density） | 12 章の目標値（ダッシュボード以外）を満たす、API.md と README を整備 |
+| 2 | 0.2 | `ClamStatView`、`ClamBarGaugeView`、`ClamRadialBarView`、`ScatterSeries`、第 2 Y 軸、凡例の表・時間窓・Grafana / 段階パレット、閾値の表示・塗り分け、注釈、`TrackingGroup`、`EdgeToEdge`・オーバーレイ用プリセット、`IsBusy`、`RenderToImage` / `ChartDrawing.DrawSparkline`、`Downsampling`、`CategoryWidth`、触覚、アクセシビリティの自動説明、ライブ表示・警告の脈動・光彩、Example（Live / Dashboard / Overlay） | ダッシュボードの目標値を満たす、template-maui の Kit / Money / Realtime 画面を置き換えて検証 |
 | 3 | 0.3〜 | `ClamRadarChartView`、`ClamHeatmapView`、`BubbleSeries`、`RangeBarSeries`、State timeline・ツリーマップの検討、ClamGrid のスパークライン列 | 個別に決定 |
 
 ---
 
-## 16. 未決事項
+## 16. 決定事項と未決事項
+
+### 16.1 決定事項
+
+| # | 論点 | 決定 |
+|:-:|---|---|
+| 1 | 直交座標チャートの名前 | `ClamChartView` |
+| 2 | 円チャート | `ClamPieChartView` 1 つで円とドーナツの両方を描く（`InnerRadius = 0` で円、`0` より大きければドーナツ）。既定値は `0.6`（ドーナツ）とする |
+| 3 | パッケージ | `ClamChart` 1 つ |
+| 4 | 表示時のアニメーション | 既定で有効。コントロール単位（`AnimationEnabled`）・アプリ全体（`ClamChartSettings.AnimationEnabled`）で完全に無効化できる（[8.5](#85-無効化とモーション軽減)） |
+| 5 | 第 2 Y 軸 | 採用する（フェーズ 2）。左右 2 本まで、面と線の組み合わせ（湿度を面・温度を線）に対応する（[7.1.8](#718-第-2-y-軸)） |
+| 6 | Grafana 風の表現 | template-avalonia-linux の描画を参考に、凡例の表・時間窓・LCD 表示・グラデーション背景の Stat・Grafana / 段階パレットを取り入れる（[13.4](#134-template-avalonia-linuxgrafana-風の描画から取り入れるもの)） |
+
+### 16.2 未決事項
 
 判断が必要な点と、本書での推奨案。  
 
 | # | 論点 | 選択肢 | 推奨 |
 |:-:|---|---|---|
-| 1 | パッケージの分け方 | ① `ClamChart` 1 つ ② `ClamChart` ＋ `ClamChart.Widgets` | ①。依存が同じで、分けても軽くならない |
-| 2 | 直交座標チャートの名前 | ① `ClamChartView` ② `ClamCartesianChartView` | ①。最もよく使うコントロールを短い名前にする |
-| 3 | `ClamPieChartView.InnerRadius` の既定値 | ① `0.6`（ドーナツ） ② `0`（円） | ①。中央に値を出せ、ダッシュボードで使いやすい |
-| 4 | シリーズ・軸の基底 | ① `Element`（論理子、`BindingContext` 継承、`x:Name` 可） ② `BindableObject` | ①。シリーズ内でのバインドが自然に書ける |
-| 5 | タッチ透過（`HitOnly` / `PassThrough`）の実現方法 | ① `Touch` の `Pressed` で `Handled = false` を返し、Android の通常の配送で下の View に渡す ② 状況に応じて `InputTransparent` を切り替える | ①を試作で検証し、MAUI のラッパー View（ジェスチャー認識器付き）でも下へ届くか確認する。届かない場合は ②。`PassThrough` は常に `InputTransparent` 相当で確実に実現できる |
-| 6 | `ChartStyle` の共有範囲 | ① ClamChart 内のみ ② 色トークンを Clam ファミリー共通にする | まずは ①。ClamGauge は平坦なプロパティ方式のため、共通化は別途検討 |
-| 7 | `ClamStatView` の置き場所 | ① ClamChart ② 別ライブラリ | ①。傾向線・閾値・スタイルを共有するため |
-| 8 | 直線型の単一ゲージ（温度計型など） | ① ClamGauge の拡張 ② ClamChart の `ClamBarGaugeView` で代用 | ①。1 つの値を精密に読む計器は ClamGauge の役割 |
-| 9 | バージョン番号 | ① 0.x から開始 ② ファミリーに合わせ 2.x から | ①。API が固まるまで 0.x とする |
-| 10 | iOS 対応 | ① Android のみ（既存と同じ） ② iOS も対象 | ①。描画は Skia なので、タッチのブリッジとモーション軽減の読み取りを追加すれば対応できる設計にしておく |
+| 1 | シリーズ・軸の基底 | ① `Element`（論理子、`BindingContext` 継承、`x:Name` 可） ② `BindableObject` | ①。シリーズ内でのバインドが自然に書ける |
+| 2 | タッチ透過（`HitOnly` / `PassThrough`）の実現方法 | ① `Touch` の `Pressed` で `Handled = false` を返し、Android の通常の配送で下の View に渡す ② 状況に応じて `InputTransparent` を切り替える | ①を試作で検証し、MAUI のラッパー View（ジェスチャー認識器付き）でも下へ届くか確認する。届かない場合は ②。`PassThrough` は常に `InputTransparent` 相当で確実に実現できる |
+| 3 | `ChartStyle` の共有範囲 | ① ClamChart 内のみ ② 色トークンを Clam ファミリー共通にする | まずは ①。ClamGauge は平坦なプロパティ方式のため、共通化は別途検討 |
+| 4 | `ClamStatView` の置き場所 | ① ClamChart ② 別ライブラリ | ①。傾向線・閾値・スタイルを共有するため |
+| 5 | 直線型の単一ゲージ（温度計型など） | ① ClamGauge の拡張 ② ClamChart の `ClamBarGaugeView` で代用 | ①。1 つの値を精密に読む計器は ClamGauge の役割 |
+| 6 | バージョン番号 | ① 0.x から開始 ② ファミリーに合わせ 2.x から | ①。API が固まるまで 0.x とする |
+| 7 | iOS 対応 | ① Android のみ（既存と同じ） ② iOS も対象 | ①。描画は Skia なので、タッチのブリッジとモーション軽減の読み取りを追加すれば対応できる設計にしておく |
+| 8 | 第 2 Y 軸の目盛り合わせ | ① 主軸に目盛りの本数を合わせる（`AlignTicks = true`） ② 各軸を独立に Nice Scale（Grafana と同じ） | ①を既定にし、② も選べるようにする。グリッド線が 1 組になり読みやすい |
+| 9 | 第 2 Y 軸のフェーズ | ① フェーズ 2 ② フェーズ 1 に前倒し | ①。軸・凡例・トラックボールの基盤が固まってから追加する。温度・湿度のような用途が初期から必要ならフェーズ 1 の最後に前倒しする |
 
 ---
 
@@ -1536,3 +1647,20 @@ ClamChart の完成後、template-maui の次の画面は ClamChart に置き換
 | [Microcharts.Maui（NuGet）](https://packages.nuget.org/packages/Microcharts.Maui) | 最新は 1.0.0。コントリビューター募集中の記載あり |
 | usausa/clam-gauge、clam-grid、clam-calendar | API・構成・命名の規約（本書の P7） |
 | usausa/template-maui | 自前描画の実装（13 章） |
+| usausa/template-avalonia-linux | Grafana 風のダッシュボード描画（13.4） |
+
+---
+
+## 付録 B. 補足
+
+### B.1 template-maui の `NoiseGauge` の不具合（調査中に発見）
+
+ClamChart の対象ではないが、template-maui の自前描画を調べる中で見つけた不具合を記録しておく。  
+
+| 項目 | 内容 |
+|---|---|
+| 対象 | template-maui の `Template.MobileApp/Controls/NoiseGauge.cs` |
+| 症状 | 値が変わったとき、針が滑らかに動かず新しい値へ飛ぶ |
+| 原因 | 60 Hz の `System.Timers.Timer` で `animatedValue` を `Value` に近づける平滑化を計算しているが（`animatedValue += diff * EasingRate`）、描画側は `Math.Clamp(Value, min, max)` と平滑化前の `Value` を使っており、計算結果が表示に反映されていない |
+| 修正案 | 描画で `animatedValue` を使う。あわせて、`animatedValue` をスレッドプールのタイマーで書き換え、UI スレッドの描画で読む構造になっているため、更新をディスパッチ先（UI スレッド）で行うようにする |
+| ClamChart への教訓 | アニメーションは MAUI の `Animate` で UI スレッドに閉じ、描画は必ず「表示用の値（補間後の値）」を読む（[8.6](#86-実装方針)）。単体テストで「補間中の描画状態が最終値と異なること」を確認する |
