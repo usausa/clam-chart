@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:navigation="http://smart/navigation"
+             xmlns:local="clr-namespace:Example"
+             xmlns:shell="clr-namespace:Example.Shell"
+             x:Class="Example.MainPage"
+             x:DataType="{x:Type local:MainPageViewModel}"
+             s:BindingContextResolver.Type="{x:Type local:MainPageViewModel}"
+             SafeAreaEdges="Default">
+
+    <ContentPage.Behaviors>
+        <s:AppLifecycleBehavior />
+        <shell:ShellUpdateBehavior Navigator="{Binding Navigator, Mode=OneTime}" />
+    </ContentPage.Behaviors>
+
+    <Grid Style="{StaticResource MainGrid}"
+          RowDefinitions="Auto,*,Auto">
+        <!-- header -->
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="*"
+              IsVisible="{Binding HeaderVisible}">
+            <Label Grid.Column="0"
+                   Style="{StaticResource HeaderTitleLabel}"
+                   Text="{Binding Title}" />
+        </Grid>
+
+        <!-- view container -->
+        <AbsoluteLayout Grid.Row="1"
+                        Style="{StaticResource ContainerLayout}"
+                        IsClippedToBounds="True">
+            <AbsoluteLayout.Behaviors>
+                <navigation:NavigationContainerBehavior Navigator="{Binding Navigator}" />
+            </AbsoluteLayout.Behaviors>
+        </AbsoluteLayout>
+
+        <!-- function -->
+        <Grid Grid.Row="2"
+              Style="{StaticResource FunctionGrid}"
+              ColumnDefinitions="*,*,*,*"
+              IsVisible="{Binding FunctionVisible}">
+            <Button Grid.Column="0"
+                    Style="{StaticResource FunctionButton1}"
+                    Command="{Binding Function1Command}"
+                    Text="{Binding Function1Text}" />
+            <Button Grid.Column="1"
+                    Style="{StaticResource FunctionButton2}"
+                    Command="{Binding Function2Command}"
+                    Text="{Binding Function2Text}" />
+            <Button Grid.Column="2"
+                    Style="{StaticResource FunctionButton3}"
+                    Command="{Binding Function3Command}"
+                    Text="{Binding Function3Text}" />
+            <Button Grid.Column="3"
+                    Style="{StaticResource FunctionButton4}"
+                    Command="{Binding Function4Command}"
+                    Text="{Binding Function4Text}" />
+        </Grid>
+    </Grid>
+
+</ContentPage>

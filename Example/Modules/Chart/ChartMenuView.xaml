@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             x:Class="Example.Modules.Chart.ChartMenuView"
+             x:DataType="{x:Type module:ChartMenuViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartMenuViewModel}"
+             shell:ShellProperty.Title="ClamChart"
+             shell:ShellProperty.Function1Text="Exit"
+             shell:ShellProperty.Function1Enabled="True">
+
+    <Grid Style="{StaticResource MenuGrid}"
+          RowDefinitions="*,*,*,*,*,*,*">
+        <Button Grid.Row="0"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+        <Button Grid.Row="1"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+        <Button Grid.Row="2"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+        <Button Grid.Row="3"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+        <Button Grid.Row="4"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+        <Button Grid.Row="5"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+        <Button Grid.Row="6"
+                Style="{StaticResource MenuButton}"
+                IsEnabled="False"
+                Text="" />
+    </Grid>
+
+</ContentView>
