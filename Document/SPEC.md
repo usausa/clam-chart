@@ -645,6 +645,250 @@ public sealed partial class DashboardViewModel : AppViewModelBase
 
 ## 7. コントロール仕様
 
+表の「P」列はフェーズ（1 / 2 / 3）を表す。既定値の「style」は `ChartStyle` の同名の既定値に従うことを表す。  
+
+### 7.1 `ClamChartView`（直交座標チャート）
+
+#### 7.1.1 概要
+
+X/Y 軸を持つチャートを 1 つのコントロールで描く。シリーズの種類を混在でき（棒＋線）、積み上げ・横棒・時系列に対応する。  
+
+```xml
+<clam:ClamChartView HeightRequest="220"
+                    XKey="month"
+                    ValueAccessors="{x:Static models:MonthlySales.Accessors}"
+                    SelectionMode="Item"
+                    SelectedItem="{Binding SelectedSales}">
+    <clam:BarSeries Title="店舗" ItemsSource="{Binding Sales}" YKey="store" StackGroup="total" />
+    <clam:BarSeries Title="EC" ItemsSource="{Binding Sales}" YKey="online" StackGroup="total" />
+    <clam:LineSeries Title="目標" ItemsSource="{Binding Sales}" YKey="target" DashPattern="4,3" />
+</clam:ClamChartView>
+```
+
+#### 7.1.2 チャートのプロパティ
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `Series` | `IList<ChartSeries>` | 空の `ObservableCollection` | ✓ | シリーズ（XAML の内容プロパティ）。描画順は並び順 | 1 |
+| `XAxis`, `YAxis` | `ChartAxis?` | `null` | ✓ | 軸。`null` は X の型から自動選択（Y は `NumericAxis`） | 1 |
+| `Orientation` | `ChartOrientation` | `Vertical` | ✓ | `Horizontal` で X と Y を入れ替える（横棒・ランキング） | 1 |
+| `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | 全シリーズ共通のアクセサ | 1 |
+| `XKey` | `string?` | `null` | ✓ | 全シリーズ共通の X のキー | 1 |
+| `StackMode` | `ChartStackMode` | `Normal` | ✓ | `Normal` / `Percent`（100% 積み上げ）。`StackGroup` が同じシリーズに適用 | 1 |
+| `LegendVisible` | `bool?` | `null` | ✓ | `null` はシリーズが 2 本以上かつ密度 `Full` のとき表示（1 本なら凡例は不要） | 1 |
+| `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | `Top` / `Bottom` / `Left` / `Right` | 1 |
+| `LegendToggleEnabled` | `bool` | `false` | ✓ | 凡例タップでシリーズの表示を切り替える | 1 |
+| `DataLabelsMode` | `ChartDataLabelsMode` | `None` | ✓ | `None` / `Last` / `MinMax` / `All`。全点へのラベルは非推奨 | 1 |
+| `SelectionMode` | `ChartSelectionMode` | `None` | ✓ | `None` / `Item`（1 つの点・棒） / `Category`（同じ X の全シリーズ） | 1 |
+| `SelectedItem`, `SelectedIndex` | `object?`, `int` | `null`, `-1` | ✓ TwoWay | 選択中の項目と位置 | 1 |
+| `SelectedSeries` | `ChartSeries?` | `null` | ✓ TwoWay | `Item` 選択のときのシリーズ | 1 |
+| `TrackballMode` | `ChartTrackballMode` | `None` | ✓ | `None` / `LongPress` / `Touch`（[9.3](#93-トラックボール)） | 1 |
+| `TooltipVisible` | `bool` | `true` | ✓ | トラックボール中にキャンバス内のツールチップを描く。`false` なら縦線とマーカーのみ（値は `TrackedItem` でアプリ側に表示） | 1 |
+| `TooltipFormatter` | `Func<ChartTrackingInfo, string>?` | `null` | | ツールチップの各行の文字列 | 1 |
+| `TrackedItem`, `TrackedIndex` | `object?`, `int` | `null`, `-1` | ✓ OneWayToSource | トラックボールの位置 | 1 |
+| `TrackingGroup` | `string?` | `null` | ✓ | 同じ名前のチャート間でトラックボールを同期（[9.4](#94-トラックボールの同期)） | 2 |
+| `Thresholds` | `IList<ChartThreshold>` | 空 | ✓ | 閾値 | 2 |
+| `ThresholdsMode` | `ChartThresholdsMode` | `None` | ✓ | フラグ: `Lines`（破線） / `Bands`（淡い帯） / `ColorSeries`（線・棒を閾値の色で塗り分け） | 2 |
+| `Annotations` | `IList<ChartAnnotation>` | 空 | ✓ | 基準線・帯（[7.1.6](#716-注釈)） | 2 |
+| `Downsampling` | `ChartDownsampling` | `Auto` | ✓ | `None` / `Auto`。点数が描画幅の 2 倍を超えると LTTB で間引いて描く（データは変えない） | 2 |
+
+#### 7.1.3 シリーズ
+
+全シリーズ共通（`ChartSeries`）:  
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `Title` | `string?` | `null` | ✓ | 凡例・ツールチップの名前 | 1 |
+| `ItemsSource` | `IEnumerable?` | `null` | ✓ | データ（[5.1](#51-データの渡し方)） | 1 |
+| `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | シリーズ個別のアクセサ（チャートより優先） | 1 |
+| `XKey`, `YKey` | `string?` | `null` | ✓ | 値のキー。`XKey` の `null` はチャートの `XKey` | 1 |
+| `ValueSelector` | `Func<object, double?>?` | `null` | | コードから Y を渡す場合 | 1 |
+| `Color` | `Color?` | `null` | ✓ | `null` はパレットの「シリーズの位置」番目の色 | 1 |
+| `IsVisible` | `bool` | `true` | ✓ TwoWay | 表示。非表示でも色の割り当ては変えない | 1 |
+| `LegendVisible` | `bool` | `true` | ✓ | 凡例に載せるか | 1 |
+| `ValueFormat`, `ValueConverter`, `ValueFormatter` | | `null` | ✓ / ✓ / | データラベル・ツールチップの書式（`null` は Y 軸の書式） | 1 |
+| `EmptyPointMode` | `ChartEmptyPointMode` | `Gap` | ✓ | 欠損の扱い: `Gap` / `Zero` / `Interpolate` | 1 |
+| `TrackItemChanges` | `bool` | `true` | ✓ | 項目の `PropertyChanged` を追跡する | 1 |
+
+`LineSeries`:  
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `Thickness` | `double?` | style（2） | ✓ | 線の太さ | 1 |
+| `Interpolation` | `ChartLineInterpolation` | `Linear` | ✓ | `Linear` / `Smooth`（単調 3 次補間。データの範囲を超えて膨らまない） / `Step` | 1 |
+| `DashPattern` | `DoubleCollection?` | `null` | ✓ | 破線（`4,3`）。目標・前期比較など副次的な線に使う | 1 |
+| `MarkerMode` | `ChartMarkerMode` | `Auto` | ✓ | `Auto`（最後の点と選択点のみ） / `None` / `All` | 1 |
+| `MarkerSize` | `double?` | style（8） | ✓ | マーカーの直径 | 1 |
+| `MarkerShape` | `ChartMarkerShape` | `Circle` | ✓ | `Circle` / `Square` / `Diamond` | 2 |
+
+`AreaSeries`（`LineSeries` を継承）:  
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `FillOpacity` | `double?` | style（0.10） | ✓ | 塗りの不透明度 | 1 |
+| `FillMode` | `ChartFillMode` | `Solid` | ✓ | `Solid` / `Gradient`（上端が `FillOpacity`、基線で透明） | 1 |
+| `BaselineValue` | `double?` | `null` | ✓ | 塗りの基線。`null` は 0（Y の範囲外なら下端） | 1 |
+| `StackGroup` | `string?` | `null` | ✓ | 同じ名前のシリーズを積み上げる | 1 |
+
+`BarSeries`:  
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `CornerRadius` | `double?` | style（4） | ✓ | データ側の端の角丸。基線側は常に角を立てる。積み上げは最上段のみ | 1 |
+| `MaxBarWidth` | `double?` | style（24） | ✓ | 棒の最大の太さ | 1 |
+| `BarWidthRatio` | `double` | `0.6` | ✓ | カテゴリ幅に対する棒（集合なら群）の割合 | 1 |
+| `StackGroup` | `string?` | `null` | ✓ | 同じ名前のシリーズを積み上げる。段の間には `SegmentGap` の隙間を空ける | 1 |
+| `NegativeColor` | `Color?` | `null` | ✓ | 負の値の色。`null` はシリーズ色 | 1 |
+| `TrackVisible` | `bool` | `false` | ✓ | 軸の最大値までの淡いトラックを棒の背後に描く（進捗風の見た目） | 2 |
+| `FillMode` | `ChartFillMode` | `Solid` | ✓ | `Gradient` で基線側を淡くする | 2 |
+
+`ScatterSeries`（フェーズ 2）: `MarkerSize`、`MarkerShape`、`Opacity`（既定 0.8）。X は数値または日時。  
+
+棒の Y 軸は常に 0 を含める（`NumericAxis.IncludeZero` の既定値が棒のあるチャートでは `true`）。棒の長さで値を比べる以上、基線を 0 以外にしない。  
+
+#### 7.1.4 軸
+
+全軸共通（`ChartAxis`）:  
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `IsVisible` | `bool?` | `null` | ✓ | `null` は密度に従う（`Minimal` で非表示） | 1 |
+| `Title` | `string?` | `null` | ✓ | 軸タイトル（`Full` のみ表示） | 1 |
+| `LabelsVisible` | `bool` | `true` | ✓ | 目盛りラベル | 1 |
+| `LabelFormat`, `LabelConverter`, `LabelFormatter` | | 軸の種類による | ✓ / ✓ / | ラベルの書式 | 1 |
+| `MaxLabelCount` | `int?` | `null` | ✓ | `null` は長さから自動（X は約 64 DIP、Y は約 40 DIP に 1 つ）。重なるラベルは間引く | 1 |
+| `GridLinesVisible` | `bool?` | `null` | ✓ | `null` は Y のみ表示、X は非表示 | 1 |
+| `Position` | `ChartAxisPosition` | `Auto` | ✓ | `Auto`（Y は左、X は下） / `Opposite` | 1 |
+| `IsInversed` | `bool` | `false` | ✓ | 反転 | 1 |
+
+| 軸 | 固有のプロパティ | 説明 | P |
+|---|---|---|:-:|
+| `NumericAxis` | `Minimum`, `Maximum`（`double?`）、`Interval`（`double?`）、`IncludeZero`（`bool?`） | 範囲・間隔の `null` は Nice Scale（1・2・5 の倍数）で自動決定。既定の書式はコンパクト表記 | 1 |
+| `DateTimeAxis` | `Minimum`, `Maximum`（`DateTime?`）、`IntervalType`（`Auto` / `Minutes` / `Hours` / `Days` / `Weeks` / `Months` / `Years`）、`Interval`（`double?`） | 既定の書式は範囲から自動（1 日未満 `HH:mm`、2 か月未満 `M/d`、それ以上 `yyyy/M`）。日付が変わる目盛りだけ日付を添える（P2） | 1 |
+| `CategoryAxis` | `LabelPlacement`（`BetweenTicks` / `OnTicks`）、`CategoryWidth`（`double?`） | カテゴリは全シリーズの X を出現順に統合する。`CategoryWidth` を指定すると幅が「カテゴリ数 × 幅」になり、横 `ScrollView` に入れて時間別の天気のように横に長いチャートを作れる（P2） | 1 |
+
+表示範囲の切り替え（1 日 / 1 週 / 1 か月など）は、ViewModel から `Minimum` / `Maximum` をバインドで変える。範囲の変化は軸ごと補間して滑らかに切り替える。  
+
+#### 7.1.5 凡例・データラベル・ツールチップ
+
+| 要素 | 仕様 |
+|---|---|
+| 凡例 | 色付きの小さな丸（線シリーズは短い線）＋インク色の文字。幅が足りなければ折り返し、2 行を超える分は「+N」に省略 |
+| データラベル | `DataLabelsMode` で選んだ点のみ。棒は端、線は終点に置く。収まらないラベルは描かない（切り詰めない） |
+| ツールチップ | 指の上側に表示し、画面端では反対側へ回り込む。X のラベル＋シリーズごとに「● 名前 値」。指で隠れないよう、指から 48 DIP 以上離す |
+
+#### 7.1.6 注釈
+
+| 型 | プロパティ | 説明 | P |
+|---|---|---|:-:|
+| `ChartReferenceLine` | `Value`（`double`）、`Axis`（`X` / `Y`）、`Label`、`Color?`、`DashPattern` | 目標値・平均値などの基準線。`Value` はバインド可（注釈は `Element` なので `BindingContext` を継承） | 2 |
+| `ChartReferenceBand` | `Start`、`End`、`Axis`、`Label`、`Color?` | 正常範囲・営業時間などの淡い帯 | 2 |
+
+#### 7.1.7 密度による変化
+
+| 要素 | `Full` | `Compact` | `Minimal` |
+|---|---|---|---|
+| 軸ラベル | 自動で間引いて表示 | Y は 3 本まで、X は両端のみ | なし |
+| 軸タイトル | 表示 | なし | なし |
+| グリッド | 横のヘアライン | 横のヘアライン（本数を減らす） | なし |
+| 凡例 | 自動（2 本以上） | なし（`LegendVisible = true` なら 1 行） | なし |
+| データラベル | `DataLabelsMode` | `Last` まで | なし |
+| マーカー | `MarkerMode` | 最後の点のみ | 最後の点のみ |
+| タッチ | 選択・トラックボール | 選択・トラックボール | チャート全体のタップのみ（`ChartTapped`） |
+
+### 7.2 `ClamPieChartView`（円・ドーナツ）
+
+#### 7.2.1 概要
+
+構成比を表す。既定はドーナツ（中央に合計や選択値を表示できるため）で、`InnerRadius = 0` で円、`SweepAngle = 180` で半円ドーナツになる。  
+
+```xml
+<clam:ClamPieChartView HeightRequest="200"
+                       ItemsSource="{Binding Categories}"
+                       ValueAccessors="{x:Static models:CategoryShare.Accessors}"
+                       ValueKey="amount"
+                       LabelKey="name"
+                       CenterLabel="合計"
+                       SelectionMode="Single"
+                       SelectedItem="{Binding SelectedCategory}" />
+```
+
+#### 7.2.2 プロパティ
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `ItemsSource` | `IEnumerable?` | `null` | ✓ | データ。`ChartEntry` ならキー不要 | 1 |
+| `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | アクセサ | 1 |
+| `ValueKey`, `LabelKey`, `ColorKey` | `string?` | `null` | ✓ | 値・名前・色のキー | 1 |
+| `InnerRadius` | `double` | `0.6` | ✓ | 内径（半径に対する割合、0〜0.95） | 1 |
+| `StartAngle`, `SweepAngle` | `double` | `0`, `360` | ✓ | 12 時の方向から時計回りの角度（ClamGauge と同じ） | 1 |
+| `SliceGap` | `double?` | style（2） | ✓ | スライス間の隙間（DIP）。縁取り線は描かない | 1 |
+| `SliceCornerRadius` | `double` | `0` | ✓ | スライスの角丸（ドーナツ向け） | 2 |
+| `SortMode` | `ChartSortMode` | `None` | ✓ | `None` / `Descending`。並べ替えても色はデータの並び順で決める | 1 |
+| `MaxSlices` | `int` | `8` | ✓ | 超える分は小さい順に「その他」へまとめる | 1 |
+| `OthersThreshold` | `double` | `0` | ✓ | 全体に対する割合がこれ未満のスライスを「その他」へまとめる | 1 |
+| `OthersLabel` | `string` | `Other` | ✓ | 「その他」の名前 | 1 |
+| `LabelsMode` | `ChartPieLabelsMode` | `None` | ✓ | `None` / `Inside`（収まる場合のみ） / `Outside`（引き出し線、P2） | 1 |
+| `LabelContent` | `ChartPieLabelContent` | `Percent` | ✓ | `Percent` / `Value` / `Label` / `LabelAndPercent` | 1 |
+| `LegendVisible` | `bool?` | `null` | ✓ | `null` は密度 `Full` で表示 | 1 |
+| `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | `Bottom` / `Right` | 1 |
+| `LegendValueMode` | `ChartLegendValueMode` | `None` | ✓ | 凡例に `Value` / `Percent` を添える | 1 |
+| `CenterValueMode` | `ChartCenterValueMode` | `Auto` | ✓ | `Auto`（選択中はそのスライス、未選択は合計） / `Total` / `Selected` / `None` | 1 |
+| `CenterValue` | `double?` | `null` | ✓ | 中央に表示する値を直接指定（合計以外を出したい場合） | 1 |
+| `CenterLabel` | `string?` | `null` | ✓ | 中央の値の下の小さな文字（「合計」「完了率」など） | 1 |
+| `CenterValueFormat`, `CenterValueConverter`, `CenterValueFormatter` | | コンパクト表記 | ✓ / ✓ / | 中央の値の書式。文字は内径に収まるよう自動で縮小 | 1 |
+| `SelectionMode` | `ChartSelectionMode` | `None` | ✓ | `None` / `Item` | 1 |
+| `SelectedItem`, `SelectedIndex` | `object?`, `int` | `null`, `-1` | ✓ TwoWay | 選択中のスライス | 1 |
+| `ExplodeOffset` | `double` | `6` | ✓ | 選択スライスを外側へずらす距離（DIP） | 1 |
+
+中央のタップ、またはスライス以外のタップで選択を解除する（`ChartTapped`）。  
+
+### 7.3 `ClamSparklineView`（スパークライン）
+
+#### 7.3.1 概要
+
+軸・凡例を持たない最小のチャート。リストのセル、KPI の下、文章の横に置く。`CollectionView` の行で再利用されることを前提に、1 回の描画で割り当てを行わない実装にする。  
+
+```xml
+<CollectionView ItemsSource="{Binding Products}">
+    <CollectionView.ItemTemplate>
+        <DataTemplate x:DataType="vm:ProductRow">
+            <Grid ColumnDefinitions="*,96,Auto" Padding="12,8">
+                <Label Text="{Binding Name}" />
+                <clam:ClamSparklineView Grid.Column="1"
+                                        HeightRequest="28"
+                                        Values="{Binding Last30Days}"
+                                        Minimum="{Binding Source={x:Reference Root}, Path=BindingContext.SalesMinimum}"
+                                        Maximum="{Binding Source={x:Reference Root}, Path=BindingContext.SalesMaximum}" />
+                <Label Grid.Column="2" Text="{Binding Total, StringFormat='{0:N0}'}" />
+            </Grid>
+        </DataTemplate>
+    </CollectionView.ItemTemplate>
+</CollectionView>
+```
+
+#### 7.3.2 プロパティ
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `Values` | `IEnumerable<double>?` | `null` | ✓ | 値の列（最速の経路）。`IReadOnlyList<double>` / `double[]` はコピーせず参照する | 1 |
+| `ItemsSource`, `ValueAccessors`, `ValueKey` | | `null` | ✓ | 任意の型から取り出す場合 | 1 |
+| `Kind` | `ChartSparklineKind` | `Line` | ✓ | `Line` / `Area` / `Bar` / `WinLoss` | 1 |
+| `Color` | `Color?` | `null` | ✓ | `null` はパレットの 1 色目 | 1 |
+| `NegativeColor` | `Color?` | `null` | ✓ | 棒・勝敗の負の値。`null` は `CriticalColor` | 1 |
+| `Thickness` | `double?` | style（2）。高さ 24 DIP 未満は 1.5 | ✓ | 線の太さ | 1 |
+| `Smooth` | `bool` | `false` | ✓ | 単調 3 次補間 | 1 |
+| `Markers` | `ChartSparklineMarkers` | `Last` | ✓ | フラグ: `First` / `Last` / `High` / `Low` | 1 |
+| `Minimum`, `Maximum` | `double?` | `null` | ✓ | `null` は自動。リストの行どうしを同じ尺度で比べる場合は ViewModel から同じ値を渡す | 1 |
+| `ReferenceValue` | `double?` | `null` | ✓ | 目標・前期平均などの基準線（ヘアラインの破線） | 1 |
+| `NormalRangeMinimum`, `NormalRangeMaximum` | `double?` | `null` | ✓ | 正常範囲の淡い帯 | 2 |
+| `EmphasisMode` | `ChartSparklineEmphasis` | `None` | ✓ | `Last` で最後の区間だけシリーズ色、それ以外を弱い色で描く（「今」を目立たせる） | 2 |
+| `Thresholds`, `ThresholdsMode` | | 空, `None` | ✓ | `ColorSeries` で線を閾値の色で塗り分け | 2 |
+
+スパークラインの既定値は一覧での利用に合わせ、`EntranceAnimation = None`（行の再利用のたびに動かない）、`Density = Minimal`（固定）とする。値の更新アニメーションは有効のままにする。  
+
+### 7.4 以降
+
 （執筆中）
 
 ## 8. アニメーション
