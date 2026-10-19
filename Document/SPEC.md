@@ -316,7 +316,7 @@ ClamChart/
 ├── Axes/          ChartAxis, CategoryAxis, NumericAxis, DateTimeAxis
 ├── Annotations/   ChartAnnotation, ChartReferenceLine, ChartReferenceBand
 ├── Data/          ChartAccessorCollection<T>, ChartPoint, ChartEntry, DataSnapshot, ChartCollectionWatcher
-├── Layout/        NiceScale, TickGenerator, LabelThinning, StackCalculator, PieLayout, DensityResolver, Downsampler, ChartRect, ChartHit
+├── Layout/        NiceScale, AxisRangeResolver, TickGenerator, LabelThinning, StackCalculator, PieLayout, DensityResolver, Downsampler, ChartRect, ChartHit
 ├── Input/         ChartGestureController, GestureAction, GestureResult
 ├── Animation/     ChartAnimator, SnapshotInterpolator
 ├── Rendering/     CartesianRenderer, PieRenderer, SparklineRenderer, … , ChartRenderState, ChartTextFormat, PaintCache
@@ -684,7 +684,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 |---|---|---|:-:|---|:-:|
 | `Series` | `IList<ChartSeries>` | 空の `ObservableCollection` | ✓ | シリーズ（XAML の内容プロパティ）。描画順は並び順 | 1 |
 | `XAxis`, `YAxis` | `ChartAxis?` | `null` | ✓ | 軸。`null` は X の型から自動選択（Y は `NumericAxis`） | 1 |
-| `SecondaryYAxis` | `NumericAxis?` | `null` | ✓ | 第 2 Y 軸（右側）。`YAxis = Secondary` のシリーズがあり、これが `null` なら自動で作る（[7.1.8](#718-第-2-y-軸)） | 2 |
+| `SecondaryYAxis` | `NumericAxis?` | `null` | ✓ | 第 2 Y 軸（右側）。`YAxis = Secondary` のシリーズがあり、これが `null` なら自動で作る（[7.1.8](#718-第-2-y-軸)） | 1 |
 | `Orientation` | `ChartOrientation` | `Vertical` | ✓ | `Horizontal` で X と Y を入れ替える（横棒・ランキング） | 1 |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | 全シリーズ共通のアクセサ | 1 |
 | `XKey` | `string?` | `null` | ✓ | 全シリーズ共通の X のキー | 1 |
@@ -719,7 +719,7 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | データ（[5.1](#51-データの渡し方)） | 1 |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | シリーズ個別のアクセサ（チャートより優先） | 1 |
 | `XKey`, `YKey` | `string?` | `null` | ✓ | 値のキー。`XKey` の `null` はチャートの `XKey` | 1 |
-| `YAxis` | `ChartAxisTarget` | `Primary` | ✓ | `Primary`（左の主軸） / `Secondary`（右の第 2 軸） | 2 |
+| `YAxis` | `ChartAxisTarget` | `Primary` | ✓ | `Primary`（左の主軸） / `Secondary`（右の第 2 軸） | 1 |
 | `ValueSelector` | `Func<object, double?>?` | `null` | | コードから Y を渡す場合 | 1 |
 | `Color` | `Color?` | `null` | ✓ | `null` はパレットの「シリーズの位置」番目の色 | 1 |
 | `IsVisible` | `bool` | `true` | ✓ TwoWay | 表示。非表示でも色の割り当ては変えない | 1 |
@@ -781,10 +781,30 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 | 軸 | 固有のプロパティ | 説明 | P |
 |---|---|---|:-:|
-| `NumericAxis` | `Minimum`, `Maximum`（`double?`）、`Interval`（`double?`）、`IncludeZero`（`bool?`） | 範囲・間隔の `null` は Nice Scale（1・2・5 の倍数）で自動決定。既定の書式はコンパクト表記 | 1 |
+| `NumericAxis` | `Minimum`, `Maximum`、`SoftMinimum`, `SoftMaximum`、`Interval`、`IncludeZero`、`NiceRange`、`TickAlignment`（下表） | 範囲・間隔の `null` は Nice Scale（1・2・2.5・5 の倍数）で自動決定。既定の書式はコンパクト表記 | 1 |
 | `DateTimeAxis` | `Minimum`, `Maximum`（`DateTime?`）、`IntervalType`（`Auto` / `Seconds` / `Minutes` / `Hours` / `Days` / `Weeks` / `Months` / `Years`）、`Interval`（`double?`） | `Auto` の間隔は、ラベルの幅が収まる最小の段階を 1・2・5・10・15・30 秒、1・2・5・10・15・30 分、1・3・6・12 時間、1 日… から選ぶ（template-avalonia-linux の `ChartHelper` と同じ考え方）。既定の書式は間隔から自動（1 分未満 `HH:mm:ss`、1 日未満 `HH:mm`、2 か月未満 `M/d`、それ以上 `yyyy/M`）。日付が変わる目盛りだけ日付を添える（P2） | 1 |
 | `DateTimeAxis`（ライブ表示） | `WindowSize`（`TimeSpan?`）、`EndTime`（`DateTime?`） | 直近の一定時間を表示する時間窓。`EndTime` の `null` は最新の点の時刻。データが窓に満たないうちは右寄せで描き、左側は空ける（Grafana・template-avalonia-linux の `SeriesChart` と同じ見え方） | 2 |
 | `CategoryAxis` | `LabelPlacement`（`BetweenTicks` / `OnTicks`）、`CategoryWidth`（`double?`） | カテゴリは全シリーズの X を出現順に統合する。`CategoryWidth` を指定すると幅が「カテゴリ数 × 幅」になり、横 `ScrollView` に入れて時間別の天気のように横に長いチャートを作れる（P2） | 1 |
+
+`NumericAxis` の範囲・目盛りのプロパティ（主軸・第 2 軸とも共通）:  
+
+| 名前 | 型 | 既定値 | Bindable | 説明 | P |
+|---|---|---|:-:|---|:-:|
+| `Minimum`, `Maximum` | `double?` | `null` | ✓ | 下限・上限を明示して固定する。範囲外のデータはプロット領域の端でクリップする。片方だけの指定も可（もう片方は自動） | 1 |
+| `SoftMinimum`, `SoftMaximum` | `double?` | `null` | ✓ | 少なくともこの範囲は表示し、データがはみ出したときだけ広げる（Grafana の Soft min / Soft max）。例: 湿度を基本 0〜100 で見せる、値が小さくても 0 を下端に保つ | 1 |
+| `Interval` | `double?` | `null` | ✓ | 目盛りの間隔を明示する | 1 |
+| `IncludeZero` | `bool?` | `null` | ✓ | 0 を範囲に含める。`null` は棒・面があるとき `true`、線だけなら `false` | 1 |
+| `NiceRange` | `bool` | `true` | ✓ | 自動で決めた端を目盛りの切りの良い値まで広げる。`Minimum` / `Maximum` を明示した端は広げない | 1 |
+| `TickAlignment` | `ChartTickAlignment` | `AlignToPrimary` | ✓ | 第 2 軸の目盛りの決め方: `AlignToPrimary`（主軸に合わせる） / `Independent`（独立）。主軸では無視する（[7.1.8](#718-第-2-y-軸)） | 1 |
+
+範囲は次の優先順で決める。  
+
+1. `Minimum` / `Maximum` を明示した端はその値で固定する。
+2. 明示していない端は、表示中のシリーズのデータ範囲と `SoftMinimum` / `SoftMaximum` を合わせた範囲から決める。
+3. `IncludeZero` が `true` なら 0 を含める。
+4. `NiceRange` が `true` なら、明示していない端を `Interval`（`null` なら自動の間隔）の倍数まで広げる。
+
+`Minimum` と `Maximum` を両方指定して `Maximum <= Minimum` になった場合は、その軸を自動範囲として扱い、デバッグ出力に警告を出す（バインドの更新順で一時的に逆転しても描画が消えないようにする）。値はいずれも有限であること（`NaN` / 無限大は `ArgumentOutOfRangeException`）。  
 
 表示範囲の切り替え（1 日 / 1 週 / 1 か月など）は、ViewModel から `Minimum` / `Maximum` をバインドで変える。範囲の変化は軸ごと補間して滑らかに切り替える。  
 
@@ -818,17 +838,20 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 #### 7.1.8 第 2 Y 軸
 
-温度（°C）と湿度（%）のように単位・尺度の異なる 2 つの指標を、同じ時間軸で 1 枚に重ねる（Grafana の右軸と同じ）。シリーズごとに `YAxis = Secondary` を指定すると右側の第 2 軸に対応付ける。面と線の組み合わせ（湿度を面、温度を線）にも対応する。  
+温度（°C）と湿度（%）のように単位・尺度の異なる 2 つの指標を、同じ時間軸で 1 枚に重ねる（Grafana の右軸と同じ）。シリーズごとに `YAxis = Secondary` を指定すると右側の第 2 軸に対応付ける。面と線の組み合わせ（湿度を面、温度を線）にも対応する。フェーズ 1 で、軸の基盤と同時に実装する。  
 
 ```xml
 <clam:ClamChartView HeightRequest="220"
                     XKey="time"
                     ValueAccessors="{x:Static models:WeatherSample.Accessors}">
     <clam:ClamChartView.YAxis>
-        <clam:NumericAxis Title="気温" LabelFormat="{}{0:0}°C" />
+        <!-- 基本は 0〜35°C、はみ出したときだけ広げる -->
+        <clam:NumericAxis Title="気温" SoftMinimum="0" SoftMaximum="35" LabelFormat="{}{0:0}°C" />
     </clam:ClamChartView.YAxis>
     <clam:ClamChartView.SecondaryYAxis>
-        <clam:NumericAxis Title="湿度" Minimum="0" Maximum="100" LabelFormat="{}{0:0}%" />
+        <!-- 0〜100% に固定し、目盛りは主軸と独立に 0・25・50・75・100 -->
+        <clam:NumericAxis Title="湿度" Minimum="0" Maximum="100" Interval="25"
+                          TickAlignment="Independent" LabelFormat="{}{0:0}%" />
     </clam:ClamChartView.SecondaryYAxis>
     <!-- 背面: 湿度を面で右軸に -->
     <clam:AreaSeries Title="湿度" ItemsSource="{Binding Samples}" YKey="humidity" YAxis="Secondary" />
@@ -844,15 +867,20 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 | 軸は左右 2 本まで | 主軸（左）と第 2 軸（右）。`Orientation = Horizontal` では下と上 |
 | 軸と系列の対応表示 | 軸タイトルの横に、その軸に属するシリーズの色付きマーカーを置く。凡例・ツールチップにも単位付きの値を表示する |
 | 単位の明示 | 2 軸のときは各軸の `LabelFormat` に単位を含めることを推奨（例: `{0:0}°C`、`{0:0}%`） |
-| グリッドは主軸だけ | 横のグリッド線は主軸の目盛りから引く。第 2 軸は `AlignTicks`（既定 `true`）で主軸と同じ本数の目盛りになるよう範囲を調整し、グリッド線と目盛りの位置を揃える |
+| グリッドは主軸だけ | 横のグリッド線は主軸の目盛りから引く。第 2 軸の目盛りの決め方は `TickAlignment` で選ぶ（下表） |
 | 描画順 | シリーズの並び順。面を先（背面）、線を後（前面）に置くのが基本 |
 | 積み上げ | 同じ軸のシリーズどうしのみ |
 | 密度 | `Compact` では第 2 軸のラベルを 3 本まで、`Minimal` では両軸とも非表示（データのみ） |
 | トラックボール | 縦線上に両軸のシリーズのマーカーを表示し、ツールチップは各シリーズの単位で値を出す |
 
-| 第 2 軸固有のプロパティ（`NumericAxis`） | 型 | 既定値 | 説明 |
-|---|---|---|---|
-| `AlignTicks` | `bool` | `true` | 主軸の目盛りの本数に合わせて範囲を調整する（`Minimum` / `Maximum` を指定した場合はその範囲を優先し、目盛りだけ合わせる） |
+第 2 軸の目盛りの決め方（`TickAlignment`）:  
+
+| 値 | 目盛り | グリッド線 | 範囲の扱い | 向いている場面 |
+|---|---|---|---|---|
+| `AlignToPrimary`（既定） | 主軸と同じ本数・同じ高さに置く | 主軸と共通の 1 組 | 自動の範囲は、主軸と同じ分割数で切りの良い間隔（1・2・2.5・5 の倍数）になるよう広げる。`Minimum` / `Maximum` を明示した場合はその範囲を主軸と同じ数に等分する（間隔が割り切れないとラベルが端数になるため、その場合は `Independent` を推奨） | 2 本の線の上下関係を目で追いたいとき |
+| `Independent` | 第 2 軸だけの Nice Scale（`Interval` の明示も可）で決める（Grafana と同じ） | 主軸のものだけ。第 2 軸は右端に短い目盛り線とラベルのみ描く | `Minimum` / `Maximum` / `SoftMinimum` / `SoftMaximum` / `Interval` をそのまま使う | 湿度 0〜100% のように、範囲と目盛りを固定したいとき |
+
+どちらの方式でも、主軸・第 2 軸それぞれに `Minimum` / `Maximum`（固定）と `SoftMinimum` / `SoftMaximum`（最低限の範囲）を明示できる（[7.1.4](#714-軸)）。  
 
 ### 7.2 `ClamPieChartView`（円・ドーナツ）
 
@@ -1564,6 +1592,7 @@ Performance 画面（Stat タイル 12 枚、CPU・温度・クロック・デ�
 | 対象 | 主な観点 |
 |---|---|
 | `NiceScale` / `TickGenerator` | 1・2・5 の倍数、負の値、0 を含める、極小・極大、日時の間隔の自動選択（分〜年） |
+| `AxisRangeResolver` | `Minimum` / `Maximum` の固定（片側のみを含む）、`SoftMinimum` / `SoftMaximum` の拡張、`IncludeZero`、`NiceRange`、上下限の逆転時の自動範囲へのフォールバック、第 2 軸の `AlignToPrimary` / `Independent` |
 | `LabelThinning` | 重なりの検出と間引き、両端の保持 |
 | `StackCalculator` | 通常・100% 積み上げ、正負の混在、非表示シリーズ |
 | `PieLayout` | 角度の合計、`MaxSlices` / `OthersThreshold` による「その他」、隙間、並べ替えと色の対応 |
@@ -1600,8 +1629,8 @@ Performance 画面（Stat タイル 12 枚、CPU・温度・クロック・デ�
 
 | フェーズ | バージョン | 内容 | 完了条件 |
 |---|---|---|---|
-| 1 | 0.1 | 基盤（`ChartViewBase`、スナップショット・レイアウト・アニメーター（無効化の設定を含む）・ジェスチャー）、`ClamChartView`（線・面・棒、積み上げ・横棒、3 種の軸、凡例、データラベル、選択、トラックボール、密度）、`ClamPieChartView`、`ClamSparklineView`、`ChartStyles.Light` / `Dark`、`TouchMode`、Example（Line / Bar / TimeSeries / Pie / Sparkline / Density） | 12 章の目標値（ダッシュボード以外）を満たす、API.md と README を整備 |
-| 2 | 0.2 | `ClamStatView`、`ClamBarGaugeView`、`ClamRadialBarView`、`ScatterSeries`、第 2 Y 軸、凡例の表・時間窓・Grafana / 段階パレット、閾値の表示・塗り分け、注釈、`TrackingGroup`、`EdgeToEdge`・オーバーレイ用プリセット、`IsBusy`、`RenderToImage` / `ChartDrawing.DrawSparkline`、`Downsampling`、`CategoryWidth`、触覚、アクセシビリティの自動説明、ライブ表示・警告の脈動・光彩、Example（Live / Dashboard / Overlay） | ダッシュボードの目標値を満たす、template-maui の Kit / Money / Realtime 画面を置き換えて検証 |
+| 1 | 0.1 | 基盤（`ChartViewBase`、スナップショット・レイアウト・アニメーター（無効化の設定を含む）・ジェスチャー）、`ClamChartView`（線・面・棒、積み上げ・横棒、3 種の軸、第 2 Y 軸、軸範囲の明示（固定・Soft）、凡例、データラベル、選択、トラックボール、密度）、`ClamPieChartView`、`ClamSparklineView`、`ChartStyles.Light` / `Dark`、`TouchMode`、Example（Line / Bar / TimeSeries / DualAxis / Pie / Sparkline / Density） | 12 章の目標値（ダッシュボード以外）を満たす、API.md と README を整備 |
+| 2 | 0.2 | `ClamStatView`、`ClamBarGaugeView`、`ClamRadialBarView`、`ScatterSeries`、凡例の表・時間窓・Grafana / 段階パレット、閾値の表示・塗り分け、注釈、`TrackingGroup`、`EdgeToEdge`・オーバーレイ用プリセット、`IsBusy`、`RenderToImage` / `ChartDrawing.DrawSparkline`、`Downsampling`、`CategoryWidth`、触覚、アクセシビリティの自動説明、ライブ表示・警告の脈動・光彩、Example（Live / Dashboard / Overlay） | ダッシュボードの目標値を満たす、template-maui の Kit / Money / Realtime 画面を置き換えて検証 |
 | 3 | 0.3〜 | `ClamRadarChartView`、`ClamHeatmapView`、`BubbleSeries`、`RangeBarSeries`、State timeline・ツリーマップの検討、ClamGrid のスパークライン列 | 個別に決定 |
 
 ---
@@ -1616,8 +1645,9 @@ Performance 画面（Stat タイル 12 枚、CPU・温度・クロック・デ�
 | 2 | 円チャート | `ClamPieChartView` 1 つで円とドーナツの両方を描く（`InnerRadius = 0` で円、`0` より大きければドーナツ）。既定値は `0.6`（ドーナツ）とする |
 | 3 | パッケージ | `ClamChart` 1 つ |
 | 4 | 表示時のアニメーション | 既定で有効。コントロール単位（`AnimationEnabled`）・アプリ全体（`ClamChartSettings.AnimationEnabled`）で完全に無効化できる（[8.5](#85-無効化とモーション軽減)） |
-| 5 | 第 2 Y 軸 | 採用する（フェーズ 2）。左右 2 本まで、面と線の組み合わせ（湿度を面・温度を線）に対応する（[7.1.8](#718-第-2-y-軸)） |
-| 6 | Grafana 風の表現 | template-avalonia-linux の描画を参考に、凡例の表・時間窓・LCD 表示・グラデーション背景の Stat・Grafana / 段階パレットを取り入れる（[13.4](#134-template-avalonia-linuxgrafana-風の描画から取り入れるもの)） |
+| 5 | 第 2 Y 軸 | 採用し、フェーズ 1 で軸の基盤と同時に実装する（後付けより軸レイアウトの手戻りが少ないため）。左右 2 本まで、面と線の組み合わせ（湿度を面・温度を線）に対応する。目盛りは「主軸に合わせる」（既定）と「独立」を `TickAlignment` で選べる（[7.1.8](#718-第-2-y-軸)） |
+| 6 | 軸範囲の明示 | 主軸・第 2 軸とも `Minimum` / `Maximum`（固定）と `SoftMinimum` / `SoftMaximum`（最低限の範囲、はみ出せば広げる）、`Interval` を明示できる（[7.1.4](#714-軸)） |
+| 7 | Grafana 風の表現 | template-avalonia-linux の描画を参考に、凡例の表・時間窓・LCD 表示・グラデーション背景の Stat・Grafana / 段階パレットを取り入れる（[13.4](#134-template-avalonia-linuxgrafana-風の描画から取り入れるもの)） |
 
 ### 16.2 未決事項
 
@@ -1632,8 +1662,6 @@ Performance 画面（Stat タイル 12 枚、CPU・温度・クロック・デ�
 | 5 | 直線型の単一ゲージ（温度計型など） | ① ClamGauge の拡張 ② ClamChart の `ClamBarGaugeView` で代用 | ①。1 つの値を精密に読む計器は ClamGauge の役割 |
 | 6 | バージョン番号 | ① 0.x から開始 ② ファミリーに合わせ 2.x から | ①。API が固まるまで 0.x とする |
 | 7 | iOS 対応 | ① Android のみ（既存と同じ） ② iOS も対象 | ①。描画は Skia なので、タッチのブリッジとモーション軽減の読み取りを追加すれば対応できる設計にしておく |
-| 8 | 第 2 Y 軸の目盛り合わせ | ① 主軸に目盛りの本数を合わせる（`AlignTicks = true`） ② 各軸を独立に Nice Scale（Grafana と同じ） | ①を既定にし、② も選べるようにする。グリッド線が 1 組になり読みやすい |
-| 9 | 第 2 Y 軸のフェーズ | ① フェーズ 2 ② フェーズ 1 に前倒し | ①。軸・凡例・トラックボールの基盤が固まってから追加する。温度・湿度のような用途が初期から必要ならフェーズ 1 の最後に前倒しする |
 
 ---
 
