@@ -1005,19 +1005,349 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 ## 8. アニメーション
 
-（執筆中）
+### 8.1 方針
+
+アニメーションは「何が変わったか」を伝えるためだけに使う。1 回で終わり、繰り返す動きは明示的に有効にした場合だけとする。  
+
+| 種類 | 採用 | 既定 | 内容 |
+|---|:-:|---|---|
+| 登場 | ✓ | 有効（スパークラインは無効） | データが初めて表示されるとき |
+| 更新（モーフ） | ✓ | 有効 | 値・点数・軸範囲の変化を補間 |
+| ストリーミング | ✓ | 有効 | 末尾追加・先頭削除で横に流れる |
+| 選択・強調 | ✓ | 選択有効時 | 他要素を薄くする、スライスを外へずらす |
+| 表示切り替え | ✓ | 有効 | 凡例タップでのシリーズの出し入れ |
+| カウントアップ | ✓ | 有効 | KPI・中央値の数字 |
+| ライブ表示（脈動） | ✓ | 無効（オプトイン） | 最後の点に波紋（[10 章](#10-エフェクト)） |
+| スケルトン | ✓ | `IsBusy` のときのみ | 読み込み中のきらめき |
+| 警告の脈動 | ✓ | 無効（オプトイン） | 閾値 Critical 時の控えめな脈動 |
+| バネ・バウンド | — | — | `AnimationEasing` に `Easing.SpringOut` 等を指定すれば可能だが、既定にはしない |
+| 装飾的な常時アニメーション | ✗ | — | 背景のうねり・パーティクルなどは採用しない |
+
+### 8.2 登場アニメーション
+
+`EntranceAnimation`（`ChartEntranceAnimation`）: `Auto` / `None` / `Fade` / `Grow` / `Reveal`。`Auto` はコントロールごとに次の動きを選ぶ。  
+
+| 対象 | `Auto` の動き |
+|---|---|
+| 線・面 | `Reveal`: 左から右へ描き出す（クリップ幅を広げる）。面の塗りは少し遅れてフェードイン |
+| 棒 | `Grow`: 基線から伸びる。カテゴリ順に少しずつずらす（ずらしの合計は全体の 30% 以内） |
+| 散布図 | `Fade`: 不透明度と大きさ（0.6 → 1.0） |
+| 円・ドーナツ | `Grow`: `StartAngle` から時計回りに広がる |
+| ラジアルバー・バーゲージ | `Grow`: 0 から値まで。項目ごとに 40 ms ずらす |
+| KPI | 値のカウントアップ＋傾向線の `Reveal` |
+| スパークライン | なし（一覧で行が再利用されるたびに動かないため） |
+
+| 項目 | 仕様 |
+|---|---|
+| 再生のタイミング | Handler が付き、表示中で、データが初めて空でなくなったとき |
+| 再生し直し | `ItemsSource` の差し替えで点数が変わった場合と、`PlayEntranceAnimation()` を呼んだ場合 |
+| 長さ | `AnimationDuration`（既定 450 ms）、`AnimationEasing`（既定 `CubicOut`） |
+
+### 8.3 更新アニメーション
+
+| 変化 | 動き |
+|---|---|
+| 値の変化（点数が同じ） | 各点を旧値から新値へ補間。軸範囲も同時に補間するので、目盛りごと滑らかに伸び縮みする |
+| 末尾への追加 | 新しい点は直前の点の位置から現れ、X 方向に全体が流れる |
+| 先頭の削除 | 左端からプロット領域の外へ流れ出る |
+| 途中の追加・削除 | 追加は隣の点の補間位置から、削除は隣へ吸収されるように縮む。棒は高さ 0 から / 0 へ |
+| シリーズの表示切り替え | 線はフェード、積み上げの段は高さ 0 へ縮み、他の段が詰める |
+| 割合（100% 積み上げ・円） | 割合を補間（角度の合計は常に 360°） |
+
+アニメーションの途中で次の変更が来た場合は、**その時点の表示状態から**次の目標へ補間する（一度最終状態へ飛ばさない）。template-maui の `ChartDrawing` と同じ考え方。  
+
+### 8.4 選択・強調
+
+| 動き | 長さ |
+|---|---|
+| 選択以外の要素を `DimmedOpacity` まで薄くする | 150 ms 固定 |
+| 選択スライスを `ExplodeOffset` だけ外へずらす | 150 ms 固定 |
+| 選択点のマーカーを表示する（0.6 → 1.0 倍） | 150 ms 固定 |
+| トラックボールの縦線を隣の点へ移す | 移動なし（指に即追従。遅れると指とずれて見えるため） |
+
+### 8.5 モーション軽減
+
+| 項目 | 仕様 |
+|---|---|
+| OS 設定の尊重 | Android の「アニメーション再生時間スケール」（`Settings.Global.ANIMATOR_DURATION_SCALE`）を読み、`0` ならすべて無効、それ以外は長さに掛ける（`.android.cs`） |
+| アプリ全体の設定 | `ClamChartSettings.AnimationScale`（`double`、既定 `1`）、`ClamChartSettings.RespectSystemAnimationScale`（`bool`、既定 `true`） |
+| 個別の無効化 | `AnimationDuration = 0` |
+
+### 8.6 実装方針
+
+| 項目 | 方針 |
+|---|---|
+| 駆動 | MAUI の `this.Animate(name, …)` を View ごとに 1 本（`ClamChartViewData` などの名前定数）。ClamGauge / ClamCalendar と同じ。`System.Timers.Timer` や独自スレッドは使わない |
+| 補間 | 進捗 0〜1 を受け取り、前後のスナップショット（`double[]`）を線形補間した表示用スナップショットを作る。配列は使い回す |
+| ずらし | 要素ごとの進捗 `ElementProgress(t, index, count)`（template-maui の `ChartDrawing` から移植） |
+| 常時アニメーション | `repeat` 付きの `Animate`。`IsVisible = false`、`Unloaded`、Window の `Stopped`（バックグラウンド）で止め、復帰で再開 |
+| 終了処理 | Handler の切り離し・破棄で `AbortAnimation` し、表示状態を最終状態に揃える |
+
+---
 
 ## 9. インタラクション（リアクション）
 
-（執筆中）
+### 9.1 タッチの基本方針
+
+スマートフォンの操作として迷わないよう、**タップ**と**長押し→ドラッグ**の 2 つに絞る。既定ではどちらも無効で、プロパティを設定したものだけが反応する。  
+
+`TouchMode`（`ChartTouchMode`）でタッチの受け方を決める。  
+
+| 値 | 動作 |
+|---|---|
+| `Auto`（既定） | 設定内容から自動で決める（下表） |
+| `Interactive` | 領域内のタッチをすべて受ける |
+| `HitOnly` | データ要素・凡例の上で始まったタッチだけ受け、それ以外は下のコントロールへ通す |
+| `PassThrough` | タッチをまったく受けない（下のコントロールへ通す） |
+
+| `Auto` の判定 | 結果 |
+|---|---|
+| `TrackballMode` が `None` 以外、または `ChartTapped` / `ChartTappedCommand` が設定されている | `Interactive` |
+| `SelectionMode` が `None` 以外、`ItemTapped` / `ItemTappedCommand`、`LegendToggleEnabled` のいずれか | `HitOnly` |
+| どれもない | `PassThrough` |
+
+何も設定しなければチャートはタッチを一切奪わない。カードの背景や画像の上に重ねても、下のコントロールのタップやスクロールがそのまま動く（P8）。  
+
+### 9.2 タップ
+
+| 項目 | 仕様 |
+|---|---|
+| ヒット領域 | 見た目より広く取る。線の点は X 方向にカテゴリ幅の半分、棒はカテゴリの縦一列、マーカーは半径 22 DIP、スライスは隙間を含む扇形 |
+| 結果 | `ItemTapped`（要素）または `ChartTapped`（それ以外）。`SelectionMode` が有効なら選択を切り替え、同じ要素の再タップで解除 |
+| 押下の表示 | `ChartTapped` でチャート全体がボタンになる場合（`Minimal` 密度のウィジェットなど）だけ、押している間 `PressedOverlayColor` を薄く重ねる |
+| 触覚 | `HapticFeedbackEnabled`（既定 `false`、P2）で選択時に軽い振動 |
+| 判定 | 押してから 6 DIP 以上動いたらタップではない（スクロールとして親へ渡す） |
+
+### 9.3 トラックボール
+
+指の X 位置にある値を読むための操作。`TrackballMode` で開始方法を選ぶ。  
+
+| 値 | 開始 | 向いている場所 |
+|---|---|---|
+| `None` | — | 既定 |
+| `LongPress` | 500 ms 押し続ける（その間 8 DIP 以内）。開始時に親のスクロールを止める | `ScrollView` / `CollectionView` の中。縦スクロールを奪わない |
+| `Touch` | 押した直後。最初の動きが縦向き（縦横比 1.25 以上）なら親のスクロールへ譲る | チャート主体の画面 |
+
+| 項目 | 仕様 |
+|---|---|
+| 表示 | 縦のヘアライン＋各シリーズの点にマーカー＋（`TooltipVisible` なら）ツールチップ |
+| 吸着 | 最も近い X に吸着する。棒はカテゴリの中央 |
+| ViewModel への通知 | `TrackedItem` / `TrackedIndex`（OneWayToSource）、`TrackingStarted` / `TrackingChanged` / `TrackingEnded` |
+| 終了 | 指を離す、2 本目の指が触れる、画面外へ出る、`CancelInteraction()` |
+| 触覚 | `HapticFeedbackEnabled` のとき、吸着先が変わるたびに軽い「カチッ」（P2） |
+
+ツールチップを描かずに `TrackedItem` だけを使えば、値の表示はアプリ側の任意の UI（チャート上部の大きな数字など）に任せられる。株価アプリでよくある「なぞると上の数字が変わる」表示がこれで作れる。  
+
+### 9.4 トラックボールの同期
+
+`TrackingGroup` に同じ名前を付けたチャートは、1 つでトラックボールを動かすと他のチャートにも同じ位置の縦線とマーカーを表示する（Grafana の共有クロスヘア、P2）。  
+
+| 項目 | 仕様 |
+|---|---|
+| 位置の合わせ方 | 数値・日時軸は X の値、カテゴリ軸はカテゴリの名前 |
+| 範囲 | 同じ Window 内のみ。登録は弱参照で、破棄された View を保持しない |
+| 用途 | 尺度の異なる指標（CPU とメモリ、売上と客数）を 2 軸チャートにせず、縦に並べて読み合わせる |
+
+### 9.5 凡例
+
+`LegendToggleEnabled` のとき、凡例タップでシリーズの表示を切り替える（フェードで出し入れ）。最後の 1 本は隠せない。`LegendItemTapped` で `Handled = true` にすれば、切り替えずにアプリ側で処理できる。  
+
+### 9.6 採用しない操作
+
+| 操作 | 理由・代替 |
+|---|---|
+| ピンチズーム・パン | スクロールと競合する。表示範囲は軸の `Minimum` / `Maximum` をバインドで切り替える |
+| ダブルタップ | タップの反応が遅れる |
+| 範囲選択のドラッグ | 用途が限られる |
+| 円の回転 | 読み取りに寄与しない |
+| ホバー | タッチ端末にない |
+| マルチタッチ | 2 本目の指が触れたら操作を取り消す（Clam 共通） |
+
+### 9.7 親コントロールとの共存
+
+| 置き場所 | 推奨 |
+|---|---|
+| 縦の `ScrollView` / `CollectionView` | `TrackballMode = LongPress`。タップ以外は親のスクロールが優先される |
+| 横の `ScrollView`（`CategoryWidth` で横長にした場合） | `LongPress`。`Touch` は横スクロールと競合するため使わない |
+| `CarouselView` / スワイプで切り替わるページ | `LongPress`、または操作なし（`PassThrough`） |
+| 画像・地図の上 | 操作なし（`PassThrough`）、または `HitOnly` |
+
+親のスクロールの停止・再開は ClamGrid / ClamCalendar と同じプラットフォームブリッジ（`RequestDisallowInterceptTouchEvent`）で行う。  
+
+### 9.8 アクセシビリティ
+
+| 項目 | 仕様 | P |
+|---|---|:-:|
+| 自動の説明文 | `SemanticProperties.Description` が未設定なら要約を自動生成する（例: 「売上、12 か月、最大 120（3 月）、最小 40（8 月）」）。`AutomationSummaryFormatter` で差し替え可能 | 2 |
+| 装飾として重ねる場合 | `AutomationProperties.IsInAccessibleTree = false` を推奨（説明は前景のラベルが持つ） | 1 |
+| 色だけに頼らない | 凡例（2 本以上）、状態アイコン、破線などを併用する | 1 |
+
+---
 
 ## 10. エフェクト
 
-（執筆中）
+既定で有効なのは、可読性を上げる控えめなものだけとする。目を引くための装飾はオプトインで、密度 `Minimal` や点数が多い場合は自動で無効にする。  
+
+| エフェクト | 既定 | 有効にするプロパティ | 描画コスト | P | 備考 |
+|---|---|---|:-:|:-:|---|
+| 棒の角丸（データ側のみ） | 有効 | `CornerRadius` | 低 | 1 | 4 DIP |
+| 要素間の隙間・マーカーのくり抜き | 有効 | `SegmentGap`, `MarkerKnockout` | 低 | 1 | 背景色で塗らず実際に透明にする |
+| 面の淡い塗り | 有効（面のみ） | `FillOpacity` | 低 | 1 | 10% |
+| 面のグラデーション | 無効 | `FillMode = Gradient` | 低 | 1 | 上から下へ透明に |
+| スムーズな線 | 無効 | `Interpolation = Smooth` | 低 | 1 | 単調補間でデータを超えて膨らまない |
+| 選択時の減光 | 選択有効時 | `SelectionMode` | 低 | 1 | 強調色で塗らない |
+| スライスの切り離し | 選択有効時 | `ExplodeOffset` | 低 | 1 | 6 DIP |
+| 閾値による塗り分け | 無効 | `ThresholdsMode = ColorSeries` | 低 | 2 | 閾値の位置に「硬い」色の境目を持つ線形グラデーションのシェーダーで線を塗る。線を分割しないので安い |
+| 線の光彩（グロー） | 無効 | `LineSeries.GlowRadius` | 中〜高 | 2 | ぼかしフィルター。template-maui の `GlowRing` 相当。`Minimal` と 500 点超では無効 |
+| ライブ表示の波紋 | 無効 | `LiveIndicatorVisible` | 低（常時再描画） | 2 | 最後の点から波紋（1800 ms 周期）。template-maui の `PulseRingDrawing` 相当 |
+| スケルトンのきらめき | `IsBusy` 時 | `IsBusy` | 低（常時再描画） | 2 | チャートの形（線・棒・リング）を模した淡いプレースホルダー |
+| 警告の脈動 | 無効 | `AlertAnimationEnabled` | 低（常時再描画） | 2 | 閾値 Critical のとき、状態帯の不透明度をゆっくり上下。template-maui の `TimerDial` の警告表示相当 |
+| 端のフェード | `TrendPlacement = Background` 時 | — | 低 | 2 | 背景に敷いた傾向線が文字側で消えるようにマスクする |
+
+| 採用しないエフェクト | 理由 |
+|---|---|
+| 3D・ベベル・反射・光沢 | 可読性を下げ、主張が強い |
+| 棒や円の強いドロップシャドウ | 重ねたときに下のコントロールと干渉する |
+| パーティクル・紙吹雪 | ダッシュボードの用途に合わない（template-maui の `WheelDrawing` のような演出は対象外） |
+| 動くグラデーション・ネオン | 常時再描画で電池を消費し、主張が強い |
+
+---
 
 ## 11. ウィジェット利用
 
-（執筆中）
+チャート主体の画面だけでなく、他の画面の一部として「ウィジェット」的に置けることを ClamChart の独自性とする。そのための仕組みを 6 つ用意する。  
+
+### 11.1 密度（Density）
+
+`Density = Auto` のとき、View のサイズから表示の詳細度を決める。  
+
+| 密度 | 条件（既定） | 表示 |
+|---|---|---|
+| `Full` | 幅 320 DIP 以上かつ高さ 200 DIP 以上 | 軸・凡例・データラベル・トラックボールのすべて |
+| `Compact` | 幅 160〜320 または高さ 96〜200 DIP | 軸ラベルを最小限に、凡例なし（[7.1.7](#717-密度による変化)） |
+| `Minimal` | 幅 160 DIP 未満または高さ 96 DIP 未満 | 軸・凡例なし。データだけを描き、チャート全体が 1 つのタップ対象 |
+
+境界は `ChartStyle.CompactSize` / `MinimalSize` で変えられる。目安となるダッシュボードのタイルサイズと見え方:  
+
+| タイル | おおよそのサイズ | `ClamChartView` | `ClamPieChartView` | `ClamRadialBarView` |
+|---|---|---|---|---|
+| S（1×1） | 160 × 96 | `Minimal`: 線だけ（スパークライン相当） | 中央値のみ | リングのみ |
+| M（2×1） | 340 × 160 | `Compact`: Y 軸 3 本、X は両端 | ドーナツ＋中央値 | リング＋中央値 |
+| L（2×2） | 340 × 340 | `Full` | ドーナツ＋凡例 | リング＋凡例 |
+
+### 11.2 リスト・グリッドの中で使う
+
+| 項目 | 方針 |
+|---|---|
+| 1 行あたりの重さ | `SKCanvasView` 1 つのみ。子 View・ジェスチャー認識器を作らない |
+| 描画時の割り当て | スパークラインは描画 1 回あたりの割り当てゼロ（`SKPath` / `SKPaint` を使い回し、値は `IReadOnlyList<double>` を直接読む） |
+| 行の再利用 | 登場アニメーションなし（スパークラインの既定）。`BindingContext` が変わっても動かない |
+| 尺度の統一 | 行どうしを比べる場合は `Minimum` / `Maximum` に同じ値を渡す |
+| タッチ | 既定で `PassThrough`。行のタップは `CollectionView` の選択がそのまま動く |
+
+### 11.3 重ね合わせ（オーバーレイ）
+
+ダッシュボードでは、チャートを**他のコントロールの背景や上に重ねて**使う場面がある。ClamChart は次の「邪魔をしない」約束を守る。  
+
+| 約束 | 仕組み |
+|---|---|
+| 背景を塗らない | `BackgroundColor` 未設定なら透明。プロット領域も塗らない |
+| 境界の外に描かない | 描画は View の境界でクリップする。端のマーカーは外へはみ出さず内側に寄せる |
+| 空のときは何も描かない | `EmptyText` の既定は `null` |
+| サイズを主張しない | 内容から大きさを要求しない（`HeightRequest` / レイアウトに従う）。例外は `ClamBarGaugeView.AutoHeight` と `CategoryWidth` のみで、いずれも明示的な機能 |
+| タッチを奪わない | `TouchMode = Auto` は操作を設定しない限り `PassThrough`。`HitOnly` ならデータ要素以外のタッチは下へ通す |
+| 静かにしている | アイドル時は再描画しない。常時アニメーションは既定で無効 |
+| 前景の文字を避ける | `ContentPadding` で前景のラベルがある側を空ける（例: 上半分を値の表示に空け、下半分にだけ描く） |
+| 色を抑える | オーバーレイ用プリセット（`OverlayLight` / `OverlayDark`）はグリッド・軸線を消し、塗りをさらに淡くし、文字に縁取りを付ける |
+| 端まで描ける | `EdgeToEdge = true` でプロット領域を View の端まで広げ、カードの角まで塗りが届くようにする |
+| 読み上げを邪魔しない | 装飾として重ねる場合は `AutomationProperties.IsInAccessibleTree = false` |
+
+**パターン A: カードの背景に傾向を敷く**  
+
+```xml
+<Border StrokeShape="RoundRectangle 12" HeightRequest="120">
+    <Border.GestureRecognizers>
+        <TapGestureRecognizer Command="{Binding OpenSalesCommand}" />
+    </Border.GestureRecognizers>
+    <Grid>
+        <!-- 背景: 端まで、下半分だけ、タッチは下の Border へ通す -->
+        <clam:ClamSparklineView Kind="Area"
+                                Values="{Binding SalesTrend}"
+                                EdgeToEdge="True"
+                                ContentPadding="0,56,0,0"
+                                ChartStyle="{x:Static clam:ChartStyles.OverlayLight}"
+                                AutomationProperties.IsInAccessibleTree="False" />
+        <!-- 前景: MAUI のラベル -->
+        <VerticalStackLayout Padding="16,12">
+            <Label Text="今月の売上" Style="{StaticResource CaptionLabel}" />
+            <Label Text="{Binding SalesText}" Style="{StaticResource HeroLabel}" />
+        </VerticalStackLayout>
+    </Grid>
+</Border>
+```
+
+**パターン B: 地図・カメラ映像・写真の上に重ねる**  
+
+| 設定 | 理由 |
+|---|---|
+| `ChartStyle = OverlayDark`（暗い背景） / `OverlayLight`（明るい背景） | 背景の明るさに対して線と文字の視認性を確保 |
+| `TouchMode = PassThrough`（または未設定） | 地図のパン・ピンチを妨げない |
+| `ContentPadding` | 地図の操作ボタン・ステータスバーなど、下のコントロールの UI を避ける |
+| `Opacity` | MAUI の `Opacity` でさらに控えめにできる |
+
+**パターン C: 他の Clam コントロールと重ねる**  
+
+ClamGauge の中央の下にスパークラインを置く、ClamCalendar の日付セルの上に… といった重ね方も、上記の約束により下のコントロールの描画・操作を妨げない。  
+
+### 11.4 状態表示（読み込み中・空データ）
+
+| 状態 | 表示 | P |
+|---|---|:-:|
+| 読み込み中（`IsBusy = true`） | チャートの形を模したスケルトン（線・棒・リング）を淡く描き、ゆっくりきらめかせる | 2 |
+| 空データ | `EmptyText` を設定した場合のみ中央に表示。既定は何も描かない | 1 |
+| エラー | ライブラリでは扱わない。`EmptyText` にエラー文言をバインドするか、アプリ側の UI で表示する | — |
+
+### 11.5 View を使わない描画とスナップショット
+
+| API | 用途 | スレッド | P |
+|---|---|---|:-:|
+| `ChartDrawing.DrawSparkline(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in SparklineDrawOptions options)` | 任意の Skia キャンバス（自前の `SKCanvasView`、ClamGrid のセルなど）にスパークラインを描く | 任意（MAUI のオブジェクトに触れない） | 2 |
+| `ChartDrawing.DrawRadialBar(…)` / `DrawBarGauge(…)` | 同上 | 任意 | 3 |
+| `ChartViewBase.RenderToImage(Size size, float scale)` | View と同じ見た目を `SKImage` に描く。Handler がなくてもよい | UI スレッド | 2 |
+| `ChartViewBase.SaveAsPngAsync(Stream stream, Size size, float scale)` | PNG 出力（共有・レポート） | UI スレッド | 2 |
+
+想定する用途:  
+
+- Android のホーム画面ウィジェット（`RemoteViews` の `ImageView` に画像として渡す）。`ChartDrawing` は MAUI に依存しないため、`WorkManager` などのバックグラウンド更新からも描ける。
+- 通知の大きな画像、共有シートに渡す画像、PDF レポートへの貼り付け。
+
+### 11.6 ClamGrid との連携（将来）
+
+ClamGrid の列にセル描画のフック（例: `GridColumn.CellPainter`）が追加されれば、`ChartDrawing.DrawSparkline` を呼ぶだけで「スパークライン列」を View なしで実現できる。ClamGrid 側の変更が必要なため、フェーズ 3 で別途検討する。  
+
+### 11.7 ダッシュボードの構成例
+
+```xml
+<ScrollView>
+    <Grid ColumnDefinitions="*,*" RowDefinitions="120,120,240,Auto" ColumnSpacing="12" RowSpacing="12" Padding="16">
+        <clam:ClamStatView Title="売上" Value="{Binding Sales}" Unit="円"
+                           PreviousValue="{Binding LastMonthSales}" DeltaCaption="前月比"
+                           TrendValues="{Binding SalesTrend}"
+                           ChartTappedCommand="{Binding OpenSalesCommand}" />
+        <clam:ClamStatView Grid.Column="1" Title="エラー率" Value="{Binding ErrorRate}" Unit="%"
+                           IncreaseIsGood="False" ColorMode="Indicator"
+                           Thresholds="{Binding ErrorThresholds}" />
+        <clam:ClamRadialBarView Grid.Row="1" ItemsSource="{Binding Goals}" CenterText="{Binding GoalText}" />
+        <clam:ClamPieChartView Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Channels}" CenterLabel="合計" />
+        <clam:ClamChartView Grid.Row="2" Grid.ColumnSpan="2" TrackballMode="LongPress" TrackingGroup="ops">
+            <clam:AreaSeries Title="リクエスト" ItemsSource="{Binding Requests}" />
+        </clam:ClamChartView>
+        <clam:ClamBarGaugeView Grid.Row="3" Grid.ColumnSpan="2" ItemsSource="{Binding Storage}" ValueMode="ValueOfMaximum" />
+    </Grid>
+</ScrollView>
+```
+
+上から「KPI（2 枚）→ 進捗と構成比 → 推移 → 内訳」の順に、要約から詳細へ並べる。タイルの大きさに応じて各チャートが密度を自動で選ぶ。  
 
 ## 12. パフォーマンスと品質
 
