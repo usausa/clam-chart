@@ -1,0 +1,163 @@
+{
+  "AttributesTolerance": 1,
+  "KeepFirstAttributeOnSameLine": true,
+  "MaxAttributeCharactersPerLine": 0,
+  "MaxAttributesPerLine": 4,
+  "NewlineExemptionElements": "RadialGradientBrush, GradientStop, LinearGradientBrush, ScaleTransform, SkewTransform, RotateTransform, TranslateTransform, Trigger, Condition, Setter, On",
+  "SeparateByGroups": true,
+  "AttributeIndentation": 0,
+  "AttributeIndentationStyle": 1,
+  "RemoveDesignTimeReferences": false,
+  "EnableAttributeReordering": true,
+  "AttributeOrderingRuleGroups": [
+    "xmlns",
+    "xmlns:x",
+    "xmlns:maui",
+    "xmlns:ios",
+    "xmlns:d",
+    "xmlns:mc",
+
+    "xmlns:s",
+    "xmlns:navigation",
+
+    "xmlns:mcs",
+    "xmlns:mct",
+    "xmlns:toolkit",
+    "xmlns:scanner",
+
+    "xmlns:app",
+    "xmlns:local",
+    "xmlns:dialog",
+    "xmlns:core",
+    "xmlns:input",
+    "xmlns:grid",
+    "xmlns:resources",
+    "xmlns:shell",
+    "xmlns:animationss",
+    "xmlns:behaviors",
+    "xmlns:controls",
+    "xmlns:converters",
+    "xmlns:codes",
+    "xmlns:effects",
+    "xmlns:fonts",
+    "xmlns:graphics",
+    "xmlns:helpers",
+    "xmlns:markup",
+    "xmlns:models",
+    "xmlns:module",
+
+    "xmlns:*",
+
+    "mc:Ignorable, d:IsDataSource, d:LayoutOverrides, d:IsStaticText",
+
+    "x:TypeArguments",
+    "x:Class",
+    "x:Type",
+    "x:Key, Key",
+    "x:Name, Name",
+    "x:Uid, Uid",
+
+    "s:Behavior.Key",
+    "s:ValidationProperty.*",
+
+    "TargetType, BasedOn",
+
+    "Class",
+    "ClassId",
+
+    "TargetName",
+    "Property",
+
+    "Grid.Row, Grid.RowSpan, Grid.Column, Grid.ColumnSpan",
+    "Canvas.Left, Canvas.Top, Canvas.Right, Canvas.Bottom",
+    "AbsoluteLayout.LayoutBounds, AbsoluteLayout.LayoutFlags",
+
+    "x:DataType",
+    "s:BindingContextResolver.*",
+    "BindingContext",
+
+    "Style",
+    "StyleClass",
+
+    "shell:ShellProperty.Title",
+    "shell:ShellProperty.HeaderVisible",
+    "shell:ShellProperty.FunctionVisible",
+    "shell:ShellProperty.Function1Text",
+    "shell:ShellProperty.Function2Text",
+    "shell:ShellProperty.Function3Text",
+    "shell:ShellProperty.Function4Text",
+    "shell:ShellProperty.Function1Enabled",
+    "shell:ShellProperty.Function2Enabled",
+    "shell:ShellProperty.Function3Enabled",
+    "shell:ShellProperty.Function4Enabled",
+
+    "shell:ShellProperty.BusyOverlay",
+
+    "RowDefinitions",
+    "ColumnDefinitions",
+    "Width, Height, MinWidth, MinHeight, MaxWidth, MaxHeight, WidthRequest, HeightRequest",
+
+    "ios:*",
+    "mcs:*",
+    "behaviors:*",
+    "s:*",
+    "effects:*",
+
+    "Platform",
+
+    "Orientation",
+    "Margin, Padding",
+    "HorizontalTextAlignment, VerticalTextAlignment, HorizontalContentAlignment, VerticalContentAlignment, Panel.ZIndex",
+
+    "ItemsSource",
+    "Source",
+    "PageSource, PageIndex, Offset", 
+
+    "Command, CommandParameter",
+
+    "IsEnabled",
+    "IsVisible",
+
+    "Value",
+    "Minimum, Maximum",
+    "StartPoint, EndPoint",
+    "Progress",
+
+    "Text",
+
+    "FontFamily, FontSize, FontAttributes",
+    "Color, TextColor, BackgroundColor",
+
+    "Storyboard.*, From, To, Duration",
+
+    "KeyCode",
+
+    "Keyboard",
+
+    "*",
+    "*:*",
+
+    "TrueValue",
+    "FalseValue",
+    "HandleEmptyString",
+    "NullValue",
+    "NonNullValue"
+  ],
+  "FirstLineAttributes": "",
+  "OrderAttributesByName": true,
+  "PutEndingBracketOnNewLine": false,
+  "RemoveEndingTagOfEmptyElement": true,
+  "SpaceBeforeClosingSlash": true,
+  "RootElementLineBreakRule": 0,
+  "ReorderVSM": 1,
+  "ReorderGridChildren": false,
+  "ReorderCanvasChildren": false,
+  "ReorderSetters": 0,
+  "FormatMarkupExtension": true,
+  "NoNewLineMarkupExtensions": "x:Bind, x:Binding, Binding",
+  "ThicknessSeparator": 2,
+  "ThicknessAttributes": "Margin, Padding, BorderThickness, ThumbnailClipMargin",
+  "FormatOnSave": true,
+  "CommentPadding": 1,
+  "IndentSize": 4
+}

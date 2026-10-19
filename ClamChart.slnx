@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/Example/">
+  </Folder>
+  <Folder Name="/Library/">
+  </Folder>
+  <Folder Name="/Tests/">
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="Analyzers.ruleset" />
+    <File Path="ClamChart.sln.DotSettings" />
+    <File Path="CodeCoverage.runsettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+    <File Path="Settings.XamlStyler" />
+  </Folder>
+</Solution>
