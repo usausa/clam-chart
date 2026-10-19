@@ -6,6 +6,7 @@
 | 対象 | ClamChart 0.x（初回リリースまでの設計） |
 | 作成日 | 2026-10-19 |
 | 前提 | .NET 10 / .NET MAUI 10.0.110 / SkiaSharp 4.153.1 / SkiaExtension 1.2.0、Android 優先（API 30 以上） |
+| 実装プラン | [PLAN.md](PLAN.md)（チェックリスト） |
 
 本書は Clam シリーズ（ClamCalendar / ClamGrid / ClamGauge）の新ライブラリ **ClamChart** について、作成するチャート・プロパティ・アニメーション・インタラクション・差別化方針を定める仕様書である。  
 API の命名・構成は既存の Clam シリーズに揃え、描画は template-maui の自前描画（GraphicsView / Drawing フレームワーク）ではなく **SkiaSharp の `SKCanvasView` を継承したコントロール**として実装する。Grafana 風のダッシュボード表現は template-avalonia-linux の実装も参考にする。  
