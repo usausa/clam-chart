@@ -858,8 +858,8 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
                 <clam:ClamSparklineView Grid.Column="1"
                                         HeightRequest="28"
                                         Values="{Binding Last30Days}"
-                                        Minimum="{Binding Source={x:Reference Root}, Path=BindingContext.SalesMinimum}"
-                                        Maximum="{Binding Source={x:Reference Root}, Path=BindingContext.SalesMaximum}" />
+                                        Minimum="{Binding ScaleMinimum}"
+                                        Maximum="{Binding ScaleMaximum}" />
                 <Label Grid.Column="2" Text="{Binding Total, StringFormat='{0:N0}'}" />
             </Grid>
         </DataTemplate>
@@ -887,9 +887,121 @@ X/Y 軸を持つチャートを 1 つのコントロールで描く。シリー�
 
 スパークラインの既定値は一覧での利用に合わせ、`EntranceAnimation = None`（行の再利用のたびに動かない）、`Density = Minimal`（固定）とする。値の更新アニメーションは有効のままにする。  
 
-### 7.4 以降
+### 7.4 `ClamStatView`（KPI タイル、フェーズ 2）
 
-（執筆中）
+#### 7.4.1 概要
+
+ダッシュボードの「数値カード」を 1 キャンバスで描く。Grafana の Stat パネルに相当し、ラベル・値・単位・差分・傾向（スパークライン）・状態を持つ。値の文字は領域に合わせて自動で縮小するため、タイルの大きさが変わってもレイアウトが崩れない。  
+
+```
+┌────────────────────────────┐
+│ 今月の売上                  │  ← Title（二次インク、文頭のみ大文字、コロンなし）
+│ 12.9M 円                    │  ← Value + Unit（一次インク、自動縮小、1 画面に 1 つの主役）
+│ ▲ 8.2% 前月比               │  ← Delta（方向 × 増加が良いか で色）+ DeltaCaption
+│ ▁▂▃▂▅▄▆▅▇█                  │  ← Trend（弱い色、最後の区間のみシリーズ色）
+└────────────────────────────┘
+```
+
+#### 7.4.2 プロパティ
+
+| 名前 | 型 | 既定値 | Bindable | 説明 |
+|---|---|---|:-:|---|
+| `Title` | `string?` | `null` | ✓ | ラベル |
+| `Value` | `double` | `0` | ✓ | 値。更新時は旧値から数え上げる（カウントアップ） |
+| `ValueFormat`, `ValueConverter`, `ValueFormatter` | | コンパクト表記 | ✓ / ✓ / | 値の書式 |
+| `Unit` | `string?` | `null` | ✓ | 単位（値の右、小さめ） |
+| `ValueFontSize`, `MinValueFontSize` | `double` | `32`, `16` | ✓ | 値の最大・最小の文字サイズ。幅に収まるまで縮小 |
+| `PreviousValue` | `double?` | `null` | ✓ | 比較対象。指定すると差分を自動計算 |
+| `Delta` | `double?` | `null` | ✓ | 差分を直接指定（`PreviousValue` より優先） |
+| `DeltaMode` | `ChartDeltaMode` | `Percent` | ✓ | `Percent` / `Absolute` |
+| `DeltaFormat` | `string?` | `null` | ✓ | 差分の書式。`null` は符号付き（`+8.2%`） |
+| `DeltaCaption` | `string?` | `null` | ✓ | 比較期間の説明（「前月比」） |
+| `IncreaseIsGood` | `bool` | `true` | ✓ | 増加を良い（緑）とするか。コスト・エラー数などは `false` |
+| `TrendValues` | `IEnumerable<double>?` | `null` | ✓ | 傾向のスパークライン |
+| `TrendKind` | `ChartSparklineKind` | `Area` | ✓ | `Line` / `Area` / `Bar` |
+| `TrendPlacement` | `ChartTrendPlacement` | `Bottom` | ✓ | `Bottom`（下部に帯状） / `Background`（タイル全体の背景に淡く、端まで） / `Right` |
+| `Thresholds` | `IList<ChartThreshold>` | 空 | ✓ | 状態の判定 |
+| `ColorMode` | `ChartStatColorMode` | `None` | ✓ | `None` / `Indicator`（状態アイコン＋左端の細い帯） / `Background`（背景を状態色で淡く塗る） |
+| `Layout` | `ChartStatLayout` | `Auto` | ✓ | `Auto`（縦長・横長で切り替え） / `Vertical` / `Horizontal` |
+
+値の文字にはデータ色・状態色を使わない（インク色のまま）。状態は `ColorMode` のアイコン・帯・背景で伝え、アイコンはフォントに頼らずベクターで描く（✓・▲・●）。  
+
+### 7.5 `ClamBarGaugeView`（バーゲージ、フェーズ 2）
+
+#### 7.5.1 概要
+
+複数項目の「値 / 上限」を横棒で並べる。ストレージ使用率、店舗別の目標達成率、ランキングなど。目標線（ブレット）とセグメント表示（template-maui の `SegmentBar` 相当）に対応する。  
+
+```
+売上目標  東京       ████████████████░░░░  82%
+         大阪       ███████████░░░░░│░░░  58%   ← │ は Target
+         名古屋     ██████░░░░░░░░░░░░░░  31%
+```
+
+#### 7.5.2 プロパティ
+
+| 名前 | 型 | 既定値 | Bindable | 説明 |
+|---|---|---|:-:|---|
+| `ItemsSource`, `ValueAccessors` | | `null` | ✓ | データ。`ChartEntry`（`Label`, `Value`, `Maximum?`, `Target?`, `Color?`）ならキー不要 |
+| `LabelKey`, `ValueKey`, `MaximumKey`, `TargetKey`, `ColorKey` | `string?` | `null` | ✓ | キー |
+| `Minimum`, `Maximum` | `double` | `0`, `100` | ✓ | 全項目共通の範囲（項目の `Maximum` が優先） |
+| `Orientation` | `ChartOrientation` | `Horizontal` | ✓ | `Horizontal`（行） / `Vertical`（列） |
+| `DisplayMode` | `ChartBarGaugeMode` | `Basic` | ✓ | `Basic` / `Gradient`（トラック全体に閾値のグラデーション） / `Segmented`（区切り表示） |
+| `SegmentCount` | `int` | `10` | ✓ | `Segmented` の区切り数。区切りの間は `SegmentGap` |
+| `BarThickness` | `double` | `8` | ✓ | 棒の太さ（DIP） |
+| `ItemSpacing` | `double` | `12` | ✓ | 項目の間隔 |
+| `LabelPosition` | `ChartBarGaugeLabelPosition` | `Top` | ✓ | `Top`（棒の上に名前、右端に値。狭い画面向け） / `Left` / `None` |
+| `ValueVisible`, `ValueMode` | `bool`, `ChartBarGaugeValueMode` | `true`, `Percent` | ✓ | `Value` / `Percent` / `ValueOfMaximum`（`72 / 100`） |
+| `ValueFormat`, `ValueConverter`, `ValueFormatter` | | `null` | ✓ / ✓ / | 値の書式 |
+| `TrackVisible` | `bool` | `true` | ✓ | 未到達部分のトラック（`TrackColor`） |
+| `TargetVisible` | `bool` | `true` | ✓ | 目標がある項目に目標線を描く（一次インクの細線） |
+| `Thresholds` | `IList<ChartThreshold>` | 空 | ✓ | 指定すると棒の色を値（上限に対する割合）で切り替える |
+| `Color` | `Color?` | `null` | ✓ | 全項目共通の色。`null` はパレットの 1 色目。同じ指標の比較なので項目ごとに色を変えない |
+| `SortMode` | `ChartSortMode` | `None` | ✓ | `None` / `Descending` / `Ascending` |
+| `MaxItems` | `int?` | `null` | ✓ | 上位 N 件のみ表示 |
+| `AutoHeight` | `bool` | `true` | ✓ | 項目数から高さを計測する（`StackLayout` に置いたとき行数に合わせて伸びる） |
+
+### 7.6 `ClamRadialBarView`（ラジアルバー、フェーズ 2）
+
+#### 7.6.1 概要
+
+同心円のリングで複数の進捗を表す（アクティビティリング）。目盛りや針を持たない点で ClamGauge と役割を分ける。正方形の小さなタイルに収まるため、ウィジェット向き。  
+
+| ClamGauge | ClamRadialBarView |
+|---|---|
+| 1 つの値を目盛り・針・範囲色で精密に読む計器 | 複数の進捗を一目で比べる |
+| ベゼル・目盛り・ラベルを持つ | リングと中央のテキストのみ |
+
+#### 7.6.2 プロパティ
+
+| 名前 | 型 | 既定値 | Bindable | 説明 |
+|---|---|---|:-:|---|
+| `ItemsSource`, `ValueAccessors` | | `null` | ✓ | データ（`ChartEntry` 可）。先頭が外側のリング |
+| `LabelKey`, `ValueKey`, `MaximumKey`, `ColorKey` | `string?` | `null` | ✓ | キー |
+| `Minimum`, `Maximum` | `double` | `0`, `100` | ✓ | 全項目共通の範囲 |
+| `StartAngle`, `SweepAngle` | `double` | `0`, `360` | ✓ | `SweepAngle = 270` で下が開いたリング |
+| `InnerRadius` | `double` | `0.4` | ✓ | 最も内側のリングの内径（半径に対する割合） |
+| `RingThickness` | `double?` | `null` | ✓ | `null` は項目数と内径から自動 |
+| `RingSpacing` | `double` | `4` | ✓ | リングの間隔 |
+| `CapStyle` | `ChartCapStyle` | `Round` | ✓ | `Round` / `Flat` |
+| `TrackVisible` | `bool` | `true` | ✓ | 未到達部分のトラック |
+| `SegmentCount` | `int` | `0` | ✓ | `0` は連続、1 以上で区切り表示（template-maui の `ActivityDrawing` 相当） |
+| `OverflowMode` | `ChartOverflowMode` | `Clamp` | ✓ | 上限超過: `Clamp` / `Wrap`（2 周目を重ねる） |
+| `CenterText`, `CenterLabel` | `string?` | `null` | ✓ | 中央の主テキストと補足 |
+| `CenterValueMode` | `ChartCenterValueMode` | `None` | ✓ | `Selected` / `Total` などで中央に値を出す |
+| `LegendVisible`, `LegendPosition` | `bool?`, `ChartLegendPosition` | `null`, `Right` | ✓ | `null` は密度 `Full` で表示 |
+| `SelectionMode`, `SelectedItem`, `SelectedIndex` | | `None`, `null`, `-1` | ✓ | リングの選択（他のリングを薄くする） |
+
+### 7.7 将来候補（フェーズ 3 以降）
+
+| コントロール / シリーズ | 概要 | 主なプロパティ案 | 根拠 |
+|---|---|---|---|
+| `ClamRadarChartView` | レーダー（多角形・円グリッド） | `Series`（`RadarSeries`: `ItemsSource`, `ValueKey`, `FillOpacity`）、`CategoryKey`、`Minimum` / `Maximum`、`GridShape`（`Polygon` / `Circle`）、`LevelCount` | 調査で LiveCharts2・Syncfusion が対応。評価項目の比較 |
+| `ClamHeatmapView` | 行列ヒートマップ / カレンダーヒートマップ | `ItemsSource`、`RowKey` / `ColumnKey` / `ValueKey`、`Layout`（`Matrix` / `Calendar`）、`ColorScale`（単色の濃淡、`Minimum` / `Maximum`）、`CellGap` | template-maui の `ChartDrawing`（Heat）。曜日×時間帯、日別活動量。色は単一色相の明→暗 |
+| `BubbleSeries` | バブル | `SizeKey`、`MinBubbleSize` / `MaxBubbleSize` | 散布図の拡張 |
+| `RangeBarSeries` | 最小〜最大の浮いた棒 | `LowKey` / `HighKey` | template-maui の `RangeBar`（天気の最低・最高気温） |
+| `ClamStateTimelineView` | 状態の時間帯表示 | `ItemsSource`（開始・終了・状態）、`StateColors` | template-maui の `KitSleepBand`（睡眠ステージ）、稼働状態 |
+| `ClamTreemapView` | ツリーマップ（squarified） | `ItemsSource`、`ValueKey`、`LabelKey`、`ColorKey` | template-maui の `ColorTreeMapDrawing` |
 
 ## 8. アニメーション
 
