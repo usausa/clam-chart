@@ -3,5 +3,6 @@ namespace ClamChart;
 public enum ChartSortMode
 {
     None,
-    Descending
+    Descending,
+    Ascending
 }

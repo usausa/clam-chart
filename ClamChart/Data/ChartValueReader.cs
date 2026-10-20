@@ -6,6 +6,8 @@ internal sealed class ChartValueReader
     private readonly ChartAccessor? y;
     private readonly ChartAccessor? label;
     private readonly ChartAccessor? color;
+    private readonly ChartAccessor? maximum;
+    private readonly ChartAccessor? target;
     private readonly Func<object, double?>? valueSelector;
     private readonly Func<object, string?>? labelSelector;
 
@@ -15,12 +17,18 @@ internal sealed class ChartValueReader
 
     public bool HasColorSource => color is not null;
 
+    public bool HasMaximumSource => maximum is not null;
+
+    public bool HasTargetSource => target is not null;
+
     public ChartValueReader(ChartValueOptions options)
     {
         x = Resolve(options.Accessors, options.XKey, "X", static kind => kind != ChartValueKind.Color);
         y = Resolve(options.Accessors, options.YKey, "Y", static kind => kind == ChartValueKind.Number);
         label = Resolve(options.Accessors, options.LabelKey, "the label", static kind => kind == ChartValueKind.Text);
         color = Resolve(options.Accessors, options.ColorKey, "the color", static kind => kind == ChartValueKind.Color);
+        maximum = Resolve(options.Accessors, options.MaximumKey, "the maximum", static kind => kind == ChartValueKind.Number);
+        target = Resolve(options.Accessors, options.TargetKey, "the target", static kind => kind == ChartValueKind.Number);
         valueSelector = options.ValueSelector;
         labelSelector = options.LabelSelector;
     }
@@ -141,6 +149,26 @@ internal sealed class ChartValueReader
         }
 
         return color is not null ? color.GetColor(item) : (item as ChartEntry)?.Color;
+    }
+
+    public double ReadMaximum(object? item)
+    {
+        if (item is null)
+        {
+            return Double.NaN;
+        }
+
+        return maximum?.GetNumber(item) ?? (item as ChartEntry)?.Maximum ?? Double.NaN;
+    }
+
+    public double ReadTarget(object? item)
+    {
+        if (item is null)
+        {
+            return Double.NaN;
+        }
+
+        return target?.GetNumber(item) ?? (item as ChartEntry)?.Target ?? Double.NaN;
     }
 
     private static ChartAccessor? Resolve(IChartAccessorProvider? provider, string? key, string role, Func<ChartValueKind, bool> accepts)

@@ -17,6 +17,26 @@ public sealed class ChartProgressTests
     }
 
     [Fact]
+    public void ElementsCanUseAShorterStagger()
+    {
+        // Act & Assert
+        Assert.Equal(0.5, ChartProgress.ForElement(0.4, 0, 3, 0.2), 9);
+        Assert.Equal(0.375, ChartProgress.ForElement(0.4, 1, 3, 0.2), 9);
+        Assert.Equal(0.25, ChartProgress.ForElement(0.4, 2, 3, 0.2), 9);
+        Assert.Equal(0.4, ChartProgress.ForElement(0.4, 0, 1, 0), 9);
+    }
+
+    [Fact]
+    public void StaggerFollowsTheDelayBetweenElements()
+    {
+        // Act & Assert
+        Assert.Equal(80d / 450, ChartProgress.GetStagger(3, 40, 450), 9);
+        Assert.Equal(0.3, ChartProgress.GetStagger(20, 40, 450), 9);
+        Assert.Equal(0, ChartProgress.GetStagger(1, 40, 450));
+        Assert.Equal(0, ChartProgress.GetStagger(3, 40, 0));
+    }
+
+    [Fact]
     public void DelayedProgressStartsLate()
     {
         // Act & Assert

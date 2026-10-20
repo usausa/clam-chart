@@ -15,52 +15,58 @@
              shell:ShellProperty.Function2Enabled="True">
 
     <Grid Style="{StaticResource MenuGrid}"
-          RowDefinitions="*,*,*,*,*,*,*,*,*">
-        <Button Grid.Row="0"
+          RowDefinitions="*,*,*,*,*,*,*,*,*"
+          ColumnDefinitions="*,*">
+        <Button Grid.Row="0" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartLine}"
                 Text="1.Line" />
-        <Button Grid.Row="1"
+        <Button Grid.Row="1" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartBar}"
                 Text="2.Bar" />
-        <Button Grid.Row="2"
+        <Button Grid.Row="2" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartTimeSeries}"
                 Text="3.Time series" />
-        <Button Grid.Row="3"
+        <Button Grid.Row="3" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartDualAxis}"
                 Text="4.Dual axis" />
-        <Button Grid.Row="4"
+        <Button Grid.Row="4" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartPie}"
                 Text="5.Pie" />
-        <Button Grid.Row="5"
+        <Button Grid.Row="5" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartSparkline}"
                 Text="6.Sparkline" />
-        <Button Grid.Row="6"
+        <Button Grid.Row="6" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartStat}"
                 Text="7.Stat" />
-        <Button Grid.Row="7"
+        <Button Grid.Row="7" Grid.Column="0"
+                Style="{StaticResource MenuButton}"
+                Command="{Binding ForwardCommand}"
+                CommandParameter="{x:Static modules:ViewId.ChartBarGauge}"
+                Text="8.Bar gauge" />
+        <Button Grid.Row="8" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartDensity}"
-                Text="8.Density" />
-        <Button Grid.Row="8"
+                Text="9.Density" />
+        <Button Grid.Row="0" Grid.Column="1"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartPerformance}"
-                Text="9.Performance" />
+                Text="10.Performance" />
     </Grid>
 
 </ContentView>

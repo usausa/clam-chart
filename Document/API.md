@@ -2,7 +2,7 @@
 
 ## 📖 ChartViewBase
 
-`ClamChartView`, `ClamPieChartView` and `ClamSparklineView` derive from `ChartViewBase`, which derives from `SKCanvasView`.  
+`ClamChartView`, `ClamPieChartView`, `ClamSparklineView`, `ClamStatView` and `ClamBarGaugeView` derive from `ChartViewBase`, which derives from `SKCanvasView`.  
 Each view draws everything on its own canvas, has no child views and paints no background unless `BackgroundColor` is set.  
 Sizes, thicknesses and font sizes are DIP, and angles are degrees clockwise from 12 o'clock.  
 Invalid values throw when assigned: `ArgumentNullException` for a missing required value and `ArgumentOutOfRangeException` for a value out of range (sizes must be finite and zero or more, values and angles must be finite).  
@@ -84,6 +84,7 @@ A touch that moves 6 DIP or more is not a tap and a second finger cancels the to
 The boundaries are `ChartStyle.CompactSize` and `ChartStyle.MinimalSize`.  
 Explicit settings such as `MaxLabelCount` and `LegendVisible = true` take precedence over the density.  
 A sparkline is always `Minimal`.  
+A bar gauge that measures its own height (`AutoHeight`) decides the density from the width only.  
 
 ## 📈 ClamChartView
 
@@ -435,7 +436,7 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 |---|---|
 | Values | Finite values greater than 0 become slices; negative values are skipped and reported once through `Trace.TraceWarning` |
 | Merged slice | Items over `MaxSlices` (the smallest first) and below `OthersThreshold` become one last slice named `OthersLabel` in `ChartStyle.OtherColor`; a single item is never merged |
-| Order | `None` keeps the data order and `Descending` orders by value, equal values in data order |
+| Order | `None` keeps the data order, and `Descending` and `Ascending` order by value, equal values in data order |
 | Colors | An explicit color (`ColorKey`, `ChartEntry.Color`) first, otherwise the palette in the order of the drawn slices; slices beyond the palette use `OtherColor` with a warning |
 | Placement | The swept sector, hole included, is scaled to the largest size that fits outside the legend; the upper half sits on the bottom edge |
 | Gaps | Parallel gaps of `SliceGap` between neighboring slices, none at the ends of a partial sweep or around a single full slice |
@@ -534,6 +535,64 @@ The value counts up from the shown value when it changes, and counting allocates
 The threshold with the largest `Value` at or below the value applies, and the later one wins a tie.  
 Changes of a notifying list are followed; after changing a threshold in place, call `Invalidate()`.  
 
+## 📶 ClamBarGaugeView
+
+Bars of a value against a maximum for several items, such as storage use, the progress of stores toward their goals or a ranking.  
+The bars are drawn like the Grafana bar gauge: `Basic`, `Gradient` and the LCD-like `Segmented`.  
+With `AutoHeight`, a horizontal gauge measures its height from the rows, so it grows with the items in a `StackLayout`.  
+
+### 🧩 Properties
+
+#### Data
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data; `ChartEntry` items need no keys |
+| `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
+| `ValueKey`, `LabelKey`, `MaximumKey`, `TargetKey`, `ColorKey` | `string?` | `null` | ✓ | Keys of the value, the name, the maximum of the item, the target and the color |
+| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the keys |
+| `LabelSelector` | `Func<object, string?>?` | `null` | | Name of an item from code, used before the keys |
+| `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
+
+#### Shape
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Minimum`, `Maximum` | `double` | `0`, `100` | ✓ | Range of every item, finite values; the maximum of an item comes first |
+| `Orientation` | `ChartOrientation` | `Horizontal` | ✓ | `Horizontal` stacks rows and `Vertical` places columns |
+| `DisplayMode` | `ChartBarGaugeMode` | `Basic` | ✓ | Drawing of the bars |
+| `SegmentWidth` | `double` | `12` | ✓ | Width of a cell in `Segmented`, greater than 0; the count of cells is the bar length divided by it, rounded down |
+| `BarThickness` | `double` | `8` | ✓ | Thickness of the bars, greater than 0 |
+| `ItemSpacing` | `double` | `12` | ✓ | Space between rows or columns, zero or more |
+| `LabelPosition` | `ChartBarGaugeLabelPosition` | `Top` | ✓ | Place of the names |
+| `ValueVisible` | `bool` | `true` | ✓ | Shows the value at the end of each row or above each column |
+| `ValueMode` | `ChartBarGaugeValueMode` | `Percent` | ✓ | Text of the value |
+| `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the numbers in `Value` and `ValueOfMaximum` (see [Formats](#formats)); the default is the compact number |
+| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the numbers from code, used first |
+| `TrackVisible` | `bool` | `true` | ✓ | Draws the part that is not reached in `ChartStyle.TrackColor` |
+| `TargetVisible` | `bool` | `true` | ✓ | Draws a line at the target of the items that have one |
+| `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Colors by the percentage of the maximum; `null` throws `ArgumentNullException` |
+| `Color` | `Color?` | `null` | ✓ | Color of every bar; `null` uses the first palette color |
+| `SortMode` | `ChartSortMode` | `None` | ✓ | Order of the rows; items without a value come last |
+| `MaxItems` | `int?` | `null` | ✓ | Shows only the first items after sorting, zero or more |
+| `AutoHeight` | `bool` | `true` | ✓ | Measures the height from the rows when horizontal and `HeightRequest` is not set |
+
+| Item | Rule |
+|---|---|
+| Rows | Rows follow the item order, sorted by `SortMode` and cut at `MaxItems`. `Top` puts the name 4 DIP above the bar, and `Left` puts the names right-aligned in a column of up to 40% of the width, 8 DIP before the bars; names take room only when some item has one. The bar line is as high as `BarThickness` or the value text, whichever is higher, with the bar in its middle, and the values are right-aligned after the bars |
+| Columns | `Vertical` divides the width evenly, with the value at the top, the name at the bottom and the bar growing upward between them, at most `BarThickness` wide |
+| Ratio | (value − `Minimum`) / (maximum − `Minimum`), where the maximum is the item's, otherwise `Maximum`. Bars are clamped from 0 to 1 and drawn at least 1 DIP long, and `Percent` writes the ratio in `P0` without clamping (`120%`). An item without a value or with an empty range draws neither the bar nor the value |
+| Thresholds | Compared with the percentage of the maximum (`Value = 70` means 70%), so items with different maximums share them; the later one wins a tie |
+| `Basic` | The bar color at 35% with a 2 DIP line at the end |
+| `Gradient` | The threshold colors change halfway between each threshold and the previous one; thresholds above the value are not used and the last color sits at the end of the bar. Without thresholds the bar is one color |
+| `Segmented` | Each cell takes the threshold color at its start. Cells up to the value are lit with a radial gradient from 95% to 55%, and the others are drawn at 18%. Cells are separated by `ChartStyle.SegmentGap` and fill the bar length |
+| Track | `Basic` and `Gradient` draw the track only beyond the bar; in `Segmented` the unlit cells take its place |
+| Target | A 2 DIP line in `PrimaryTextColor`, 3 DIP longer than the bar on each side |
+| Colors | The bar color is the item color (`ColorKey`, `ChartEntry.Color`), then `Color`, then the first palette color, and the threshold color at the value when thresholds are set. The value uses the same color and the name `SecondaryTextColor` |
+| Height | `AutoHeight` measures the rows that are shown plus the padding. The density then depends on the width only, so a gauge with one row keeps its item taps |
+| Taps | A row (name, bar and value) raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; the space between rows raises `ChartTapped` |
+| Animation | The entrance grows the bars from 0 with 40 ms between items (at most 30% of the duration in total) and fades in the values over its last 30%. Updates move the lengths, the positions after sorting and the opacity from the shown state; added rows grow from 0 and removed rows shrink and fade where they were. Frames allocate nothing |
+
 ## 🎨 ChartStyle
 
 `ChartStyle` holds the look of everything except the data, together with the defaults of series widths, opacities and sizes.  
@@ -560,7 +619,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `TooltipBorderColor` | `Color` | `#1A0B0B0B` | `#1AF0EFEC` | Tooltip hairline border |
 | `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `0` | `12`, `0` | Tooltip |
 | `TrackballLineColor` | `Color` | `#898781` | `#898781` | Trackball line |
-| `TrackColor` | `Color?` | `null` | `null` | Reserved for gauge-like charts |
+| `TrackColor` | `Color?` | `null` | `null` | Part of a bar gauge that is not reached; `null` is a neutral gray (black at 7% in light, white at 7% in dark) |
 | `DimmedOpacity` | `double` | `0.35` | `0.35` | Opacity of the elements that are not selected |
 | `PressedOverlayColor` | `Color` | `#0F000000` | `#14FFFFFF` | Cover of a pressed chart |
 | `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Reserved for the loading placeholder |
@@ -572,7 +631,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `AreaFillOpacity` | `double` | `0.1` | `0.1` | Default fill opacity |
 | `BarCornerRadius`, `MaxBarWidth` | `double` | `0`, `24` | `0`, `24` | Default bar corner and width |
 | `MarkerSize`, `MarkerKnockout` | `double` | `8`, `2` | `8`, `2` | Default marker diameter and the transparent ring around it |
-| `SegmentGap` | `double` | `2` | `2` | Gap between stack segments, grouped bars and slices |
+| `SegmentGap` | `double` | `2` | `2` | Gap between stack segments, grouped bars, slices and the cells of a segmented bar gauge |
 | `CompactSize`, `MinimalSize` | `Size` | `320, 200`, `160, 96` | same | Density boundaries: a width or a height at or below a size switches to that density |
 
 ### ChartStyles
@@ -686,7 +745,7 @@ The type of X chooses the automatic axis: text a `CategoryAxis`, dates a `DateTi
 |---|---|---|
 | `ChartPoint` | `X` (`double`), `Y` (`double`) | Point on a numeric X axis |
 | `ChartTimePoint` | `X` (`DateTime`), `Y` (`double`) | Point on a date and time axis |
-| `ChartEntry` | `Label` (`string?`), `Value` (`double`), `Color` (`Color?`, optional) | Named value, such as a slice or a category |
+| `ChartEntry` | `Label` (`string?`), `Value` (`double`), `Color` (`Color?`), `Maximum`, `Target` (`double?`), the last three optional | Named value, such as a slice, a category or a bar gauge item |
 
 They are sealed records, so `TrackedItem` and `SelectedItem` can be bound to typed view model properties.  
 
@@ -836,6 +895,7 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `Interpolate` | Interpolates between the neighbors along X |
 | `ChartSortMode` | `None` | Data order |
 | | `Descending` | Largest first |
+| | `Ascending` | Smallest first |
 | `ChartPieLabelsMode` | `None` | No labels |
 | | `Inside` | Labels inside the slices that fit |
 | `ChartPieLabelContent` | `Percent`, `Value`, `Label`, `LabelAndPercent` | Text of a slice label |
@@ -859,3 +919,12 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `BackgroundGradient` | Gradient of the tile color with text in light or dark ink by its brightness |
 | `ChartStatLayoutMode` | `Auto` | Horizontal when the width is at least 2.5 times the height |
 | | `Vertical`, `Horizontal` | Fixed arrangement |
+| `ChartBarGaugeMode` | `Basic` | Bar color at 35% with a line at the end |
+| | `Gradient` | Gradient of the threshold colors up to the value |
+| | `Segmented` | Cells lit up to the value, like an LCD |
+| `ChartBarGaugeLabelPosition` | `Top` | Name above the bar |
+| | `Left` | Names in a column on the left |
+| | `None` | No names |
+| `ChartBarGaugeValueMode` | `Value` | The value |
+| | `Percent` | Percentage of the maximum |
+| | `ValueOfMaximum` | The value and the maximum (`72 / 100`) |

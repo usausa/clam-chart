@@ -11,6 +11,8 @@ internal sealed class DataSnapshot : IDisposable
     private string?[]? categories;
     private string?[]? labels;
     private Color?[]? colors;
+    private double[]? maximums;
+    private double[]? targets;
 
     public static DataSnapshot Empty { get; } = new(0, ChartXKind.Index, null, null, null, null, null, null);
 
@@ -28,7 +30,7 @@ internal sealed class DataSnapshot : IDisposable
 
     public bool HasColors => colors is not null;
 
-    public DataSnapshot(int count, ChartXKind xKind, double[]? x, double[]? y, object?[]? items, string?[]? categories, string?[]? labels, Color?[]? colors)
+    public DataSnapshot(int count, ChartXKind xKind, double[]? x, double[]? y, object?[]? items, string?[]? categories, string?[]? labels, Color?[]? colors, double[]? maximums = null, double[]? targets = null)
     {
         Count = count;
         XKind = xKind;
@@ -38,6 +40,8 @@ internal sealed class DataSnapshot : IDisposable
         this.categories = categories;
         this.labels = labels;
         this.colors = colors;
+        this.maximums = maximums;
+        this.targets = targets;
     }
 
     public void Dispose()
@@ -49,6 +53,8 @@ internal sealed class DataSnapshot : IDisposable
         Return(ref categories);
         Return(ref labels);
         Return(ref colors);
+        Return(ref maximums);
+        Return(ref targets);
     }
 
     public object? GetItem(int index) => items is null ? Y[index] : items[index];
@@ -92,6 +98,10 @@ internal sealed class DataSnapshot : IDisposable
     public string? GetLabel(int index) => labels?[index];
 
     public Color? GetColor(int index) => colors?[index];
+
+    public double GetMaximum(int index) => maximums is null ? Double.NaN : maximums[index];
+
+    public double GetTarget(int index) => targets is null ? Double.NaN : targets[index];
 
     internal static T[] Rent<T>(int length) => length == 0 ? [] : ArrayPool<T>.Shared.Rent(length);
 

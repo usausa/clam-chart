@@ -308,6 +308,10 @@ internal sealed class PieLayout
         {
             shown.Sort(default(LargerFirst));
         }
+        else if (options.SortMode == ChartSortMode.Ascending)
+        {
+            shown.Sort(default(SmallerFirst));
+        }
 
         var cumulative = 0d;
         for (var k = 0; k < shown.Length; k++)
@@ -473,6 +477,15 @@ internal sealed class PieLayout
         public int Compare(PieCandidate x, PieCandidate y)
         {
             var value = y.Value.CompareTo(x.Value);
+            return value != 0 ? value : x.Index.CompareTo(y.Index);
+        }
+    }
+
+    private readonly struct SmallerFirst : IComparer<PieCandidate>
+    {
+        public int Compare(PieCandidate x, PieCandidate y)
+        {
+            var value = x.Value.CompareTo(y.Value);
             return value != 0 ? value : x.Index.CompareTo(y.Index);
         }
     }

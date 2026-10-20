@@ -383,6 +383,18 @@
         <Setter Property="BackgroundColor" Value="Transparent" />
     </Style>
 
+    <Style x:Key="PanelStack"
+           TargetType="VerticalStackLayout">
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Spacing" Value="8" />
+    </Style>
+
+    <Style x:Key="PanelTitleLabel"
+           TargetType="Label">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryTextColor}, Dark={StaticResource DarkPrimaryTextColor}}" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
     <Style x:Key="TapBorder"
            TargetType="Border">
         <Setter Property="Padding" Value="4" />

@@ -157,6 +157,34 @@ public sealed class DataSnapshotBuilderTests
         Assert.Throws<InvalidOperationException>(() => new ChartValueReader(options with { XKey = "color" }));
         Assert.Throws<InvalidOperationException>(() => new ChartValueReader(options with { LabelKey = "sales" }));
         Assert.Throws<InvalidOperationException>(() => new ChartValueReader(options with { ColorKey = "month" }));
+        Assert.Throws<InvalidOperationException>(() => new ChartValueReader(options with { MaximumKey = "month" }));
+        Assert.Throws<InvalidOperationException>(() => new ChartValueReader(options with { TargetKey = "unknown" }));
+    }
+
+    [Fact]
+    public void MaximumsAndTargetsComeFromEntriesOrKeys()
+    {
+        // Arrange
+        var january = new TestSalesItem { Month = "Jan", Sales = 10, Count = 40, Target = 25 };
+        var february = new TestSalesItem { Month = "Feb", Sales = 20 };
+        var options = new ChartValueOptions { Accessors = TestSalesItem.Accessors, YKey = "sales", MaximumKey = "count", TargetKey = "target" };
+
+        // Act
+        using var entries = Build(new List<ChartEntry> { new("A", 1, Maximum: 5, Target: 3), new("B", 2) });
+        using var items = Build(new[] { january, february }, options);
+        using var plain = Build(new[] { january }, options with { MaximumKey = null, TargetKey = null });
+
+        // Assert
+        Assert.Equal(5, entries.GetMaximum(0));
+        Assert.Equal(3, entries.GetTarget(0));
+        Assert.True(Double.IsNaN(entries.GetMaximum(1)));
+        Assert.True(Double.IsNaN(entries.GetTarget(1)));
+        Assert.Equal(40, items.GetMaximum(0));
+        Assert.Equal(25, items.GetTarget(0));
+        Assert.Equal(0, items.GetMaximum(1));
+        Assert.True(Double.IsNaN(items.GetTarget(1)));
+        Assert.True(Double.IsNaN(plain.GetMaximum(0)));
+        Assert.True(Double.IsNaN(plain.GetTarget(0)));
     }
 
     [Fact]

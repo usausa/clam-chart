@@ -70,7 +70,9 @@ internal static class DataSnapshotBuilder
         var categories = kind == ChartXKind.Category ? DataSnapshot.Rent<string?>(count) : null;
         var labels = (reader.HasLabelSource || entries) ? DataSnapshot.Rent<string?>(count) : null;
         var colors = (reader.HasColorSource || entries) ? DataSnapshot.Rent<Color?>(count) : null;
-        var snapshot = new DataSnapshot(count, kind, x, y, items, categories, labels, colors);
+        var maximums = (reader.HasMaximumSource || entries) ? DataSnapshot.Rent<double>(count) : null;
+        var targets = (reader.HasTargetSource || entries) ? DataSnapshot.Rent<double>(count) : null;
+        var snapshot = new DataSnapshot(count, kind, x, y, items, categories, labels, colors, maximums, targets);
         try
         {
             for (var i = 0; i < count; i++)
@@ -81,6 +83,8 @@ internal static class DataSnapshotBuilder
                 categories?[i] = reader.ReadCategory(item);
                 labels?[i] = reader.ReadLabel(item);
                 colors?[i] = reader.ReadColor(item);
+                maximums?[i] = reader.ReadMaximum(item);
+                targets?[i] = reader.ReadTarget(item);
             }
         }
         catch

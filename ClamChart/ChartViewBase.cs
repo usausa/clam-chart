@@ -69,18 +69,20 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         set => SetValue(EmptyTextProperty, value);
     }
 
-    internal Thickness EffectiveContentPadding =>
-        ContentPadding ?? new Thickness(EffectiveDensity switch
-        {
-            ChartDensity.Full => 8,
-            ChartDensity.Compact => 4,
-            _ => 0
-        });
+    internal Thickness EffectiveContentPadding => ContentPadding ?? GetDensityPadding(EffectiveDensity);
 
     internal virtual int RenderedPointCount => 0;
 
     internal virtual ChartDensity ResolveDensity() =>
         Density == ChartDensity.Auto ? DensityResolver.Resolve(Width, Height, ChartStyle.CompactSize, ChartStyle.MinimalSize) : Density;
+
+    internal static Thickness GetDensityPadding(ChartDensity density) =>
+        new(density switch
+        {
+            ChartDensity.Full => 8,
+            ChartDensity.Compact => 4,
+            _ => 0
+        });
 
     internal ChartViewBase()
     {

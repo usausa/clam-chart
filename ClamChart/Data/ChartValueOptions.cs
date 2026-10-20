@@ -12,6 +12,10 @@ internal sealed record ChartValueOptions
 
     public string? ColorKey { get; init; }
 
+    public string? MaximumKey { get; init; }
+
+    public string? TargetKey { get; init; }
+
     public Func<object, double?>? ValueSelector { get; init; }
 
     public Func<object, string?>? LabelSelector { get; init; }

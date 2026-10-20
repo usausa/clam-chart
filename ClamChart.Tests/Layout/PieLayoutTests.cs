@@ -40,6 +40,17 @@ public sealed class PieLayoutTests
     }
 
     [Fact]
+    public void AscendingSortPutsTheSmallestSliceFirst()
+    {
+        // Act
+        var layout = Layout([30, 10, 50, 10], new PieLayoutOptions { SortMode = ChartSortMode.Ascending });
+
+        // Assert
+        Assert.Equal([1, 3, 0, 2], layout.Slices.Select(static x => x.DataIndex));
+        Assert.Equal(0.1, layout.Slices[0].End, Precision);
+    }
+
+    [Fact]
     public void ValuesThatCannotBeDrawnAreSkipped()
     {
         // Act

@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartBarGaugeView"
+             x:DataType="{x:Type module:ChartBarGaugeViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartBarGaugeViewModel}"
+             shell:ShellProperty.Title="Bar gauge"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Mode"
+             shell:ShellProperty.Function3Text="Sort"
+             shell:ShellProperty.Function4Text="Live"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource ChartStack}">
+            <Border Style="{StaticResource StatBorder}">
+                <VerticalStackLayout Style="{StaticResource PanelStack}">
+                    <Label Style="{StaticResource PanelTitleLabel}"
+                           Text="店舗別の達成率" />
+                    <clam:ClamBarGaugeView ItemsSource="{Binding Stores}"
+                                           ContentPadding="0"
+                                           DisplayMode="{Binding DisplayMode}"
+                                           SortMode="{Binding SortMode}"
+                                           Thresholds="{Binding AchievementThresholds}" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource StatBorder}">
+                <VerticalStackLayout Style="{StaticResource PanelStack}">
+                    <Label Style="{StaticResource PanelTitleLabel}"
+                           Text="ストレージ" />
+                    <clam:ClamBarGaugeView ItemsSource="{Binding Storages}"
+                                           BarThickness="16" ContentPadding="0" DisplayMode="Gradient" LabelPosition="Left"
+                                           Thresholds="{Binding UsageThresholds}"
+                                           ValueMode="ValueOfMaximum" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource StatBorder}">
+                <VerticalStackLayout Style="{StaticResource PanelStack}">
+                    <Label Style="{StaticResource PanelTitleLabel}"
+                           Text="CPU" />
+                    <clam:ClamBarGaugeView ItemsSource="{Binding Servers}"
+                                           BarThickness="16" ContentPadding="0" DisplayMode="Segmented" ItemSpacing="8"
+                                           LabelPosition="Left"
+                                           Thresholds="{Binding LoadThresholds}" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource StatBorder}">
+                <VerticalStackLayout Style="{StaticResource PanelStack}">
+                    <Label Style="{StaticResource PanelTitleLabel}"
+                           Text="月別の売上" />
+                    <clam:ClamBarGaugeView HeightRequest="200"
+                                           Orientation="Vertical"
+                                           ItemsSource="{Binding Months}"
+                                           Color="{AppThemeBinding Light=#3274D9,
+                                                                   Dark=#5794F2}"
+                                           BarThickness="24" ContentPadding="0" ValueMode="Value" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentView>
