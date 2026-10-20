@@ -3,7 +3,7 @@ namespace ClamChart.Tests.Animation;
 using ClamChart.Animation;
 using ClamChart.Tests.Layout;
 
-public sealed class BarGaugeInterpolatorTests
+public sealed class GaugeInterpolatorTests
 {
     private const int Precision = 9;
 
@@ -15,7 +15,7 @@ public sealed class BarGaugeInterpolatorTests
     public void CompleteShowsTheRowsAsTheyAre()
     {
         // Arrange
-        var interpolator = new BarGaugeInterpolator();
+        var interpolator = new GaugeInterpolator<BarGaugeRow>();
 
         // Act
         interpolator.Complete(Layout(50, 80));
@@ -132,7 +132,7 @@ public sealed class BarGaugeInterpolatorTests
     public void TheEntranceGrowsEachRowAfterTheStagger()
     {
         // Arrange
-        var interpolator = new BarGaugeInterpolator();
+        var interpolator = new GaugeInterpolator<BarGaugeRow>();
 
         // Act
         interpolator.BeginEntrance(Layout(100, 100, 100), ChartEntranceAnimation.Auto, 0.2);
@@ -151,8 +151,8 @@ public sealed class BarGaugeInterpolatorTests
     public void RevealAndFadeEntrancesMoveAllRowsTogether()
     {
         // Arrange
-        var reveal = new BarGaugeInterpolator();
-        var fade = new BarGaugeInterpolator();
+        var reveal = new GaugeInterpolator<BarGaugeRow>();
+        var fade = new GaugeInterpolator<BarGaugeRow>();
 
         // Act
         reveal.BeginEntrance(Layout(100, 50), ChartEntranceAnimation.Reveal, 0.2);
@@ -167,18 +167,18 @@ public sealed class BarGaugeInterpolatorTests
         Assert.Equal(0.4, fade.EntranceAlpha, Precision);
     }
 
-    private static BarGaugeInterpolator Linear(BarGaugeLayout layout)
+    private static GaugeInterpolator<BarGaugeRow> Linear(IReadOnlyList<BarGaugeRow> rows)
     {
-        var interpolator = new BarGaugeInterpolator();
-        interpolator.Complete(layout);
+        var interpolator = new GaugeInterpolator<BarGaugeRow>();
+        interpolator.Complete(rows);
         return interpolator;
     }
 
-    private static BarGaugeLayout Layout(params double[] values)
+    private static IReadOnlyList<BarGaugeRow> Layout(params double[] values)
     {
-        var entries = values.Select(static (value, index) => new BarGaugeEntry(index, $"C{index}", value, Double.NaN, Double.NaN, null)).ToArray();
+        var entries = values.Select(static (value, index) => new GaugeEntry(index, $"C{index}", value, Double.NaN, Double.NaN, null)).ToArray();
         var layout = new BarGaugeLayout();
         layout.Update(300, 200, new Thickness(0), new ChartStyle(), Culture, new BarGaugeLayoutOptions(), entries, Measurer);
-        return layout;
+        return layout.Rows;
     }
 }

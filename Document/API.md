@@ -2,7 +2,7 @@
 
 ## 📖 ChartViewBase
 
-`ClamChartView`, `ClamPieChartView`, `ClamSparklineView`, `ClamStatView` and `ClamBarGaugeView` derive from `ChartViewBase`, which derives from `SKCanvasView`.  
+`ClamChartView`, `ClamPieChartView`, `ClamSparklineView`, `ClamStatView`, `ClamBarGaugeView` and `ClamRadialBarView` derive from `ChartViewBase`, which derives from `SKCanvasView`.  
 Each view draws everything on its own canvas, has no child views and paints no background unless `BackgroundColor` is set.  
 Sizes, thicknesses and font sizes are DIP, and angles are degrees clockwise from 12 o'clock.  
 Invalid values throw when assigned: `ArgumentNullException` for a missing required value and `ArgumentOutOfRangeException` for a value out of range (sizes must be finite and zero or more, values and angles must be finite).  
@@ -593,6 +593,87 @@ With `AutoHeight`, a horizontal gauge measures its height from the rows, so it g
 | Taps | A row (name, bar and value) raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; the space between rows raises `ChartTapped` |
 | Animation | The entrance grows the bars from 0 with 40 ms between items (at most 30% of the duration in total) and fades in the values over its last 30%. Updates move the lengths, the positions after sorting and the opacity from the shown state; added rows grow from 0 and removed rows shrink and fade where they were. Frames allocate nothing |
 
+## ⭕ ClamRadialBarView
+
+Concentric rings that compare several progress values, such as activity goals or the load of servers.  
+The rings are drawn like the Grafana gauge: flat ends over a neutral track, in one color, a gradient or segments.  
+The first item is the outermost ring.  
+
+### 🧩 Properties
+
+#### Data
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data; `ChartEntry` items need no keys |
+| `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
+| `ValueKey`, `LabelKey`, `MaximumKey`, `ColorKey` | `string?` | `null` | ✓ | Keys of the value, the name, the maximum of the item and the color |
+| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the keys |
+| `LabelSelector` | `Func<object, string?>?` | `null` | | Name of an item from code, used before the keys |
+| `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
+
+#### Shape
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Minimum`, `Maximum` | `double` | `0`, `100` | ✓ | Range of every ring, finite values; the maximum of an item comes first |
+| `StartAngle`, `SweepAngle` | `double` | `0`, `360` | ✓ | Start and length of the rings; `250` and `220` give the Grafana gauge open at the bottom |
+| `InnerRadius` | `double` | `0.4` | ✓ | Inner edge of the area the automatic thickness fills, as a fraction of the radius, from 0 to 0.95 |
+| `RingThickness` | `double?` | `null` | ✓ | Thickness of each ring, greater than 0; `null` divides the area outside `InnerRadius`, up to 1/6 of the radius |
+| `RingSpacing` | `double` | `4` | ✓ | Space between the rings, zero or more |
+| `CapStyle` | `ChartCapStyle` | `Flat` | ✓ | Ends of the rings and the track |
+| `DisplayMode` | `ChartRadialBarMode` | `Basic` | ✓ | Drawing of the rings |
+| `SegmentCount` | `int` | `20` | ✓ | Cells of a ring in `Segmented`, 1 or more; fewer on short rings |
+| `TrackVisible` | `bool` | `true` | ✓ | Draws the rest of each ring in `ChartStyle.TrackColor` |
+| `OverflowMode` | `ChartOverflowMode` | `Clamp` | ✓ | Values over the maximum |
+| `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Colors by the percentage of the maximum; `null` throws `ArgumentNullException` |
+
+#### Center and legend
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `CenterValueMode` | `ChartCenterValueMode` | `Auto` | ✓ | Value in the middle |
+| `CenterText` | `string?` | `null` | ✓ | Text shown in the middle while no ring is selected, instead of the value |
+| `CenterLabel` | `string?` | `null` | ✓ | Small text under the value while no ring is selected, instead of the name |
+| `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the `Total` value and the legend values (see [Formats](#formats)); the default is the compact number |
+| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the values from code, used first |
+| `LegendVisible` | `bool?` | `null` | ✓ | `null` shows the legend in `Full` density |
+| `LegendPosition` | `ChartLegendPosition` | `Right` | ✓ | Rows at the top or the bottom, or a column on the left or the right |
+| `LegendValueMode` | `ChartLegendValueMode` | `None` | ✓ | Adds the value or the percentage after the names |
+| `LegendItemTappedCommand` | `ICommand?` | `null` | ✓ | Executed after `LegendItemTapped` |
+
+#### Selection
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `SelectionMode` | `ChartSelectionMode` | `None` | ✓ | `Item` selects one ring; `Category` is the same as `Item` |
+| `SelectedItem` | `object?` | `null` | ✓ | Item of the selected ring, TwoWay |
+| `SelectedIndex` | `int` | `-1` | ✓ | Position of the selected ring in the data, TwoWay |
+| `SelectionChangedCommand` | `ICommand?` | `null` | ✓ | Executed after `SelectionChanged` |
+
+### 📣 Events
+
+| Name | Arguments | Description |
+|---|---|---|
+| `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; then, unless handled, the ring is selected when `SelectionMode` is set, or cleared when it is already selected |
+| `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property |
+
+### 📏 Rules
+
+| Item | Rule |
+|---|---|
+| Size | The rings take the largest radius whose arc fits outside the legend. The automatic thickness divides the area between `InnerRadius` and the edge among the rings, up to 1/6 of the radius. Round ends on a partial sweep leave room for the ends |
+| Ratio | (value − `Minimum`) / (maximum − `Minimum`), where the maximum is the item's, otherwise `Maximum`. `Clamp` keeps it from 0 to 1. `Wrap` draws the part over the maximum on top of the first lap in the ring color with 15 less lightness, showing only what is left of the last lap. An item without a value or with an empty range draws only the track |
+| Colors | The item color (`ColorKey`, `ChartEntry.Color`), then the palette in ring order, and the threshold color at the value when thresholds are set; rings beyond the palette use `OtherColor` with a warning |
+| Track | From the end of the value to the end of the sweep, with the same ends, in `TrackColor` or a neutral gray (black at 7% in light, white at 7% in dark) |
+| `Gradient` | As in the Grafana gauge. With thresholds, each threshold color sits at its position around the ring and the ring shows it up to the value. Without thresholds, a darker and a lighter shade of the ring color are turned so that the strongest contrast falls at the value. Round ends get the colors at both ends |
+| `Segmented` | Each cell takes the threshold color at its start and is lit when its start is before the value. Unlit cells use `TrackColor`, otherwise 30% black in light and 20% white in dark. Cells are separated by `ChartStyle.SegmentGap`, at least 3 DIP long, with flat ends; `Wrap` is not used |
+| Center | Fitted inside the innermost ring, up to 32 DIP. `Auto` shows the selected ring, otherwise the outermost one, as a percentage with its name; `Total` shows the sum of the values with `CenterLabel`. The number counts up from 0 during the entrance and from the shown number on updates |
+| Selection | The other rings fade to `DimmedOpacity` over 150 ms; a second tap on the selected ring clears it |
+| Taps | The band of each ring, up to half the spacing, raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; elsewhere `ChartTapped` is raised and the selection is cleared |
+| Animation | The entrance grows the rings from 0 with 40 ms between them (at most 30% of the duration in total). Updates move the lengths, and the radii when rings come and go, from the shown state. Frames allocate nothing |
+| Density | `Full` shows the legend, `Compact` hides it unless `LegendVisible` is `true`, and `Minimal` keeps the rings and the center value with whole-chart taps |
+
 ## 🎨 ChartStyle
 
 `ChartStyle` holds the look of everything except the data, together with the defaults of series widths, opacities and sizes.  
@@ -619,7 +700,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `TooltipBorderColor` | `Color` | `#1A0B0B0B` | `#1AF0EFEC` | Tooltip hairline border |
 | `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `0` | `12`, `0` | Tooltip |
 | `TrackballLineColor` | `Color` | `#898781` | `#898781` | Trackball line |
-| `TrackColor` | `Color?` | `null` | `null` | Part of a bar gauge that is not reached; `null` is a neutral gray (black at 7% in light, white at 7% in dark) |
+| `TrackColor` | `Color?` | `null` | `null` | Part of a bar gauge or a radial bar that is not reached, and unlit radial segments; `null` is a neutral gray (black at 7% in light, white at 7% in dark) |
 | `DimmedOpacity` | `double` | `0.35` | `0.35` | Opacity of the elements that are not selected |
 | `PressedOverlayColor` | `Color` | `#0F000000` | `#14FFFFFF` | Cover of a pressed chart |
 | `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Reserved for the loading placeholder |
@@ -631,7 +712,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `AreaFillOpacity` | `double` | `0.1` | `0.1` | Default fill opacity |
 | `BarCornerRadius`, `MaxBarWidth` | `double` | `0`, `24` | `0`, `24` | Default bar corner and width |
 | `MarkerSize`, `MarkerKnockout` | `double` | `8`, `2` | `8`, `2` | Default marker diameter and the transparent ring around it |
-| `SegmentGap` | `double` | `2` | `2` | Gap between stack segments, grouped bars, slices and the cells of a segmented bar gauge |
+| `SegmentGap` | `double` | `2` | `2` | Gap between stack segments, grouped bars, slices and the cells of segmented gauges |
 | `CompactSize`, `MinimalSize` | `Size` | `320, 200`, `160, 96` | same | Density boundaries: a width or a height at or below a size switches to that density |
 
 ### ChartStyles
@@ -900,9 +981,9 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `Inside` | Labels inside the slices that fit |
 | `ChartPieLabelContent` | `Percent`, `Value`, `Label`, `LabelAndPercent` | Text of a slice label |
 | `ChartLegendValueMode` | `None`, `Value`, `Percent` | Value added to the legend entries of a pie |
-| `ChartCenterValueMode` | `Auto` | The selected slice, otherwise the total or `CenterValue` |
+| `ChartCenterValueMode` | `Auto` | The selected slice or ring, otherwise the total or `CenterValue` of a pie and the outermost ring of a radial bar |
 | | `Total` | Always the total or `CenterValue` |
-| | `Selected` | Only the selected slice, nothing while none is selected |
+| | `Selected` | Only the selected slice or ring, nothing while none is selected |
 | | `None` | Nothing in the center |
 | `ChartSparklineKind` | `Line`, `Area`, `Bar`, `WinLoss` | Shape of a sparkline |
 | `ChartSparklineMarkers` | `None`, `First`, `Last`, `High`, `Low` | Flags of the points with a marker |
@@ -928,3 +1009,10 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartBarGaugeValueMode` | `Value` | The value |
 | | `Percent` | Percentage of the maximum |
 | | `ValueOfMaximum` | The value and the maximum (`72 / 100`) |
+| `ChartRadialBarMode` | `Basic` | One color |
+| | `Gradient` | Gradient of the threshold colors or of shades of the ring color |
+| | `Segmented` | Cells lit before the value |
+| `ChartCapStyle` | `Flat` | Square ends |
+| | `Round` | Round ends |
+| `ChartOverflowMode` | `Clamp` | Stops at the maximum |
+| | `Wrap` | Draws the rest of the value over the first lap in a darker color |

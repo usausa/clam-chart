@@ -19,7 +19,7 @@ internal sealed class BarGaugeLayout
 
     private const string OfMaximumSeparator = " / ";
 
-    private readonly List<BarGaugeEntry> order = [];
+    private readonly List<GaugeEntry> order = [];
     private readonly List<BarGaugeRow> rows = [];
 
     public int Version { get; private set; }
@@ -88,7 +88,7 @@ internal sealed class BarGaugeLayout
         return -1;
     }
 
-    public static double MeasureHeight(ReadOnlySpan<BarGaugeEntry> entries, ChartStyle style, ChartBarGaugeLabelPosition labelPosition, bool valueVisible, double barThickness, double itemSpacing, int? maxItems, IChartTextMeasurer measurer)
+    public static double MeasureHeight(ReadOnlySpan<GaugeEntry> entries, ChartStyle style, ChartBarGaugeLabelPosition labelPosition, bool valueVisible, double barThickness, double itemSpacing, int? maxItems, IChartTextMeasurer measurer)
     {
         var count = CountRows(entries.Length, maxItems);
         if (count == 0)
@@ -102,7 +102,7 @@ internal sealed class BarGaugeLayout
         return GetStackHeight(count, GetRowHeight(labelPosition, labelHeight, valueHeight, barThickness), itemSpacing);
     }
 
-    public void Update(double width, double height, Thickness padding, ChartStyle style, CultureInfo culture, BarGaugeLayoutOptions options, ReadOnlySpan<BarGaugeEntry> entries, IChartTextMeasurer measurer)
+    public void Update(double width, double height, Thickness padding, ChartStyle style, CultureInfo culture, BarGaugeLayoutOptions options, ReadOnlySpan<GaugeEntry> entries, IChartTextMeasurer measurer)
     {
         Version++;
         Bounds = new ChartRect(padding.Left, padding.Top, Math.Max(0, width - padding.HorizontalThickness), Math.Max(0, height - padding.VerticalThickness));
@@ -148,7 +148,7 @@ internal sealed class BarGaugeLayout
     private static double GetStackHeight(int count, double rowHeight, double itemSpacing) =>
         count > 0 ? (count * rowHeight) + ((count - 1) * itemSpacing) : 0;
 
-    private static bool HasLabels(ReadOnlySpan<BarGaugeEntry> entries)
+    private static bool HasLabels(ReadOnlySpan<GaugeEntry> entries)
     {
         foreach (var entry in entries)
         {
@@ -194,7 +194,7 @@ internal sealed class BarGaugeLayout
         return width;
     }
 
-    private void BuildRows(BarGaugeLayoutOptions options, CultureInfo culture, ReadOnlySpan<BarGaugeEntry> entries)
+    private void BuildRows(BarGaugeLayoutOptions options, CultureInfo culture, ReadOnlySpan<GaugeEntry> entries)
     {
         order.Clear();
         foreach (var entry in entries)
@@ -298,9 +298,9 @@ internal sealed class BarGaugeLayout
         CellSize = Math.Max(0, (length - (CellGap * (CellCount - 1))) / CellCount);
     }
 
-    private readonly struct LargerFirst : IComparer<BarGaugeEntry>
+    private readonly struct LargerFirst : IComparer<GaugeEntry>
     {
-        public int Compare(BarGaugeEntry x, BarGaugeEntry y)
+        public int Compare(GaugeEntry x, GaugeEntry y)
         {
             var nan = Double.IsNaN(x.Value).CompareTo(Double.IsNaN(y.Value));
             if (nan != 0)
@@ -313,9 +313,9 @@ internal sealed class BarGaugeLayout
         }
     }
 
-    private readonly struct SmallerFirst : IComparer<BarGaugeEntry>
+    private readonly struct SmallerFirst : IComparer<GaugeEntry>
     {
-        public int Compare(BarGaugeEntry x, BarGaugeEntry y)
+        public int Compare(GaugeEntry x, GaugeEntry y)
         {
             var nan = Double.IsNaN(x.Value).CompareTo(Double.IsNaN(y.Value));
             if (nan != 0)

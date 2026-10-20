@@ -104,7 +104,7 @@ public sealed class BarGaugeLayoutTests
     public void SortingAndMaxItemsChooseTheRows()
     {
         // Arrange
-        BarGaugeEntry[] entries = [Entry(0, "A", 30), Entry(1, "B", Double.NaN), Entry(2, "C", 80), Entry(3, "D", 50)];
+        GaugeEntry[] entries = [Entry(0, "A", 30), Entry(1, "B", Double.NaN), Entry(2, "C", 80), Entry(3, "D", 50)];
 
         // Act
         var descending = Layout(entries, new BarGaugeLayoutOptions { SortMode = ChartSortMode.Descending }, 300, 200);
@@ -140,7 +140,7 @@ public sealed class BarGaugeLayoutTests
     public void MeasuredHeightMatchesTheLayout(ChartBarGaugeLabelPosition position, bool valueVisible, int? maxItems)
     {
         // Arrange
-        BarGaugeEntry[] entries = [Entry(0, "Tokyo", 82), Entry(1, null, 58), Entry(2, "Nagoya", 31)];
+        GaugeEntry[] entries = [Entry(0, "Tokyo", 82), Entry(1, null, 58), Entry(2, "Nagoya", 31)];
         var options = new BarGaugeLayoutOptions { LabelPosition = position, ValueVisible = valueVisible, MaxItems = maxItems, BarThickness = 10, ItemSpacing = 6 };
 
         // Act
@@ -211,10 +211,10 @@ public sealed class BarGaugeLayoutTests
         Assert.Equal(48, layout.DesiredHeight);
     }
 
-    private static BarGaugeEntry Entry(int index, string? label, double value, double maximum = Double.NaN, double target = Double.NaN, Color? color = null) =>
+    private static GaugeEntry Entry(int index, string? label, double value, double maximum = Double.NaN, double target = Double.NaN, Color? color = null) =>
         new(index, label, value, maximum, target, color);
 
-    private static BarGaugeLayout Layout(BarGaugeEntry[] entries, BarGaugeLayoutOptions options, double width, double height)
+    private static BarGaugeLayout Layout(GaugeEntry[] entries, BarGaugeLayoutOptions options, double width, double height)
     {
         var layout = new BarGaugeLayout();
         layout.Update(width, height, new Thickness(0), new ChartStyle(), Culture, options, entries, Measurer);

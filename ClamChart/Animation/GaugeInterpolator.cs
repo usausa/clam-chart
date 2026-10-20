@@ -2,7 +2,8 @@ namespace ClamChart.Animation;
 
 using ClamChart.Layout;
 
-internal sealed class BarGaugeInterpolator
+internal sealed class GaugeInterpolator<TRow>
+    where TRow : struct, IGaugeRow
 {
     private const int DepartingKey = -1;
 
@@ -31,7 +32,27 @@ internal sealed class BarGaugeInterpolator
 
     public double Ease(double progress) => Easing.Ease(progress);
 
-    public BarGaugeRow GetRow(int index) => current[index].Row;
+    public TRow GetRow(int index) => current[index].Row;
+
+    public int GetKey(int index) => current[index].Key < 0 ? -1 : current[index].Row.DataIndex;
+
+    public int FindKey(int dataIndex)
+    {
+        if (dataIndex < 0)
+        {
+            return -1;
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            if ((current[i].Key >= 0) && (current[i].Row.DataIndex == dataIndex))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 
     public double GetRatio(int index)
     {
@@ -61,32 +82,31 @@ internal sealed class BarGaugeInterpolator
         return IsMorphing ? ChartProgress.Lerp(entry.FromAlpha, entry.ToAlpha, Ease(Progress)) : entry.ToAlpha;
     }
 
-    public void Complete(BarGaugeLayout layout)
+    public void Complete(IReadOnlyList<TRow> rows)
     {
         IsMorphing = false;
         IsEntrance = false;
         Progress = 1;
-        Fill(current, layout.Rows);
+        Fill(current, rows);
     }
 
-    public void Retarget(BarGaugeLayout layout) => Fill(current, layout.Rows);
+    public void Retarget(IReadOnlyList<TRow> rows) => Fill(current, rows);
 
-    public void BeginEntrance(BarGaugeLayout layout, ChartEntranceAnimation mode, double stagger)
+    public void BeginEntrance(IReadOnlyList<TRow> rows, ChartEntranceAnimation mode, double stagger)
     {
-        Complete(layout);
+        Complete(rows);
         entrance = mode == ChartEntranceAnimation.Auto ? ChartEntranceAnimation.Grow : mode;
         entranceStagger = stagger;
         IsEntrance = true;
         Progress = 0;
     }
 
-    public bool Begin(BarGaugeLayout layout, ReadOnlySpan<int> map, bool positional, int newCount)
+    public bool Begin(IReadOnlyList<TRow> rows, ReadOnlySpan<int> map, bool positional, int newCount)
     {
         var eased = Ease(Progress);
         var morphing = IsMorphing;
         IsEntrance = false;
         next.Clear();
-        var rows = layout.Rows;
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var r = 0; r < rows.Count; r++)
         {
@@ -122,7 +142,7 @@ internal sealed class BarGaugeInterpolator
         IsMorphing = IsMoving();
         if (!IsMorphing)
         {
-            Complete(layout);
+            Complete(rows);
             return false;
         }
 
@@ -132,7 +152,7 @@ internal sealed class BarGaugeInterpolator
 
     public void Apply(double progress) => Progress = progress;
 
-    private static void Fill(List<Entry> entries, IReadOnlyList<BarGaugeRow> rows)
+    private static void Fill(List<Entry> entries, IReadOnlyList<TRow> rows)
     {
         entries.Clear();
         // ReSharper disable once ForCanBeConvertedToForeach
@@ -185,5 +205,5 @@ internal sealed class BarGaugeInterpolator
         return false;
     }
 
-    private readonly record struct Entry(BarGaugeRow Row, int Key, double FromRatio, double ToRatio, double FromSlot, double ToSlot, double FromAlpha, double ToAlpha);
+    private readonly record struct Entry(TRow Row, int Key, double FromRatio, double ToRatio, double FromSlot, double ToSlot, double FromAlpha, double ToAlpha);
 }

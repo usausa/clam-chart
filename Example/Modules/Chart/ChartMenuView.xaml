@@ -60,13 +60,18 @@
         <Button Grid.Row="8" Grid.Column="0"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
-                CommandParameter="{x:Static modules:ViewId.ChartDensity}"
-                Text="9.Density" />
+                CommandParameter="{x:Static modules:ViewId.ChartRadialBar}"
+                Text="9.Radial bar" />
         <Button Grid.Row="0" Grid.Column="1"
                 Style="{StaticResource MenuButton}"
                 Command="{Binding ForwardCommand}"
+                CommandParameter="{x:Static modules:ViewId.ChartDensity}"
+                Text="10.Density" />
+        <Button Grid.Row="1" Grid.Column="1"
+                Style="{StaticResource MenuButton}"
+                Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartPerformance}"
-                Text="10.Performance" />
+                Text="11.Performance" />
     </Grid>
 
 </ContentView>

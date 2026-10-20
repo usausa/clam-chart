@@ -55,7 +55,7 @@ internal sealed class BarGaugeRenderer : IDisposable
 
     public void DrawEmptyText(SKCanvas canvas, string value, ChartRect bounds, ChartStyle style) => text.DrawEmptyText(canvas, value, bounds, style);
 
-    public void Render(SKCanvas canvas, BarGaugeLayout layout, BarGaugeInterpolator display, BarGaugeRenderState state, ChartStyle style)
+    public void Render(SKCanvas canvas, BarGaugeLayout layout, GaugeInterpolator<BarGaugeRow> display, BarGaugeRenderState state, ChartStyle style)
     {
         var baseKey = state.BaseColor.ToSKColor();
         if ((version != layout.Version) || (shaderBase != baseKey))

@@ -11,6 +11,7 @@ public enum ViewId
     ChartSparkline,
     ChartStat,
     ChartBarGauge,
+    ChartRadialBar,
     ChartDensity,
     ChartPerformance
 }

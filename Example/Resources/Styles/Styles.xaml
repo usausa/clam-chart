@@ -389,6 +389,12 @@
         <Setter Property="Spacing" Value="8" />
     </Style>
 
+    <Style x:Key="PanelGrid"
+           TargetType="Grid">
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="RowSpacing" Value="8" />
+    </Style>
+
     <Style x:Key="PanelTitleLabel"
            TargetType="Label">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryTextColor}, Dark={StaticResource DarkPrimaryTextColor}}" />

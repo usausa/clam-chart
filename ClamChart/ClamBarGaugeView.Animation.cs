@@ -2,6 +2,7 @@ namespace ClamChart;
 
 using ClamChart.Animation;
 using ClamChart.Data;
+using ClamChart.Layout;
 
 public partial class ClamBarGaugeView
 {
@@ -16,7 +17,7 @@ public partial class ClamBarGaugeView
     private bool entranceShown;
     private bool entranceRequested;
 
-    internal BarGaugeInterpolator Interpolator { get; } = new();
+    internal GaugeInterpolator<BarGaugeRow> Interpolator { get; } = new();
 
     internal override bool IsAnimating => dataAnimator.IsRunning;
 
@@ -33,7 +34,7 @@ public partial class ClamBarGaugeView
     internal override void FinishAnimations()
     {
         dataAnimator.Stop();
-        Interpolator.Complete(ChartLayout);
+        Interpolator.Complete(ChartLayout.Rows);
         InvalidateSurface();
     }
 
@@ -99,18 +100,18 @@ public partial class ClamBarGaugeView
         {
             if (Interpolator.IsEntrance)
             {
-                Interpolator.Retarget(ChartLayout);
+                Interpolator.Retarget(ChartLayout.Rows);
             }
-            else if (captured && (ChartLayout.Rows.Count > 0) && Interpolator.Begin(ChartLayout, pendingMap, pendingPositional || (pendingMap is null), snapshot.Count))
+            else if (captured && (ChartLayout.Rows.Count > 0) && Interpolator.Begin(ChartLayout.Rows, pendingMap, pendingPositional || (pendingMap is null), snapshot.Count))
             {
                 if (!dataAnimator.Start(ResolveAnimationLength(AnimationDuration)))
                 {
-                    Interpolator.Complete(ChartLayout);
+                    Interpolator.Complete(ChartLayout.Rows);
                 }
             }
             else
             {
-                Interpolator.Complete(ChartLayout);
+                Interpolator.Complete(ChartLayout.Rows);
             }
         }
 
@@ -141,10 +142,10 @@ public partial class ClamBarGaugeView
         entranceShown = true;
         entranceRequested = false;
         dataAnimator.Stop();
-        Interpolator.BeginEntrance(ChartLayout, EntranceAnimation, ChartProgress.GetStagger(ChartLayout.Rows.Count, StaggerMilliseconds, length));
+        Interpolator.BeginEntrance(ChartLayout.Rows, EntranceAnimation, ChartProgress.GetStagger(ChartLayout.Rows.Count, StaggerMilliseconds, length));
         if (!dataAnimator.Start(length))
         {
-            Interpolator.Complete(ChartLayout);
+            Interpolator.Complete(ChartLayout.Rows);
         }
 
         return true;
@@ -155,7 +156,7 @@ public partial class ClamBarGaugeView
         Interpolator.Apply(progress);
         if (!dataAnimator.IsRunning)
         {
-            Interpolator.Complete(ChartLayout);
+            Interpolator.Complete(ChartLayout.Rows);
         }
 
         InvalidateSurface();

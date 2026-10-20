@@ -45,7 +45,7 @@ public partial class ClamBarGaugeView : ChartViewBase
 
     private readonly ChartDataSource source;
     private readonly ChartCollectionWatcher thresholdsWatcher;
-    private readonly List<BarGaugeEntry> entries = [];
+    private readonly List<GaugeEntry> entries = [];
     private BarGaugeRenderer? renderer;
     private DataSnapshot snapshot = DataSnapshot.Empty;
     private ChartTextFormat valueFormat = ChartTextFormat.Default;
@@ -342,7 +342,7 @@ public partial class ClamBarGaugeView : ChartViewBase
         var values = data.Y;
         for (var i = 0; i < data.Count; i++)
         {
-            entries.Add(new BarGaugeEntry(i, data.GetLabel(i), values[i], data.GetMaximum(i), data.GetTarget(i), data.GetColor(i)));
+            entries.Add(new GaugeEntry(i, data.GetLabel(i), values[i], data.GetMaximum(i), data.GetTarget(i), data.GetColor(i)));
         }
 
         InvalidateHeight();
