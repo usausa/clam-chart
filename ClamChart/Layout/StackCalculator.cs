@@ -31,6 +31,7 @@ internal sealed class StackCalculator : IDisposable
         }
 
         groups.Clear();
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var s = 0; s < series.Count; s++)
         {
             if ((GetGroup(series[s]) is { } group) && !groups.Contains(group))
@@ -77,12 +78,11 @@ internal sealed class StackCalculator : IDisposable
         {
             if (GetGroup(series[s]) == group)
             {
-                var x = geometries[s].X;
-                for (var i = 0; i < x.Length; i++)
+                foreach (var x in geometries[s].X)
                 {
-                    if (Double.IsFinite(x[i]))
+                    if (Double.IsFinite(x))
                     {
-                        slots.TryAdd(x[i], slots.Count);
+                        slots.TryAdd(x, slots.Count);
                     }
                 }
             }

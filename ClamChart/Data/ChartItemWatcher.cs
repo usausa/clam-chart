@@ -13,7 +13,18 @@ internal sealed class ChartItemWatcher(Action<object> changed)
     public void Sync(IEnumerable? source)
     {
         current.Clear();
-        if (source is not (null or IEnumerable<double> or IEnumerable<double?>))
+        if (source is IList list and not (IEnumerable<double> or IEnumerable<double?>))
+        {
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i] is INotifyPropertyChanged notifier)
+                {
+                    current.Add(notifier);
+                }
+            }
+        }
+        else if (source is not (null or IEnumerable<double> or IEnumerable<double?>))
         {
             foreach (var item in source)
             {

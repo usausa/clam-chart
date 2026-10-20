@@ -192,6 +192,7 @@ internal sealed class PieLayout
     public ChartHit HitTest(double x, double y, int explodedSlice, double explodeOffset)
     {
         var items = Legend.Items;
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < items.Count; i++)
         {
             if (items[i].Bounds.Contains(x, y))
@@ -408,9 +409,8 @@ internal sealed class PieLayout
             return;
         }
 
-        for (var i = 0; i < slices.Count; i++)
+        foreach (var slice in slices)
         {
-            var slice = slices[i];
             var caption = String.IsNullOrEmpty(slice.Label) ? slice.PercentText : slice.Label + " " + slice.PercentText;
             sliceCenters.Add(slice.IsOthers ? default : FitCenter(FormatCenter(slice.Value, options, culture), caption, style, measurer));
         }

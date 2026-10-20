@@ -78,20 +78,9 @@ internal static class DataSnapshotBuilder
                 var item = items[i];
                 x[i] = reader.ReadX(item, i, kind);
                 y[i] = reader.ReadY(item);
-                if (categories is not null)
-                {
-                    categories[i] = reader.ReadCategory(item);
-                }
-
-                if (labels is not null)
-                {
-                    labels[i] = reader.ReadLabel(item);
-                }
-
-                if (colors is not null)
-                {
-                    colors[i] = reader.ReadColor(item);
-                }
+                categories?[i] = reader.ReadCategory(item);
+                labels?[i] = reader.ReadLabel(item);
+                colors?[i] = reader.ReadColor(item);
             }
         }
         catch

@@ -73,8 +73,11 @@ internal static class CartesianHitMap
             return -1;
         }
 
-        foreach (var item in legend.Items)
+        var items = legend.Items;
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < items.Count; i++)
         {
+            var item = items[i];
             var bounds = item.Bounds;
             if ((x >= bounds.X - (LegendLayout.ItemGap / 2)) && (x < bounds.Right + (LegendLayout.ItemGap / 2)) &&
                 (y >= bounds.Y - (LegendLayout.RowGap / 2)) && (y < bounds.Bottom + (LegendLayout.RowGap / 2)))

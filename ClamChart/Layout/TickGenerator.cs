@@ -93,6 +93,7 @@ internal static class TickGenerator
             return;
         }
 
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < primaryTicks.Count; i++)
         {
             var fraction = (primaryTicks[i] - primary.Minimum) / span;

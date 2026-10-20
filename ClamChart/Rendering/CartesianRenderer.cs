@@ -209,6 +209,7 @@ internal sealed class CartesianRenderer : IDisposable
 
         var plot = layout.PlotBounds;
         var paint = paints.Stroke(style.AxisLineColor.ToSKColor(), 0, SKStrokeCap.Butt);
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < axis.Ticks.Count; i++)
         {
             if (!axis.IsDisplayed(axis.Ticks[i]))
@@ -792,6 +793,7 @@ internal sealed class CartesianRenderer : IDisposable
         var height = (float)layout.DataLabelHeight;
         var outside = style.SecondaryTextColor.ToSKColor();
         var gap = (float)style.SegmentGap;
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < labels.Count; i++)
         {
             var label = labels[i];
@@ -939,6 +941,7 @@ internal sealed class CartesianRenderer : IDisposable
     private void DrawAxisLabels(SKCanvas canvas, AxisLayout axis, ChartStyle style)
     {
         var color = style.MutedTextColor.ToSKColor();
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < axis.Labels.Count; i++)
         {
             var label = axis.Labels[i];
@@ -976,6 +979,7 @@ internal sealed class CartesianRenderer : IDisposable
             return;
         }
 
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < legend.Items.Count; i++)
         {
             var item = legend.Items[i];

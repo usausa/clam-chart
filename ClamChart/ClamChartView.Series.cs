@@ -26,7 +26,7 @@ public partial class ClamChartView
     private static void OnSeriesChanged(BindableObject bindable, object oldValue, object newValue) =>
         ((ClamChartView)bindable).ObserveSeries((IList<ChartSeries>)newValue);
 
-    private void ObserveSeries(IList<ChartSeries> list)
+    private void ObserveSeries(IEnumerable<ChartSeries> list)
     {
         if (observedSeries is not null)
         {
@@ -49,8 +49,11 @@ public partial class ClamChartView
         InvalidateData();
         seriesChanged = true;
         ordered.Clear();
-        foreach (var series in Series)
+        var list = Series;
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < list.Count; i++)
         {
+            var series = list[i];
             if (!ordered.Contains(series))
             {
                 ordered.Add(series);

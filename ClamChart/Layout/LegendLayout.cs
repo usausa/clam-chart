@@ -98,12 +98,14 @@ internal sealed class LegendLayout
         var width = 0d;
         var valueColumn = 0d;
         var hasValues = false;
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < entries.Count; i++)
         {
-            var markerWidth = GetMarkerWidth(entries[i].Marker, markerSize);
-            width = Math.Max(width, markerWidth + MarkerGap + measurer.Measure(entries[i].Text, fontSize, Double.PositiveInfinity));
-            hasValues |= entries[i].Value is not null;
-            valueColumn = Math.Max(valueColumn, MeasureValue(entries[i], measurer, fontSize));
+            var entry = entries[i];
+            var markerWidth = GetMarkerWidth(entry.Marker, markerSize);
+            width = Math.Max(width, markerWidth + MarkerGap + measurer.Measure(entry.Text, fontSize, Double.PositiveInfinity));
+            hasValues |= entry.Value is not null;
+            valueColumn = Math.Max(valueColumn, MeasureValue(entry, measurer, fontSize));
         }
 
         var valueSpace = hasValues ? ValueGap + valueColumn : 0;

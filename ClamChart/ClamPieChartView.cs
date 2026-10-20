@@ -441,6 +441,7 @@ public partial class ClamPieChartView : ChartViewBase
         }
 
         var slices = ChartLayout.Slices;
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < slices.Count; i++)
         {
             var slice = slices[i];

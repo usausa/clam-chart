@@ -175,8 +175,10 @@ internal sealed class CartesianLayout : IDisposable
 
     private static double GetBarWidthRatio(IReadOnlyList<CartesianSeries> series)
     {
-        foreach (var item in series)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var s = 0; s < series.Count; s++)
         {
+            var item = series[s];
             if ((item.Kind == ChartSeriesKind.Bar) && item.IsVisible)
             {
                 return item.BarWidthRatio;
@@ -716,8 +718,10 @@ internal sealed class CartesianLayout : IDisposable
         }
 
         var count = 0;
-        foreach (var item in series)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var s = 0; s < series.Count; s++)
         {
+            var item = series[s];
             if (item.IsVisible && (GetValueAxis(item.Axis) == axis))
             {
                 count++;

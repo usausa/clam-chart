@@ -337,6 +337,7 @@ internal sealed class PieRenderer : IDisposable
         }
 
         var color = style.SecondaryTextColor.ToSKColor();
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < legend.Items.Count; i++)
         {
             var item = legend.Items[i];

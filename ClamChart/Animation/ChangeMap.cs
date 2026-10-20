@@ -17,6 +17,7 @@ internal static class ChangeMap
         }
 
         var changes = log.Changes;
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var c = 0; c < changes.Count; c++)
         {
             var change = changes[c];
