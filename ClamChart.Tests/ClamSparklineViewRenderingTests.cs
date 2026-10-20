@@ -8,7 +8,7 @@ public sealed class ClamSparklineViewRenderingTests
 
     private static readonly SKColor Blue = new(0x2A, 0x78, 0xD6);
 
-    private static readonly SKColor Critical = new(0xD0, 0x3B, 0x3B);
+    private static readonly SKColor Critical = new(0xE0, 0x2F, 0x44);
 
     [Fact]
     public void LineIsDrawnWithTheFirstPaletteColorOnATransparentBackground()

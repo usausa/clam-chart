@@ -6,6 +6,7 @@ public static class ChartStyles
 
     public static ChartStyle Dark { get; } = new()
     {
+        IsDark = true,
         PrimaryTextColor = Color.FromArgb("#F0EFEC"),
         SecondaryTextColor = Color.FromArgb("#C3C2B7"),
         AxisLineColor = Color.FromArgb("#383835"),
@@ -18,7 +19,11 @@ public static class ChartStyles
         SkeletonHighlightColor = Color.FromArgb("#2C2C2A"),
         Palette = ChartPalettes.DefaultDark,
         OtherColor = Color.FromArgb("#5C5B56"),
-        PositiveTextColor = Color.FromArgb("#0CA30C"),
-        NegativeTextColor = Color.FromArgb("#E66767")
+        GoodColor = Color.FromArgb("#73BF69"),
+        WarningColor = Color.FromArgb("#FADE2A"),
+        SeriousColor = Color.FromArgb("#FF9830"),
+        CriticalColor = Color.FromArgb("#F2495C"),
+        PositiveTextColor = Color.FromArgb("#73BF69"),
+        NegativeTextColor = Color.FromArgb("#F2495C")
     };
 }

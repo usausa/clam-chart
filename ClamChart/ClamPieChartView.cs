@@ -263,6 +263,7 @@ public partial class ClamPieChartView : ChartViewBase
         source = new ChartDataSource(InvalidateData);
         dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
         selectionAnimator = new ChartAnimator(this, SelectionAnimationName, OnSelectionProgress);
+        CenterCount = new ChartCountUp(this, CenterAnimationName);
     }
 
     protected override void Dispose(bool disposing)
@@ -338,7 +339,8 @@ public partial class ClamPieChartView : ChartViewBase
         ReportPaletteOverflow(palette);
         interaction.ExplodeOffset = IsSelectable ? ExplodeOffset : 0;
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, interaction, palette, ChartStyle);
+        CenterCount.Easing = AnimationEasing;
+        painter.Render(canvas, ChartLayout, Interpolator, interaction, CenterCount, countedKey, palette, ChartStyle);
     }
 
     private static bool ValidateInnerRadius(object? value, string name) =>

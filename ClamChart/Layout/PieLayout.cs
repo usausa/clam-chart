@@ -20,6 +20,8 @@ internal sealed class PieLayout
 
     public const double MinCenterFontSize = 6;
 
+    public const int TotalCenterKey = -1;
+
     private const double CenterFontRatio = 0.5;
 
     private const double CaptionFontRatio = 0.45;
@@ -68,6 +70,8 @@ internal sealed class PieLayout
     public PieCenterText Center { get; private set; }
 
     public IReadOnlyList<PieCenterText> SliceCenters => sliceCenters;
+
+    public ChartValueFormatting CenterFormatting { get; private set; } = ChartValueFormatting.Default;
 
     public static double Normalize(double angle)
     {
@@ -130,6 +134,18 @@ internal sealed class PieLayout
         PlaceLegend(options, style, measurer);
         PlacePie(options);
         PrepareCenters(options, style, culture, measurer);
+    }
+
+    public PieCenterText GetCenter(int key)
+    {
+        var slice = FindSlice(key);
+        return (slice >= 0) && (slice < sliceCenters.Count) && sliceCenters[slice].IsVisible ? sliceCenters[slice] : Center;
+    }
+
+    public int GetCenterKey(int key)
+    {
+        var slice = FindSlice(key);
+        return (slice >= 0) && (slice < sliceCenters.Count) && sliceCenters[slice].IsVisible ? key : TotalCenterKey;
     }
 
     public int FindSlice(int dataIndex)
@@ -247,9 +263,6 @@ internal sealed class PieLayout
         ChartPieLabelContent.LabelAndPercent => String.IsNullOrEmpty(label) ? percent : label + " " + percent,
         _ => percent
     };
-
-    private static string FormatCenter(double value, PieLayoutOptions options, CultureInfo culture) =>
-        ChartTextFormat.FormatValue(value, options.CenterFormatter, options.CenterConverter, options.CenterFormat, culture);
 
     private static double RoundSize(double size) => Math.Floor(size * 2) / 2;
 
@@ -393,6 +406,7 @@ internal sealed class PieLayout
     {
         sliceCenters.Clear();
         Center = default;
+        CenterFormatting = new ChartValueFormatting(options.CenterFormatter, options.CenterConverter, options.CenterFormat, culture);
         var mode = options.CenterValueMode;
         if ((mode == ChartCenterValueMode.None) || (InnerRadius <= 0) || (slices.Count == 0))
         {
@@ -401,7 +415,7 @@ internal sealed class PieLayout
 
         if (mode is ChartCenterValueMode.Auto or ChartCenterValueMode.Total)
         {
-            Center = FitCenter(FormatCenter(options.CenterValue ?? Total, options, culture), options.CenterLabel, style, measurer);
+            Center = FitCenter(options.CenterValue ?? Total, options.CenterLabel, style, measurer);
         }
 
         if (!options.Selectable || (mode == ChartCenterValueMode.Total))
@@ -412,12 +426,13 @@ internal sealed class PieLayout
         foreach (var slice in slices)
         {
             var caption = String.IsNullOrEmpty(slice.Label) ? slice.PercentText : slice.Label + " " + slice.PercentText;
-            sliceCenters.Add(slice.IsOthers ? default : FitCenter(FormatCenter(slice.Value, options, culture), caption, style, measurer));
+            sliceCenters.Add(slice.IsOthers ? default : FitCenter(slice.Value, caption, style, measurer));
         }
     }
 
-    private PieCenterText FitCenter(string value, string? caption, ChartStyle style, IChartTextMeasurer measurer)
+    private PieCenterText FitCenter(double number, string? caption, ChartStyle style, IChartTextMeasurer measurer)
     {
+        var value = CenterFormatting.Format(number);
         var available = InnerRadius - CenterPadding;
         var valueSize = RoundSize(Math.Min(MaxCenterFontSize, InnerRadius * CenterFontRatio));
         for (var attempt = 0; attempt < FitAttempts; attempt++)
@@ -442,7 +457,7 @@ internal sealed class PieLayout
             {
                 var valueBounds = new ChartRect(CenterX - (valueWidth / 2), top, valueWidth, valueHeight);
                 var captionBounds = text is null ? default : new ChartRect(CenterX - (captionWidth / 2), top + valueHeight + CaptionGap, captionWidth, captionHeight);
-                return new PieCenterText(value, text, valueSize, captionSize, valueBounds, captionBounds);
+                return new PieCenterText(value, text, valueSize, captionSize, valueBounds, captionBounds, number);
             }
 
             valueSize = RoundSize(valueSize * available / extent);

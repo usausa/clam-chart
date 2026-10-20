@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartStatView"
+             x:DataType="{x:Type module:ChartStatViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartStatViewModel}"
+             shell:ShellProperty.Title="Stat"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Layout"
+             shell:ShellProperty.Function3Text="Color"
+             shell:ShellProperty.Function4Text="Live"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <ScrollView>
+        <Grid Style="{StaticResource StatGrid}"
+              RowDefinitions="132,96,72,132,80"
+              ColumnDefinitions="*,*">
+            <Border Grid.Row="0" Grid.Column="0"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Sales}"
+                                   ColorMode="{Binding SalesColorMode}"
+                                   ContentPadding="12" DeltaCaption="前月比"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   PreviousValue="{Binding LastSales}"
+                                   Thresholds="{Binding SalesThresholds}"
+                                   Title="今月の売上"
+                                   TrendValues="{Binding SalesTrend}"
+                                   Unit="円" />
+            </Border>
+            <Border Grid.Row="0" Grid.Column="1"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding ErrorRate}"
+                                   ColorMode="Indicator" DeltaCaption="前日比" IncreaseIsGood="False"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   PreviousValue="{Binding LastErrorRate}"
+                                   Thresholds="{Binding ErrorThresholds}"
+                                   Title="エラー率" TrendKind="Line"
+                                   TrendValues="{Binding ErrorTrend}"
+                                   Unit="%" />
+            </Border>
+            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Cpu}"
+                                   ColorMode="BackgroundGradient"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   Thresholds="{Binding CpuThresholds}"
+                                   Title="CPU" TrendPlacement="Background"
+                                   TrendValues="{Binding CpuTrend}"
+                                   Unit="%" ValueFormat="N1" />
+            </Border>
+            <Border Grid.Row="2" Grid.Column="0"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Memory}"
+                                   ColorMode="BackgroundGradient"
+                                   Fill="{AppThemeBinding Light=#A352CC,
+                                                          Dark=#B877D9}"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   Title="メモリ" TrendPlacement="Background"
+                                   TrendValues="{Binding MemoryTrend}"
+                                   Unit="%" ValueFormat="N1" />
+            </Border>
+            <Border Grid.Row="2" Grid.Column="1"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Power}"
+                                   ColorMode="BackgroundGradient"
+                                   Fill="{AppThemeBinding Light=#FF780A,
+                                                          Dark=#FF9830}"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   Title="電力" TrendPlacement="Background"
+                                   TrendValues="{Binding PowerTrend}"
+                                   Unit="W" ValueFormat="N1" />
+            </Border>
+            <Border Grid.Row="3" Grid.Column="0"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Temperature}"
+                                   ColorMode="Background" DeltaMode="Absolute" IncreaseIsGood="False"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   PreviousValue="{Binding LastTemperature}"
+                                   Thresholds="{Binding TemperatureThresholds}"
+                                   Title="室温" TrendKind="Line"
+                                   TrendValues="{Binding TemperatureTrend}"
+                                   Unit="℃" ValueFormat="N1" />
+            </Border>
+            <Border Grid.Row="3" Grid.Column="1"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Users}"
+                                   ColorMode="Value"
+                                   Fill="{AppThemeBinding Light=#3274D9,
+                                                          Dark=#5794F2}"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   PreviousValue="{Binding LastUsers}"
+                                   Title="利用者" TrendKind="Bar" TrendPlacement="Right"
+                                   TrendValues="{Binding UserTrend}"
+                                   Unit="人" />
+            </Border>
+            <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                    Style="{StaticResource StatBorder}">
+                <clam:ClamStatView Value="{Binding Requests}"
+                                   ContentPadding="12"
+                                   LayoutMode="{Binding LayoutMode}"
+                                   Title="リクエスト" TrendKind="Line"
+                                   TrendValues="{Binding RequestTrend}"
+                                   Unit="件/秒" />
+            </Border>
+        </Grid>
+    </ScrollView>
+
+</ContentView>

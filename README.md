@@ -181,6 +181,6 @@ See the [API reference](Document/API.md).
 ## 🌊 Clam family
 
 - [ClamCalendar](https://github.com/usausa/clam-calendar) - Calendar view
-- [ClamGrid](https://github.com/usausa/clam-grid) - Grid view
-- [ClamGauge](https://github.com/usausa/clam-gauge) - Circular gauge
 - [ClamChart](https://github.com/usausa/clam-chart) - Charts
+- [ClamGauge](https://github.com/usausa/clam-gauge) - Circular gauge
+- [ClamGrid](https://github.com/usausa/clam-grid) - Grid view

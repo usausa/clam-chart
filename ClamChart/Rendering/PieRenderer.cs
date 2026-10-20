@@ -14,8 +14,11 @@ internal sealed class PieRenderer : IDisposable
 
     private const float GapOverlap = 1;
 
+    private const int BufferSize = 64;
+
     private readonly PaintCache paints = new();
     private readonly ChartTextPainter text;
+    private readonly ChartSpanText spans = new();
 
     public IChartTextMeasurer Measurer => text;
 
@@ -32,7 +35,7 @@ internal sealed class PieRenderer : IDisposable
 
     public void DrawEmptyText(SKCanvas canvas, string value, ChartRect bounds, ChartStyle style) => text.DrawEmptyText(canvas, value, bounds, style);
 
-    public void Render(SKCanvas canvas, PieLayout layout, PieInterpolator display, PieInteraction interaction, IReadOnlyList<Color> palette, ChartStyle style)
+    public void Render(SKCanvas canvas, PieLayout layout, PieInterpolator display, PieInteraction interaction, ChartCountUp centerCount, int countedKey, IReadOnlyList<Color> palette, ChartStyle style)
     {
         var progress = interaction.SelectionProgress < 1 ? display.Ease(interaction.SelectionProgress) : 1;
         var current = display.FindKey(interaction.SelectedKey) >= 0 ? interaction.SelectedKey : -1;
@@ -40,7 +43,7 @@ internal sealed class PieRenderer : IDisposable
         var selection = new PieSelection(previous, current, progress, style.DimmedOpacity, interaction.ExplodeOffset);
         DrawSlices(canvas, layout, display, palette, style, selection);
         DrawLabels(canvas, layout, display, palette, style, selection);
-        DrawCenter(canvas, layout, display, style, selection);
+        DrawCenter(canvas, layout, display, style, selection, centerCount, countedKey);
         DrawLegend(canvas, layout, palette, style);
     }
 
@@ -150,17 +153,6 @@ internal sealed class PieRenderer : IDisposable
     }
 
     private static double Square(double value) => value * value;
-
-    private static PieCenterText GetCenter(PieLayout layout, int key)
-    {
-        var slice = layout.FindSlice(key);
-        if ((slice >= 0) && (slice < layout.SliceCenters.Count) && layout.SliceCenters[slice].IsVisible)
-        {
-            return layout.SliceCenters[slice];
-        }
-
-        return layout.Center;
-    }
 
     private void DrawSlices(SKCanvas canvas, PieLayout layout, PieInterpolator display, IReadOnlyList<Color> palette, ChartStyle style, PieSelection selection)
     {
@@ -291,40 +283,75 @@ internal sealed class PieRenderer : IDisposable
         }
     }
 
-    private void DrawCenter(SKCanvas canvas, PieLayout layout, PieInterpolator display, ChartStyle style, PieSelection selection)
+    private void DrawCenter(SKCanvas canvas, PieLayout layout, PieInterpolator display, ChartStyle style, PieSelection selection, ChartCountUp centerCount, int countedKey)
     {
-        var overlay = display.OverlayAlpha;
-        if (overlay <= 0)
+        var alpha = display.EntranceAlpha;
+        if (alpha <= 0)
         {
             return;
         }
 
-        var current = GetCenter(layout, selection.Current);
+        var current = layout.GetCenter(selection.Current);
+        var counting = centerCount.IsRunning && (layout.GetCenterKey(selection.Current) == countedKey);
         if (selection.Progress < 1)
         {
-            var previous = GetCenter(layout, selection.Previous);
+            var previous = layout.GetCenter(selection.Previous);
             if (previous != current)
             {
-                DrawCenterText(canvas, previous, overlay * (1 - selection.Progress), style);
-                DrawCenterText(canvas, current, overlay * selection.Progress, style);
+                DrawCenterText(canvas, layout, previous, alpha * (1 - selection.Progress), style, null);
+                DrawCenterText(canvas, layout, current, alpha * selection.Progress, style, counting ? centerCount : null);
                 return;
             }
         }
 
-        DrawCenterText(canvas, current, overlay, style);
+        DrawCenterText(canvas, layout, current, alpha, style, counting ? centerCount : null);
     }
 
-    private void DrawCenterText(SKCanvas canvas, PieCenterText center, double alpha, ChartStyle style)
+    private void DrawCenterText(SKCanvas canvas, PieLayout layout, PieCenterText center, double alpha, ChartStyle style, ChartCountUp? count)
     {
         if ((center.Value is not { } value) || (alpha <= 0))
         {
             return;
         }
 
-        text.DrawText(canvas, value, center.ValueBounds, center.ValueFontSize, Double.PositiveInfinity, ChartColor.Fade(style.PrimaryTextColor.ToSKColor(), alpha), style);
+        var color = ChartColor.Fade(style.PrimaryTextColor.ToSKColor(), alpha);
+        if (count is null)
+        {
+            text.DrawText(canvas, value, center.ValueBounds, center.ValueFontSize, Double.PositiveInfinity, color, style);
+        }
+        else
+        {
+            DrawCounting(canvas, layout, center, count.Current, color, style);
+        }
         if (center.Caption is { } caption)
         {
             text.DrawText(canvas, caption, center.CaptionBounds, center.CaptionFontSize, Double.PositiveInfinity, ChartColor.Fade(style.SecondaryTextColor.ToSKColor(), alpha), style);
+        }
+    }
+
+    private void DrawCounting(SKCanvas canvas, PieLayout layout, PieCenterText center, double number, SKColor color, ChartStyle style)
+    {
+        Span<char> buffer = stackalloc char[BufferSize];
+        var formatting = layout.CenterFormatting;
+        var chars = formatting.TryFormat(number, buffer, out var written) ? buffer[..written] : formatting.Format(number).AsSpan();
+        var size = (float)center.ValueFontSize;
+        var width = spans.Measure(text, chars, size);
+        var limit = (float)center.ValueBounds.Width;
+        var scale = (width > 0) && (width > limit) ? limit / width : 1f;
+        var metrics = text.GetMetrics(size);
+        var bounds = center.ValueBounds;
+        var baseline = (float)bounds.Y + (((float)bounds.Height - (metrics.Descent - metrics.Ascent)) / 2) - metrics.Ascent;
+        var x = (float)bounds.CenterX - (width * scale / 2);
+        if (scale < 1)
+        {
+            canvas.Save();
+            canvas.Scale(scale, scale, x, baseline);
+        }
+
+        spans.Draw(canvas, text, chars, size, x, baseline, color, style.TextHaloColor.ToSKColor(), (float)style.TextHaloWidth);
+        if (scale < 1)
+        {
+            canvas.Restore();
         }
     }
 

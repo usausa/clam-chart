@@ -440,7 +440,7 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | Placement | The swept sector, hole included, is scaled to the largest size that fits outside the legend; the upper half sits on the bottom edge |
 | Gaps | Parallel gaps of `SliceGap` between neighboring slices, none at the ends of a partial sweep or around a single full slice |
 | Labels | At the middle angle of the slice, centered in the ring of a donut or at 0.62 of the radius of a pie, drawn only when they fit with 2 DIP of margin, in white or `#0B0B0B` by WCAG contrast; percentages use `P0` |
-| Center value | Drawn when `InnerRadius` is greater than 0, shrunk to fit the hole (not drawn under 6 DIP); a half donut puts it on the flat side; switching the selection crossfades it over 150 ms |
+| Center value | Drawn when `InnerRadius` is greater than 0, shrunk to fit the hole (not drawn under 6 DIP); a half donut puts it on the flat side; switching the selection crossfades it over 150 ms; the number counts up from 0 during the entrance and from the shown number on updates |
 | Taps | The sector of each slice, gaps included, from the hole to the edge, at its moved position when selected; a tap on the merged slice raises only `ItemTapped` with `Item = null`, `Index = -1` and the merged total; in `Interactive` mode a tap in the center or outside the slices clears the selection |
 | Density | `Full` shows the legend, `Compact` hides it unless `LegendVisible` is `true`, `Minimal` keeps the donut and the center value |
 | Updates | Slices are matched by data position and the merged slice as one; added slices open from the border of the previous slice, removed and merged ones close at the new border, and colors that change with the order move between the two colors |
@@ -480,6 +480,60 @@ It is drawn without allocations of its own: bars and win-loss allocate nothing, 
 | Entrance | `Auto` plays nothing; `Grow`, `Reveal`, `Fade` and `PlayEntranceAnimation()` play |
 | Density | Always `Minimal`, with whole-chart taps only |
 
+## 🔢 ClamStatView
+
+A KPI tile: a title, a value with its unit, a difference, a trend line and a state, drawn on one canvas.  
+The value counts up from the shown value when it changes, and counting allocates nothing of its own.  
+
+### 🧩 Properties
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Title` | `string?` | `null` | ✓ | Label at the top left |
+| `Value` | `double` | `0` | ✓ | Value; `NaN` shows `EmptyText` in `MutedTextColor` without the unit, the difference and the state |
+| `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the value (see [Formats](#formats)); the default is the compact number |
+| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the value from code, used first |
+| `Unit` | `string?` | `null` | ✓ | Unit after the value, on the same baseline |
+| `ValueFontSize`, `MinValueFontSize` | `double` | `32`, `16` | ✓ | Largest and smallest size of the value; positive finite values |
+| `PreviousValue` | `double?` | `null` | ✓ | Base of the difference |
+| `Delta` | `double?` | `null` | ✓ | Difference given directly, used before `PreviousValue`; a ratio in `Percent` mode (`0.082` is 8.2%) |
+| `DeltaMode` | `ChartDeltaMode` | `Percent` | ✓ | Ratio to the size of the base, or the difference itself |
+| `DeltaFormat` | `string?` | `null` | ✓ | Format of the difference; `null` writes the sign of the culture before `P1` or the compact number |
+| `DeltaCaption` | `string?` | `null` | ✓ | Text after the difference, shown only with a difference |
+| `IncreaseIsGood` | `bool` | `true` | ✓ | `false` colors increases with `NegativeTextColor`, for costs and errors |
+| `TrendValues` | `IEnumerable<double>?` | `null` | ✓ | Trend line, read like `ClamSparklineView.Values` |
+| `TrendKind` | `ChartSparklineKind` | `Area` | ✓ | Shape of the trend |
+| `TrendPlacement` | `ChartTrendPlacement` | `Bottom` | ✓ | Place of the trend |
+| `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | State by value; `null` throws `ArgumentNullException` |
+| `ColorMode` | `ChartStatColorMode` | `None` | ✓ | How the state and the tile color are shown |
+| `Fill` | `Color?` | `null` | ✓ | Color of the tile used by `Value`, `BackgroundGradient` and the trend; `null` uses the state color, then the first palette color |
+| `LayoutMode` | `ChartStatLayoutMode` | `Auto` | ✓ | Arrangement |
+
+| Item | Rule |
+|---|---|
+| Vertical | Title, value and difference stacked from the top left, and a bottom trend in the rest |
+| Horizontal | Title at the top left, the value and the unit at the top right, and the difference under the value; `Auto` uses it when the width is at least 2.5 times the height |
+| Fitting | The value takes the largest size up to `ValueFontSize` in 0.5 DIP steps. A short height drops the bottom trend and then the difference before the value goes below `MinValueFontSize`, and a short width drops the unit. After that the value shrinks below the minimum down to 6 DIP and is not drawn under it, so numbers are never truncated |
+| Difference | Nothing is shown when `Percent` mode has a base of 0. With the default format, a difference that rounds to zero is neutral (`SecondaryTextColor`, no arrow); others get a vector arrow in `PositiveTextColor` or `NegativeTextColor` |
+| Trend | A line of 1 DIP in the tile color (`Fill`, then the threshold color even with `None`, then the first palette color) over a fill of the same color at 20%; on a filled background, the line is the tile color brightened by 40% over a white fill at 40%, as in the Grafana stat panel. `Bottom` keeps at least 16 DIP under the text, `Right` takes the right 40% of the content, and `Background` fills the bottom 60% of the tile edge to edge and fades toward the top |
+| Colors | `None` draws the text in ink colors. `Value` writes the value, the unit and the trend in the tile color. `Indicator` adds a 4 DIP band in the state color at the left edge, `Background` tints the tile with the state color at 15%, and `BackgroundGradient` fills the tile at 120° from the tile color shifted by +8° in hue and -15 in lightness to -8° and -5 (+10.5 and +3.5 when `ChartStyle.IsDark` is `false`). Text on the gradient is `#202226` when the brightness of the tile color is above 180 and `#F7F8FA` otherwise |
+| State icon | With a color mode, the level of the threshold puts a vector icon before the title: `Good` ✓, `Warning` ▲, `Serious` ◆ and `Critical` ● |
+| Padding | `ContentPadding` `null` is 12 DIP with a color mode and the density default with `None` |
+| Animation | The entrance counts from 0, reveals the trend and fades in the difference, the caption and the icon over its last 30%. A new value counts from the shown value; the trend animates like a sparkline. Numbers in the default format count with the decimals of the two ends |
+| Taps | The whole tile raises `ChartTapped` |
+
+### ChartThreshold
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `Value` | `double` | `Double.NegativeInfinity` | The state applies from this value; leave the first one as the base |
+| `Color` | `Color?` | `null` | Color of the state; `null` uses the color of `Level` |
+| `Level` | `ChartThresholdLevel` | `None` | Level of the state, which chooses the status color and the icon |
+| `Label` | `string?` | `null` | Reserved for threshold lines |
+
+The threshold with the largest `Value` at or below the value applies, and the later one wins a tie.  
+Changes of a notifying list are followed; after changing a threshold in place, call `Invalidate()`.  
+
 ## 🎨 ChartStyle
 
 `ChartStyle` holds the look of everything except the data, together with the defaults of series widths, opacities and sizes.  
@@ -489,9 +543,10 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 
 | Name | Type | Light | Dark | Description |
 |---|---|---|---|---|
+| `IsDark` | `bool` | `false` | `true` | Whether the style is for a dark theme; chooses the direction of KPI gradients and the text on them |
 | `FontFamily` | `string` | `sans-serif` | `sans-serif` | Primary font of all text; missing characters are resolved through `FallbackFonts` of SkiaExtension |
-| `PrimaryTextColor` | `Color` | `#0B0B0B` | `#F0EFEC` | Center value of a pie |
-| `SecondaryTextColor` | `Color` | `#52514E` | `#C3C2B7` | Legend, axis titles, data labels outside the elements and the caption under the center value |
+| `PrimaryTextColor` | `Color` | `#0B0B0B` | `#F0EFEC` | Center value of a pie and the value of a KPI tile |
+| `SecondaryTextColor` | `Color` | `#52514E` | `#C3C2B7` | Legend, axis titles, data labels outside the elements, the caption under the center value, and the title, unit and caption of a KPI tile |
 | `MutedTextColor` | `Color` | `#898781` | `#898781` | Tick labels, hidden legend items, `+N` of the legend and `EmptyText` |
 | `TextHaloColor`, `TextHaloWidth` | `Color`, `double` | `Transparent`, `0` | `Transparent`, `0` | Outline around text |
 | `AxisLabelFontSize`, `AxisTitleFontSize` | `double` | `11`, `11` | `11`, `11` | Axis text |
@@ -503,7 +558,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `TooltipBackground` | `Color` | `#F0FCFCFB` | `#F01F1F1D` | Tooltip fill |
 | `TooltipTextColor` | `Color` | `#0B0B0B` | `#F0EFEC` | Tooltip text |
 | `TooltipBorderColor` | `Color` | `#1A0B0B0B` | `#1AF0EFEC` | Tooltip hairline border |
-| `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `6` | `12`, `6` | Tooltip |
+| `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `0` | `12`, `0` | Tooltip |
 | `TrackballLineColor` | `Color` | `#898781` | `#898781` | Trackball line |
 | `TrackColor` | `Color?` | `null` | `null` | Reserved for gauge-like charts |
 | `DimmedOpacity` | `double` | `0.35` | `0.35` | Opacity of the elements that are not selected |
@@ -511,11 +566,11 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Reserved for the loading placeholder |
 | `Palette` | `IReadOnlyList<Color>` | `ChartPalettes.DefaultLight` | `ChartPalettes.DefaultDark` | Series colors in a fixed order |
 | `OtherColor` | `Color` | `#B5B3AA` | `#5C5B56` | Merged slices and series beyond the palette |
-| `GoodColor`, `WarningColor`, `SeriousColor`, `CriticalColor` | `Color` | `#0CA30C`, `#FAB219`, `#EC835A`, `#D03B3B` | same | Status colors; `CriticalColor` is the default color of negative sparkline values |
-| `PositiveTextColor`, `NegativeTextColor` | `Color` | `#006300`, `#D03B3B` | `#0CA30C`, `#E66767` | Reserved for differences in KPI tiles |
+| `GoodColor`, `WarningColor`, `SeriousColor`, `CriticalColor` | `Color` | `#56A64B`, `#F2CC0C`, `#FF780A`, `#E02F44` | `#73BF69`, `#FADE2A`, `#FF9830`, `#F2495C` | Status colors used by thresholds: the Grafana named colors green, yellow, orange and red of each theme; `CriticalColor` is the default color of negative sparkline values |
+| `PositiveTextColor`, `NegativeTextColor` | `Color` | `#56A64B`, `#E02F44` | `#73BF69`, `#F2495C` | Good and bad differences in KPI tiles, the Grafana green and red |
 | `LineThickness` | `double` | `2` | `2` | Default line width |
 | `AreaFillOpacity` | `double` | `0.1` | `0.1` | Default fill opacity |
-| `BarCornerRadius`, `MaxBarWidth` | `double` | `4`, `24` | `4`, `24` | Default bar corner and width |
+| `BarCornerRadius`, `MaxBarWidth` | `double` | `0`, `24` | `0`, `24` | Default bar corner and width |
 | `MarkerSize`, `MarkerKnockout` | `double` | `8`, `2` | `8`, `2` | Default marker diameter and the transparent ring around it |
 | `SegmentGap` | `double` | `2` | `2` | Gap between stack segments, grouped bars and slices |
 | `CompactSize`, `MinimalSize` | `Size` | `320, 200`, `160, 96` | same | Density boundaries: a width or a height at or below a size switches to that density |
@@ -545,6 +600,11 @@ Colors belong to series and slices by position, so hiding a series does not chan
 |---|---|
 | `ChartPalettes.DefaultLight` | `#2A78D6`, `#EB6834`, `#1BAF7A`, `#EDA100`, `#E87BA4`, `#008300`, `#6250D6`, `#E34948` |
 | `ChartPalettes.DefaultDark` | `#3987E5`, `#D95926`, `#199E70`, `#C98500`, `#D55181`, `#008300`, `#9085E9`, `#E66767` |
+| `ChartPalettes.GrafanaLight` | `#56A64B`, `#E0B400`, `#3274D9`, `#FF780A`, `#E02F44`, `#A352CC` |
+| `ChartPalettes.GrafanaDark` | `#73BF69`, `#F2CC0C`, `#5794F2`, `#FF9830`, `#F2495C`, `#B877D9` |
+
+`GrafanaLight` and `GrafanaDark` are the first six colors of the classic Grafana palette (green, semi-dark yellow, blue, orange, red and purple) in each theme.  
+They are not checked for color vision deficiencies, so pair them with labels or a legend.  
 
 ## 🔧 ClamChartSettings
 
@@ -786,3 +846,16 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `None` | Nothing in the center |
 | `ChartSparklineKind` | `Line`, `Area`, `Bar`, `WinLoss` | Shape of a sparkline |
 | `ChartSparklineMarkers` | `None`, `First`, `Last`, `High`, `Low` | Flags of the points with a marker |
+| `ChartThresholdLevel` | `None`, `Good`, `Warning`, `Serious`, `Critical` | Level of a threshold |
+| `ChartDeltaMode` | `Percent` | Ratio to the size of the base |
+| | `Absolute` | Difference of the values |
+| `ChartTrendPlacement` | `Bottom` | Under the text |
+| | `Background` | Behind the text in the bottom of the tile, edge to edge |
+| | `Right` | Right of the text |
+| `ChartStatColorMode` | `None` | Ink colors without a state |
+| | `Value` | Value, unit and trend in the tile color |
+| | `Indicator` | State icon and a band at the left edge |
+| | `Background` | Tile tinted with the state color |
+| | `BackgroundGradient` | Gradient of the tile color with text in light or dark ink by its brightness |
+| `ChartStatLayoutMode` | `Auto` | Horizontal when the width is at least 2.5 times the height |
+| | `Vertical`, `Horizontal` | Fixed arrangement |

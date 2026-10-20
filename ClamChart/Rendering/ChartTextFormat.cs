@@ -91,6 +91,16 @@ internal sealed class ChartTextFormat : IEquatable<ChartTextFormat>
         return composite is null ? value.ToString(format, provider) : String.Format(provider, composite, value);
     }
 
+    public bool TryFormat(double value, Span<char> destination, IFormatProvider provider, out int written)
+    {
+        if (IsDefault)
+        {
+            return CompactNumberFormat.TryFormat(value, destination, provider, out written);
+        }
+
+        return composite is null ? value.TryFormat(destination, out written, format, provider) : destination.TryWrite(provider, composite, out written, value);
+    }
+
     public bool Equals(ChartTextFormat? other) => (other is not null) && (format == other.format) && (composite?.Format == other.composite?.Format);
 
     public override bool Equals(object? obj) => (obj is ChartTextFormat other) && Equals(other);

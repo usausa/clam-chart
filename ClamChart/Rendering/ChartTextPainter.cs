@@ -57,11 +57,21 @@ internal sealed class ChartTextPainter : IChartTextMeasurer, IDisposable
     {
         if ((haloWidth > 0) && (haloColor.Alpha > 0))
         {
-            haloPaint.Color = haloColor;
-            haloPaint.StrokeWidth = haloWidth * 2;
-            canvas.DrawText(text, x, baseline, align, haloPaint);
+            DrawHalo(canvas, text, x, baseline, align, haloColor, haloWidth);
         }
 
+        DrawFill(canvas, text, x, baseline, align, color);
+    }
+
+    public void DrawHalo(SKCanvas canvas, DrawableText text, float x, float baseline, SKTextAlign align, SKColor color, float width)
+    {
+        haloPaint.Color = color;
+        haloPaint.StrokeWidth = width * 2;
+        canvas.DrawText(text, x, baseline, align, haloPaint);
+    }
+
+    public void DrawFill(SKCanvas canvas, DrawableText text, float x, float baseline, SKTextAlign align, SKColor color)
+    {
         fillPaint.Color = color;
         canvas.DrawText(text, x, baseline, align, fillPaint);
     }

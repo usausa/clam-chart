@@ -1,7 +1,6 @@
 namespace ClamChart;
 
 using System.Collections;
-using System.Collections.Specialized;
 
 using ClamChart.Animation;
 using ClamChart.Data;
@@ -28,15 +27,8 @@ public partial class ClamSparklineView : ChartViewBase
     public static readonly BindableProperty MaximumProperty = BindableProperty.Create(nameof(Maximum), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(Maximum)), propertyChanged: OnRangeChanged);
     public static readonly BindableProperty ReferenceValueProperty = BindableProperty.Create(nameof(ReferenceValue), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(ReferenceValue)), propertyChanged: OnLayoutInputChanged);
 
-    private const int InitialCapacity = 16;
-
-    private readonly ChartDataSource source;
-    private readonly SeriesGeometry target = new();
+    private readonly SparklineCore core;
     private SparklineRenderer? renderer;
-    private ChartValueReader? reader;
-    private IReadOnlyList<double>? direct;
-    private double[] buffer = [];
-    private bool live;
     private bool invertedBoundsReported;
     private bool released;
 
@@ -130,21 +122,18 @@ public partial class ClamSparklineView : ChartViewBase
         set
         {
             field = value;
-            reader = null;
+            core.ResetReader();
             InvalidateData();
         }
     }
 
-    internal SparklineLayout ChartLayout { get; } = new();
+    internal SparklineLayout ChartLayout => core.Layout;
 
     internal override int RenderedPointCount => ChartLayout.Count;
 
-    private SparklineValues CurrentValues => new(direct, live ? target : null);
-
     public ClamSparklineView()
     {
-        source = new ChartDataSource(InvalidateData);
-        dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
+        core = new SparklineCore(this, DataAnimationName, InvalidateData, CreateReader);
     }
 
     protected override void Dispose(bool disposing)
@@ -156,19 +145,14 @@ public partial class ClamSparklineView : ChartViewBase
         }
 
         released = true;
-        ReleasePendingMap();
-        Interpolator.Dispose();
-        target.Dispose();
-        DataSnapshot.Return(buffer);
-        buffer = [];
-        direct = null;
+        core.Dispose();
     }
 
     internal override ChartDensity ResolveDensity() => ChartDensity.Minimal;
 
-    internal override void OnAttached() => source.Activate();
+    internal override void OnAttached() => core.Source.Activate();
 
-    internal override void OnDetached() => source.Deactivate();
+    internal override void OnDetached() => core.Source.Deactivate();
 
     internal override void ResetRenderer()
     {
@@ -176,37 +160,11 @@ public partial class ClamSparklineView : ChartViewBase
         renderer = null;
     }
 
-    internal override void UpdateData()
-    {
-        var wasLive = live;
-        var oldCount = target.Count;
-        var values = Values;
-        if ((values is IReadOnlyList<double> list) && (values is not INotifyCollectionChanged))
-        {
-            direct = list;
-            live = false;
-        }
-        else
-        {
-            direct = null;
-            live = true;
-            if (values is not null)
-            {
-                ReadValues(values);
-            }
-            else
-            {
-                ReadItems(ItemsSource);
-            }
-        }
-
-        RecordChange(wasLive && live, oldCount, live ? target.Count : 0);
-        source.Changes.Clear();
-    }
+    internal override void UpdateData() => core.Update(Values, ItemsSource);
 
     internal override void UpdateLayout(float width, float height)
     {
-        var captured = PrepareTransition();
+        var captured = core.PrepareTransition(AnimationEasing, UpdateAnimationEnabled, CanAnimate);
         var options = new SparklineLayoutOptions
         {
             Kind = Kind,
@@ -216,14 +174,14 @@ public partial class ClamSparklineView : ChartViewBase
             Maximum = Maximum,
             ReferenceValue = ReferenceValue
         };
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, options, CurrentValues);
+        core.UpdateLayout(width, height, EffectiveContentPadding, ChartStyle, options);
         if (ChartLayout.HasInvertedBounds && !invertedBoundsReported)
         {
             invertedBoundsReported = true;
             ChartDiagnostics.Warn("The sparkline Maximum is not greater than Minimum, so the automatic range is used.");
         }
 
-        CompleteTransition(captured);
+        core.CompleteTransition(captured, ResolveEntrance(), ResolveAnimationLength(AnimationDuration));
     }
 
     internal override void Render(SKCanvas canvas, float width, float height)
@@ -242,7 +200,9 @@ public partial class ClamSparklineView : ChartViewBase
         var palette = Palette ?? ChartStyle.Palette;
         var color = Color ?? (palette.Count > 0 ? palette[0] : ChartStyle.OtherColor);
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, CurrentValues, color.ToSKColor(), (NegativeColor ?? ChartStyle.CriticalColor).ToSKColor(), ChartStyle, Smooth);
+        var line = color.ToSKColor();
+        var paint = new SparklinePaint(line, (NegativeColor ?? ChartStyle.CriticalColor).ToSKColor(), ChartColor.Fade(line, ChartStyle.AreaFillOpacity), 1);
+        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, ChartStyle, Smooth);
     }
 
     private static bool ValidateFinite(object? value, string name) =>
@@ -254,7 +214,7 @@ public partial class ClamSparklineView : ChartViewBase
     private static void OnReaderChanged(BindableObject bindable, object oldValue, object newValue)
     {
         var view = (ClamSparklineView)bindable;
-        view.reader = null;
+        view.core.ResetReader();
         view.InvalidateData();
     }
 
@@ -263,7 +223,7 @@ public partial class ClamSparklineView : ChartViewBase
         var view = (ClamSparklineView)bindable;
         if (view.Values is null)
         {
-            view.source.SetTrackItemChanges((bool)newValue);
+            view.core.Source.SetTrackItemChanges((bool)newValue);
         }
     }
 
@@ -280,100 +240,15 @@ public partial class ClamSparklineView : ChartViewBase
     {
         if (Values is { } values)
         {
-            source.SetTrackItemChanges(false);
-            source.SetSource(values);
+            core.SetValues(values);
         }
         else
         {
-            source.SetSource(ItemsSource);
-            source.SetTrackItemChanges(TrackItemChanges);
+            core.SetItems(ItemsSource, TrackItemChanges);
         }
 
-        sourceReplaced = true;
         InvalidateData();
     }
 
-    private void ReadValues(IEnumerable<double> values)
-    {
-        if (values is IReadOnlyList<double> list)
-        {
-            var count = list.Count;
-            target.Reset(count);
-            for (var i = 0; i < count; i++)
-            {
-                SetPoint(i, list[i]);
-            }
-
-            return;
-        }
-
-        var collected = 0;
-        foreach (var value in values)
-        {
-            Store(ref collected, value);
-        }
-
-        CopyBuffer(collected);
-    }
-
-    private void ReadItems(IEnumerable? items)
-    {
-        if (items is null)
-        {
-            target.Reset(0);
-            return;
-        }
-
-        reader ??= new ChartValueReader(new ChartValueOptions { Accessors = ValueAccessors, YKey = ValueKey, ValueSelector = ValueSelector });
-        if (items is IList list)
-        {
-            var count = list.Count;
-            target.Reset(count);
-            for (var i = 0; i < count; i++)
-            {
-                SetPoint(i, reader.ReadY(list[i]));
-            }
-
-            return;
-        }
-
-        var collected = 0;
-        foreach (var item in items)
-        {
-            Store(ref collected, reader.ReadY(item));
-        }
-
-        CopyBuffer(collected);
-    }
-
-    private void Store(ref int count, double value)
-    {
-        if (count == buffer.Length)
-        {
-            var larger = DataSnapshot.Rent<double>(Math.Max(InitialCapacity, buffer.Length * 2));
-            Array.Copy(buffer, larger, count);
-            DataSnapshot.Return(buffer);
-            buffer = larger;
-        }
-
-        buffer[count++] = value;
-    }
-
-    private void CopyBuffer(int count)
-    {
-        target.Reset(count);
-        for (var i = 0; i < count; i++)
-        {
-            SetPoint(i, buffer[i]);
-        }
-    }
-
-    private void SetPoint(int index, double value)
-    {
-        target.X[index] = index;
-        target.Start[index] = 0;
-        target.End[index] = value;
-        target.Value[index] = value;
-        target.Outer[index] = false;
-    }
+    private ChartValueReader CreateReader() => new(new ChartValueOptions { Accessors = ValueAccessors, YKey = ValueKey, ValueSelector = ValueSelector });
 }

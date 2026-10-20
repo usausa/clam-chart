@@ -84,6 +84,45 @@ public sealed class ChartTextFormatTests
         Assert.NotEqual(first, ChartTextFormat.Default);
     }
 
+    [Theory]
+    [InlineData(null, 12900d, "12.9K")]
+    [InlineData("N1", 1234.56, "1,234.6")]
+    [InlineData("{0:N0} pts", 1234.56, "1,235 pts")]
+    public void FormattingIntoABufferMatchesTheText(string? format, double value, string expected)
+    {
+        // Arrange
+        var parsed = ChartTextFormat.Parse(format);
+        Span<char> buffer = stackalloc char[32];
+
+        // Act
+        var formatted = parsed.TryFormat(value, buffer, CultureInfo.InvariantCulture, out var written);
+
+        // Assert
+        Assert.True(formatted);
+        Assert.Equal(expected, buffer[..written].ToString());
+        Assert.Equal(expected, parsed.Format(value, CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void ValueFormattingUsesTheBufferOnlyWithoutDelegates()
+    {
+        // Arrange
+        var plain = new ChartValueFormatting(null, null, ChartTextFormat.Parse("N0"), CultureInfo.InvariantCulture);
+        var formatted = plain with { Formatter = static value => $"#{value}" };
+        var converted = plain with { Converter = new CultureConverter() };
+        Span<char> buffer = stackalloc char[32];
+
+        // Act & Assert
+        Assert.True(plain.TryFormat(1234, buffer, out var written));
+        Assert.Equal("1,234", buffer[..written].ToString());
+        Assert.False(plain.IsDefault);
+        Assert.True(ChartValueFormatting.Default.IsDefault);
+        Assert.False(formatted.TryFormat(1234, buffer, out _));
+        Assert.Equal("#1234", formatted.Format(1234));
+        Assert.False(converted.TryFormat(1234, buffer, out _));
+        Assert.Equal("1234@", converted.Format(1234));
+    }
+
     private sealed class CultureConverter : IValueConverter
     {
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>

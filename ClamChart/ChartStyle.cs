@@ -2,6 +2,8 @@ namespace ClamChart;
 
 public sealed record ChartStyle
 {
+    public bool IsDark { get; set; }
+
     public string FontFamily { get; set; } = "sans-serif";
 
     public Color PrimaryTextColor { get; set; } = Color.FromArgb("#0B0B0B");
@@ -38,7 +40,7 @@ public sealed record ChartStyle
 
     public double TooltipFontSize { get; set; } = 12;
 
-    public double TooltipCornerRadius { get; set; } = 6;
+    public double TooltipCornerRadius { get; set; }
 
     public Color TrackballLineColor { get; set; } = Color.FromArgb("#898781");
 
@@ -56,23 +58,23 @@ public sealed record ChartStyle
 
     public Color OtherColor { get; set; } = Color.FromArgb("#B5B3AA");
 
-    public Color GoodColor { get; set; } = Color.FromArgb("#0CA30C");
+    public Color GoodColor { get; set; } = Color.FromArgb("#56A64B");
 
-    public Color WarningColor { get; set; } = Color.FromArgb("#FAB219");
+    public Color WarningColor { get; set; } = Color.FromArgb("#F2CC0C");
 
-    public Color SeriousColor { get; set; } = Color.FromArgb("#EC835A");
+    public Color SeriousColor { get; set; } = Color.FromArgb("#FF780A");
 
-    public Color CriticalColor { get; set; } = Color.FromArgb("#D03B3B");
+    public Color CriticalColor { get; set; } = Color.FromArgb("#E02F44");
 
-    public Color PositiveTextColor { get; set; } = Color.FromArgb("#006300");
+    public Color PositiveTextColor { get; set; } = Color.FromArgb("#56A64B");
 
-    public Color NegativeTextColor { get; set; } = Color.FromArgb("#D03B3B");
+    public Color NegativeTextColor { get; set; } = Color.FromArgb("#E02F44");
 
     public double LineThickness { get; set; } = 2;
 
     public double AreaFillOpacity { get; set; } = 0.1;
 
-    public double BarCornerRadius { get; set; } = 4;
+    public double BarCornerRadius { get; set; }
 
     public double MaxBarWidth { get; set; } = 24;
 

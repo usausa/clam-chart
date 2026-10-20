@@ -9,6 +9,8 @@ public sealed class ClamPieChartViewAnimationTests
 
     private const string Selection = "ClamPieChartViewSelection";
 
+    private const string Center = "ClamPieChartViewCenter";
+
     private const float Scale = 2;
 
     private static readonly SKColor Blue = new(0x2A, 0x78, 0xD6);
@@ -86,10 +88,10 @@ public sealed class ClamPieChartViewAnimationTests
     }
 
     [Fact]
-    public void LabelsAndTheCenterFadeInAtTheEnd()
+    public void TheCenterCountsUpFromTheStartOfTheEntrance()
     {
         // Arrange
-        using var view = Chart(Entries(1, 1));
+        using var view = Chart(Entries(10, 10));
         view.AnimationEasing = Easing.Linear;
         view.CenterValueMode = ChartCenterValueMode.Auto;
         view.CenterLabel = "Total";
@@ -98,14 +100,66 @@ public sealed class ClamPieChartViewAnimationTests
         // Act
         using var first = view.Paint(300, 300);
         driver.Frame(Data, 0.6);
+        driver.Frame(Center, 0.6);
         using var middle = view.Paint(300, 300);
+        var counted = view.CenterCount.Current;
         driver.Finish(Data);
+        driver.Finish(Center);
         using var last = view.Paint(300, 300);
 
         // Assert
         var hole = Hole(view.ChartLayout);
-        Assert.Equal(0, CountInk(middle, hole));
+        Assert.Equal([(Data, 450u), (Center, 450u)], driver.Starts);
+        Assert.Equal(12, counted);
+        Assert.True(CountInk(first, hole) > 20);
+        Assert.True(CountInk(middle, hole) > 20);
         Assert.True(CountInk(last, hole) > 20);
+        Assert.False(view.CenterCount.IsRunning);
+        Assert.Equal(20, view.CenterCount.Current);
+    }
+
+    [Fact]
+    public void DataChangesCountTheCenterFromTheShownValue()
+    {
+        // Arrange
+        var entries = new ObservableCollection<ChartEntry>(Entries(10, 10));
+        using var view = Quiet(entries);
+        view.CenterValueMode = ChartCenterValueMode.Auto;
+        var driver = Driver(view);
+        using var first = view.Paint(300, 300);
+
+        // Act
+        entries[0] = new ChartEntry("C0", 30);
+        using var second = view.Paint(300, 300);
+        driver.Frame(Center, 0.5);
+        var half = view.CenterCount.Current;
+        entries[1] = new ChartEntry("C1", 30);
+        using var third = view.Paint(300, 300);
+
+        // Assert
+        Assert.Equal(30, half);
+        Assert.Equal("60", view.ChartLayout.Center.Value);
+        Assert.True(view.CenterCount.IsRunning);
+        Assert.Equal(30, view.CenterCount.Current);
+    }
+
+    [Fact]
+    public void TheCenterDoesNotCountWithoutUpdateAnimations()
+    {
+        // Arrange
+        var entries = new ObservableCollection<ChartEntry>(Entries(10, 10));
+        using var view = Quiet(entries);
+        view.CenterValueMode = ChartCenterValueMode.Auto;
+        view.UpdateAnimationEnabled = false;
+        using var first = view.Paint(300, 300);
+
+        // Act
+        entries[0] = new ChartEntry("C0", 30);
+        using var second = view.Paint(300, 300);
+
+        // Assert
+        Assert.False(view.CenterCount.IsRunning);
+        Assert.Equal(40, view.CenterCount.Current);
     }
 
     [Fact]
@@ -317,6 +371,7 @@ public sealed class ClamPieChartViewAnimationTests
 
         // Assert
         Assert.True(view.Interpolator.IsMorphing);
+        Assert.True(view.CenterCount.IsRunning);
         Assert.Equal(0, allocated);
     }
 
@@ -381,6 +436,11 @@ public sealed class ClamPieChartViewAnimationTests
         for (var i = 1; i <= 4; i++)
         {
             driver.Frame(Data, i * 0.2);
+            if (driver.IsRunning(Center))
+            {
+                driver.Frame(Center, i * 0.2);
+            }
+
             view.Render(canvas, 340, 340);
         }
 

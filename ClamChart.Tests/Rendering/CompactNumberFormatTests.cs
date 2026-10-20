@@ -47,4 +47,37 @@ public sealed class CompactNumberFormatTests
         Assert.Equal(Double.NaN.ToString(CultureInfo.InvariantCulture), CompactNumberFormat.Format(Double.NaN, CultureInfo.InvariantCulture));
         Assert.Equal(Double.PositiveInfinity.ToString(CultureInfo.InvariantCulture), CompactNumberFormat.Format(Double.PositiveInfinity, CultureInfo.InvariantCulture));
     }
+
+    [Theory]
+    [InlineData(0d)]
+    [InlineData(-0.125)]
+    [InlineData(1284d)]
+    [InlineData(-12900d)]
+    [InlineData(999950d)]
+    [InlineData(3.5e12)]
+    [InlineData(Double.NaN)]
+    public void FormattingIntoABufferMatchesTheText(double value)
+    {
+        // Arrange
+        var culture = CultureInfo.GetCultureInfo("de-DE");
+        Span<char> buffer = stackalloc char[32];
+
+        // Act
+        var formatted = CompactNumberFormat.TryFormat(value, buffer, culture, out var written);
+
+        // Assert
+        Assert.True(formatted);
+        Assert.Equal(CompactNumberFormat.Format(value, culture), buffer[..written].ToString());
+    }
+
+    [Fact]
+    public void FormattingIntoAShortBufferFails()
+    {
+        // Arrange
+        Span<char> buffer = stackalloc char[3];
+
+        // Act & Assert
+        Assert.False(CompactNumberFormat.TryFormat(12900, buffer, CultureInfo.InvariantCulture, out _));
+        Assert.False(CompactNumberFormat.TryFormat(1284, buffer, CultureInfo.InvariantCulture, out _));
+    }
 }

@@ -18,6 +18,15 @@ public sealed class ChartStyleTests
         Assert.Equal(0.35, style.DimmedOpacity);
         Assert.Equal(0.1, style.AreaFillOpacity);
         Assert.Equal(24d, style.MaxBarWidth);
+        Assert.Equal(0d, style.BarCornerRadius);
+        Assert.Equal(0d, style.TooltipCornerRadius);
+        Assert.False(style.IsDark);
+        Assert.Equal(Color.FromArgb("#56A64B"), style.GoodColor);
+        Assert.Equal(Color.FromArgb("#F2CC0C"), style.WarningColor);
+        Assert.Equal(Color.FromArgb("#FF780A"), style.SeriousColor);
+        Assert.Equal(Color.FromArgb("#E02F44"), style.CriticalColor);
+        Assert.Equal(Color.FromArgb("#56A64B"), style.PositiveTextColor);
+        Assert.Equal(Color.FromArgb("#E02F44"), style.NegativeTextColor);
         Assert.Equal(new Size(320, 200), style.CompactSize);
         Assert.Equal(new Size(160, 96), style.MinimalSize);
         Assert.Same(ChartPalettes.DefaultLight, style.Palette);
@@ -34,11 +43,15 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#F0EFEC"), dark.PrimaryTextColor);
         Assert.Equal(Color.FromArgb("#2C2C2A"), dark.GridLineColor);
         Assert.Equal(Color.FromArgb("#F01F1F1D"), dark.TooltipBackground);
-        Assert.Equal(Color.FromArgb("#0CA30C"), dark.PositiveTextColor);
-        Assert.Equal(Color.FromArgb("#E66767"), dark.NegativeTextColor);
+        Assert.True(dark.IsDark);
+        Assert.Equal(Color.FromArgb("#73BF69"), dark.GoodColor);
+        Assert.Equal(Color.FromArgb("#FADE2A"), dark.WarningColor);
+        Assert.Equal(Color.FromArgb("#FF9830"), dark.SeriousColor);
+        Assert.Equal(Color.FromArgb("#F2495C"), dark.CriticalColor);
+        Assert.Equal(Color.FromArgb("#73BF69"), dark.PositiveTextColor);
+        Assert.Equal(Color.FromArgb("#F2495C"), dark.NegativeTextColor);
         Assert.Same(ChartPalettes.DefaultDark, dark.Palette);
         Assert.Equal(light.MutedTextColor, dark.MutedTextColor);
-        Assert.Equal(light.CriticalColor, dark.CriticalColor);
         Assert.Equal(light.AxisLabelFontSize, dark.AxisLabelFontSize);
         Assert.Equal(light.CompactSize, dark.CompactSize);
     }
@@ -54,6 +67,15 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#3987E5"), ChartPalettes.DefaultDark[0]);
         Assert.Equal(Color.FromArgb("#E66767"), ChartPalettes.DefaultDark[7]);
         Assert.IsNotType<Color[]>(ChartPalettes.DefaultLight);
+        Assert.Equal(6, ChartPalettes.GrafanaLight.Count);
+        Assert.Equal(6, ChartPalettes.GrafanaDark.Count);
+        Assert.Equal(Color.FromArgb("#56A64B"), ChartPalettes.GrafanaLight[0]);
+        Assert.Equal(Color.FromArgb("#E0B400"), ChartPalettes.GrafanaLight[1]);
+        Assert.Equal(Color.FromArgb("#A352CC"), ChartPalettes.GrafanaLight[5]);
+        Assert.Equal(Color.FromArgb("#73BF69"), ChartPalettes.GrafanaDark[0]);
+        Assert.Equal(Color.FromArgb("#F2CC0C"), ChartPalettes.GrafanaDark[1]);
+        Assert.Equal(Color.FromArgb("#B877D9"), ChartPalettes.GrafanaDark[5]);
+        Assert.IsNotType<Color[]>(ChartPalettes.GrafanaLight);
     }
 
     [Fact]

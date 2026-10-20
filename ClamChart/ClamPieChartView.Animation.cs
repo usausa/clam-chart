@@ -2,12 +2,15 @@ namespace ClamChart;
 
 using ClamChart.Animation;
 using ClamChart.Data;
+using ClamChart.Layout;
 
 public partial class ClamPieChartView
 {
     private const string DataAnimationName = "ClamPieChartViewData";
 
     private const string SelectionAnimationName = "ClamPieChartViewSelection";
+
+    private const string CenterAnimationName = "ClamPieChartViewCenter";
 
     private const double SelectionMilliseconds = 150;
 
@@ -18,10 +21,13 @@ public partial class ClamPieChartView
     private bool sourceReplaced;
     private bool entranceShown;
     private bool entranceRequested;
+    private int countedKey = PieLayout.TotalCenterKey;
 
     internal PieInterpolator Interpolator { get; } = new();
 
-    internal override bool IsAnimating => dataAnimator.IsRunning || selectionAnimator.IsRunning;
+    internal ChartCountUp CenterCount { get; }
+
+    internal override bool IsAnimating => dataAnimator.IsRunning || selectionAnimator.IsRunning || CenterCount.IsRunning;
 
     internal override void StartEntranceAnimation()
     {
@@ -29,6 +35,7 @@ public partial class ClamPieChartView
         EnsureLayout();
         if (TryStartEntrance())
         {
+            SyncCenterCount(true, false);
             InvalidateSurface();
         }
     }
@@ -37,6 +44,7 @@ public partial class ClamPieChartView
     {
         dataAnimator.Stop();
         selectionAnimator.Stop();
+        CenterCount.Complete(CenterCount.Target);
         Interpolator.Complete(ChartLayout);
         interaction.SelectionProgress = 1;
         InvalidateSurface();
@@ -104,7 +112,8 @@ public partial class ClamPieChartView
 
     private void CompleteTransition(bool captured)
     {
-        if (!TryStartEntrance())
+        var entrance = TryStartEntrance();
+        if (!entrance)
         {
             if (Interpolator.IsEntrance)
             {
@@ -123,8 +132,36 @@ public partial class ClamPieChartView
             }
         }
 
+        SyncCenterCount(entrance, captured);
         ReleasePendingMap();
         pendingPositional = false;
+    }
+
+    private void SyncCenterCount(bool entrance, bool animate)
+    {
+        var key = ChartLayout.GetCenterKey(interaction.SelectedKey);
+        var center = ChartLayout.GetCenter(interaction.SelectedKey);
+        var number = center.IsVisible ? center.Number : Double.NaN;
+        var round = ChartLayout.CenterFormatting.IsDefault;
+        var length = ResolveAnimationLength(AnimationDuration);
+        if (entrance)
+        {
+            CenterCount.Start(0, number, length, true, round);
+        }
+        else if (CenterCount.IsEntrance && Interpolator.IsEntrance && (key == countedKey))
+        {
+            CenterCount.Retarget(number, round);
+        }
+        else if (animate && (key == countedKey))
+        {
+            CenterCount.Start(CenterCount.Current, number, length, false, round);
+        }
+        else
+        {
+            CenterCount.Complete(number);
+        }
+
+        countedKey = key;
     }
 
     private bool TryStartEntrance()

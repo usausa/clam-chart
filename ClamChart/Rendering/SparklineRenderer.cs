@@ -17,6 +17,7 @@ internal sealed class SparklineRenderer : IDisposable
 
     private readonly PaintCache paints = new();
     private readonly ChartTextPainter text;
+    private readonly bool ownsText;
     private readonly SKPathEffect dash = SKPathEffect.CreateDash([ReferenceDash, ReferenceDash], 0);
     private float[] along = [];
     private float[] across = [];
@@ -25,14 +26,29 @@ internal sealed class SparklineRenderer : IDisposable
     public IChartTextMeasurer Measurer => text;
 
     public SparklineRenderer(string fontFamily)
+        : this(new ChartTextPainter(fontFamily), true)
     {
-        text = new ChartTextPainter(fontFamily);
+    }
+
+    public SparklineRenderer(ChartTextPainter text)
+        : this(text, false)
+    {
+    }
+
+    private SparklineRenderer(ChartTextPainter text, bool ownsText)
+    {
+        this.text = text;
+        this.ownsText = ownsText;
     }
 
     public void Dispose()
     {
         paints.Dispose();
-        text.Dispose();
+        if (ownsText)
+        {
+            text.Dispose();
+        }
+
         dash.Dispose();
         Return(ref along);
         Return(ref across);
@@ -41,7 +57,7 @@ internal sealed class SparklineRenderer : IDisposable
 
     public void DrawEmptyText(SKCanvas canvas, string value, ChartRect bounds, ChartStyle style) => text.DrawEmptyText(canvas, value, bounds, style);
 
-    public void Render(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SKColor color, SKColor negative, ChartStyle style, bool smooth)
+    public void Render(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SparklinePaint paint, ChartStyle style, bool smooth)
     {
         var scale = display.IsMorphing ? display.Scale : layout.Scale;
         var entrance = display.Entrance;
@@ -55,7 +71,7 @@ internal sealed class SparklineRenderer : IDisposable
             ClipPlot(canvas, layout, display, entrance);
             if (layout.IsBar)
             {
-                DrawBars(canvas, layout, display, values, scale, color, negative, style, alpha, entrance);
+                DrawBars(canvas, layout, display, values, scale, paint, style, alpha, entrance);
             }
             else
             {
@@ -63,10 +79,14 @@ internal sealed class SparklineRenderer : IDisposable
                 if (layout.Kind == ChartSparklineKind.Area)
                 {
                     var fill = entrance == ChartEntranceAnimation.Reveal ? alpha * display.Ease(ChartProgress.Delayed(display.Progress, ChartProgress.FillDelay)) : alpha;
-                    FillArea(canvas, layout, count, smooth, ChartColor.Fade(color, fill * style.AreaFillOpacity));
+                    FillArea(canvas, layout, count, smooth, ChartColor.Fade(paint.Area, fill));
                 }
 
-                StrokeLine(canvas, count, smooth, ChartColor.Fade(color, alpha), layout.Thickness);
+                StrokeLine(canvas, count, smooth, ChartColor.Fade(paint.Color, alpha * paint.WeakOpacity), layout.Thickness);
+                if (paint.HasEmphasis)
+                {
+                    StrokeLast(canvas, count, smooth, ChartColor.Fade(paint.Color, alpha), layout.Thickness);
+                }
             }
         }
         finally
@@ -76,7 +96,7 @@ internal sealed class SparklineRenderer : IDisposable
 
         if (!layout.IsBar)
         {
-            DrawMarkers(canvas, layout, display, count, ChartColor.Fade(color, alpha * overlay));
+            DrawMarkers(canvas, layout, display, count, ChartColor.Fade(paint.Color, alpha * overlay));
         }
     }
 
@@ -205,6 +225,39 @@ internal sealed class SparklineRenderer : IDisposable
         bool IsPoint(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
     }
 
+    private void StrokeLast(SKCanvas canvas, int count, bool smooth, SKColor color, float thickness)
+    {
+        if (thickness <= 0)
+        {
+            return;
+        }
+
+        var end = count - 1;
+        while ((end >= 0) && !IsPoint(end))
+        {
+            end--;
+        }
+
+        if ((end < 1) || !IsPoint(end - 1))
+        {
+            return;
+        }
+
+        var stroke = paints.Stroke(color, thickness);
+        if (!smooth)
+        {
+            canvas.DrawLine(along[end - 1], across[end - 1], along[end], across[end], stroke);
+            return;
+        }
+
+        var builder = paints.Path;
+        LinePathBuilder.AddLine(builder, along.AsSpan(end - 1, 2), across.AsSpan(end - 1, 2), tangents.AsSpan(end - 1, 2), ChartLineInterpolation.Smooth, false);
+        using var path = builder.Detach();
+        canvas.DrawPath(path, stroke);
+
+        bool IsPoint(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
+    }
+
     private void FillArea(SKCanvas canvas, SparklineLayout layout, int count, bool smooth, SKColor color)
     {
         if (color.Alpha == 0)
@@ -261,7 +314,7 @@ internal sealed class SparklineRenderer : IDisposable
         bool IsPoint(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
     }
 
-    private void DrawBars(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SparklineScale scale, SKColor color, SKColor negative, ChartStyle style, double alpha, ChartEntranceAnimation entrance)
+    private void DrawBars(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SparklineScale scale, SparklinePaint paint, ChartStyle style, double alpha, ChartEntranceAnimation entrance)
     {
         var morphing = display.IsMorphing;
         var geometry = display.Display;
@@ -278,6 +331,7 @@ internal sealed class SparklineRenderer : IDisposable
         var winLoss = layout.Kind == ChartSparklineKind.WinLoss;
         var origin = SparklineLayout.GetBase(scale);
         var middle = (float)layout.ToY(origin, scale);
+        var emphasized = paint.HasEmphasis && (layout.LastIndex >= 0) ? display.ToDisplayIndex(layout.LastIndex) : -1;
         for (var i = 0; i < count; i++)
         {
             var position = morphing ? geometry.X[i] : i;
@@ -309,7 +363,8 @@ internal sealed class SparklineRenderer : IDisposable
                 continue;
             }
 
-            canvas.DrawRect(new SKRect(center - (width / 2), top, center + (width / 2), bottom), paints.Fill(ChartColor.Fade(value < 0 ? negative : color, alpha)));
+            var weight = !paint.HasEmphasis || (i == emphasized) ? 1 : paint.WeakOpacity;
+            canvas.DrawRect(new SKRect(center - (width / 2), top, center + (width / 2), bottom), paints.Fill(ChartColor.Fade(value < 0 ? paint.Negative : paint.Color, alpha * weight)));
         }
     }
 

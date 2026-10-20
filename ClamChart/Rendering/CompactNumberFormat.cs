@@ -4,6 +4,12 @@ internal static class CompactNumberFormat
 {
     private const double CompactThreshold = 10000;
 
+    private const double ZeroThreshold = 0.005;
+
+    private const string ZeroFormat = "0";
+
+    private const string PlainFormat = "#,0.##";
+
     private static readonly string[] Suffixes = ["K", "M", "B", "T"];
 
     public static string Format(double value, IFormatProvider provider)
@@ -13,15 +19,50 @@ internal static class CompactNumberFormat
             return value.ToString(provider);
         }
 
-        var magnitude = Math.Abs(value);
-        if (magnitude < 0.005)
+        var (number, format, suffix) = Resolve(value);
+        var text = number.ToString(format, provider);
+        return suffix is null ? text : String.Concat(text, suffix);
+    }
+
+    public static bool TryFormat(double value, Span<char> destination, IFormatProvider provider, out int written)
+    {
+        if (!Double.IsFinite(value))
         {
-            return 0d.ToString("0", provider);
+            return value.TryFormat(destination, out written, default, provider);
+        }
+
+        var (number, format, suffix) = Resolve(value);
+        if (!number.TryFormat(destination, out written, format, provider))
+        {
+            return false;
+        }
+
+        if (suffix is null)
+        {
+            return true;
+        }
+
+        if (!suffix.AsSpan().TryCopyTo(destination[written..]))
+        {
+            written = 0;
+            return false;
+        }
+
+        written += suffix.Length;
+        return true;
+    }
+
+    private static (double Number, string Format, string? Suffix) Resolve(double value)
+    {
+        var magnitude = Math.Abs(value);
+        if (magnitude < ZeroThreshold)
+        {
+            return (0, ZeroFormat, null);
         }
 
         if (magnitude < CompactThreshold)
         {
-            return Math.Round(value, 2, MidpointRounding.AwayFromZero).ToString("#,0.##", provider);
+            return (Math.Round(value, 2, MidpointRounding.AwayFromZero), PlainFormat, null);
         }
 
         var unit = 0;
@@ -39,7 +80,7 @@ internal static class CompactNumberFormat
             rounded = Round(rounded / 1000);
         }
 
-        return String.Concat((value < 0 ? -rounded : rounded).ToString(rounded >= 100 ? "#,0" : "0.##", provider), Suffixes[unit]);
+        return (value < 0 ? -rounded : rounded, rounded >= 100 ? "#,0" : "0.##", Suffixes[unit]);
     }
 
     private static double Round(double value) =>
