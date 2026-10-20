@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:models="clr-namespace:Example.Models"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartDensityView"
+             x:DataType="{x:Type module:ChartDensityViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartDensityViewModel}"
+             shell:ShellProperty.Title="Density"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="S"
+             shell:ShellProperty.Function3Text="M"
+             shell:ShellProperty.Function4Text="L"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource ChartStack}">
+            <Border Style="{StaticResource TapBorder}"
+                    HorizontalOptions="Start">
+                <clam:ClamChartView WidthRequest="{Binding ChartWidth}"
+                                    HeightRequest="{Binding ChartHeight}"
+                                    ValueAccessors="{x:Static models:MonthlySales.Accessors}"
+                                    XKey="month">
+                    <clam:BarSeries ItemsSource="{Binding Sales}"
+                                    Title="Store" YKey="store" />
+                    <clam:LineSeries ItemsSource="{Binding Sales}"
+                                     Title="Target" YKey="target" />
+                </clam:ClamChartView>
+            </Border>
+            <Border Style="{StaticResource TapBorder}"
+                    HorizontalOptions="Start">
+                <clam:ClamPieChartView WidthRequest="{Binding ChartWidth}"
+                                       HeightRequest="{Binding ChartHeight}"
+                                       ItemsSource="{Binding Expenses}"
+                                       CenterLabel="Total" />
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentView>

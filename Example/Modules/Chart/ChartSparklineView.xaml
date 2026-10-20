@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartSparklineView"
+             x:DataType="{x:Type module:ChartSparklineViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartSparklineViewModel}"
+             shell:ShellProperty.Title="Sparkline"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Kind"
+             shell:ShellProperty.Function3Text="Markers"
+             shell:ShellProperty.Function4Text="Live"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource FillGrid}"
+          RowDefinitions="Auto,*">
+        <Grid Grid.Row="0"
+              Style="{StaticResource RowGrid}"
+              ColumnDefinitions="*,120,64">
+            <Label Grid.Column="0"
+                   Style="{StaticResource ValueLabel}"
+                   Padding="0"
+                   VerticalTextAlignment="Center"
+                   Text="Live" />
+            <clam:ClamSparklineView Grid.Column="1"
+                                    HeightRequest="28"
+                                    Kind="{Binding Kind}"
+                                    Markers="{Binding Markers}"
+                                    Values="{Binding LiveValues}" />
+            <Label Grid.Column="2"
+                   Style="{StaticResource ValueLabel}"
+                   Padding="0"
+                   HorizontalTextAlignment="End" VerticalTextAlignment="Center"
+                   Text="{Binding LiveText}" />
+        </Grid>
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Rows}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="{x:Type module:SparklineRow}">
+                    <Grid Style="{StaticResource RowGrid}"
+                          ColumnDefinitions="*,120,64">
+                        <Label Grid.Column="0"
+                               VerticalTextAlignment="Center"
+                               Text="{Binding Name}" />
+                        <clam:ClamSparklineView Grid.Column="1"
+                                                HeightRequest="28"
+                                                Kind="{Binding Kind}"
+                                                Markers="{Binding Markers}"
+                                                Values="{Binding Values}" />
+                        <Label Grid.Column="2"
+                               HorizontalTextAlignment="End" VerticalTextAlignment="Center"
+                               Text="{Binding Last, StringFormat='{0:N1}'}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+
+</ContentView>

@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:models="clr-namespace:Example.Models"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartTimeSeriesView"
+             x:DataType="{x:Type module:ChartTimeSeriesViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartTimeSeriesViewModel}"
+             shell:ShellProperty.Title="Time series"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="1D"
+             shell:ShellProperty.Function3Text="1W"
+             shell:ShellProperty.Function4Text="1M"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource ChartGrid}">
+        <clam:ClamChartView TrackballMode="LongPress"
+                            ValueAccessors="{x:Static models:WeatherSample.Accessors}"
+                            XKey="time">
+            <clam:ClamChartView.XAxis>
+                <clam:DateTimeAxis Minimum="{Binding Minimum}"
+                                   Maximum="{Binding Maximum}" />
+            </clam:ClamChartView.XAxis>
+            <clam:ClamChartView.YAxis>
+                <clam:NumericAxis IncludeZero="False" />
+            </clam:ClamChartView.YAxis>
+            <clam:AreaSeries ItemsSource="{Binding Samples}"
+                             Title="Temperature" ValueFormat="{}{0:N1} °C" YKey="temperature" />
+        </clam:ClamChartView>
+    </Grid>
+
+</ContentView>

@@ -28,4 +28,6 @@ global using Smart.Navigation.Attributes;
 
 global using SkiaSharp;
 
+global using ClamChart;
+
 global using Example;

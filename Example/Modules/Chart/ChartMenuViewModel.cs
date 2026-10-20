@@ -16,4 +16,14 @@ public sealed class ChartMenuViewModel : AppViewModelBase
     }
 
     protected override Task OnNotifyFunction1() => OnNotifyBackAsync();
+
+    protected override Task OnNotifyFunction2()
+    {
+        if (Application.Current is { } application)
+        {
+            application.UserAppTheme = application.RequestedTheme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+        }
+
+        return Task.CompletedTask;
+    }
 }

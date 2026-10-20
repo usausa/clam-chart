@@ -13,6 +13,11 @@ global using System.Text;
 global using System.Threading;
 global using System.Threading.Tasks;
 
+global using ClamChart;
+global using ClamChart.Data;
+global using ClamChart.Layout;
+global using ClamChart.Rendering;
+
 global using Microsoft.Maui.Controls;
 global using Microsoft.Maui.Graphics;
 

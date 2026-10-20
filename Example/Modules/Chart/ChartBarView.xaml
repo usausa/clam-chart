@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:models="clr-namespace:Example.Models"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartBarView"
+             x:DataType="{x:Type module:ChartBarViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartBarViewModel}"
+             shell:ShellProperty.Title="Bar"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Stack"
+             shell:ShellProperty.Function3Text="Select"
+             shell:ShellProperty.Function4Text="Labels"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource ChartGrid}"
+          RowDefinitions="*,*">
+        <clam:ClamChartView Grid.Row="0"
+                            DataLabelsMode="{Binding LabelsMode}"
+                            SelectedItem="{Binding SelectedSales}"
+                            SelectionMode="{Binding SelectionMode}"
+                            StackMode="{Binding StackMode}"
+                            ValueAccessors="{x:Static models:MonthlySales.Accessors}"
+                            XKey="month">
+            <clam:BarSeries ItemsSource="{Binding Sales}"
+                            StackGroup="{Binding StackGroup}"
+                            Title="Store" YKey="store" />
+            <clam:BarSeries ItemsSource="{Binding Sales}"
+                            StackGroup="{Binding StackGroup}"
+                            Title="Online" YKey="online" />
+            <clam:BarSeries ItemsSource="{Binding Sales}"
+                            StackGroup="{Binding StackGroup}"
+                            Title="Wholesale" YKey="wholesale" />
+        </clam:ClamChartView>
+        <clam:ClamChartView Grid.Row="1"
+                            Orientation="Horizontal"
+                            DataLabelsMode="All"
+                            SelectionMode="{Binding SelectionMode}"
+                            ValueAccessors="{x:Static models:ProductRank.Accessors}"
+                            XKey="name">
+            <clam:BarSeries ItemsSource="{Binding Ranking}"
+                            Title="Units" YKey="units" />
+        </clam:ClamChartView>
+    </Grid>
+
+</ContentView>

@@ -2,5 +2,13 @@ namespace Example.Modules;
 
 public enum ViewId
 {
-    ChartMenu
+    ChartMenu,
+    ChartLine,
+    ChartBar,
+    ChartTimeSeries,
+    ChartDualAxis,
+    ChartPie,
+    ChartSparkline,
+    ChartDensity,
+    ChartPerformance
 }

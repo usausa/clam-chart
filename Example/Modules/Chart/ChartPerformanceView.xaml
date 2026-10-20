@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartPerformanceView"
+             x:DataType="{x:Type module:ChartPerformanceViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartPerformanceViewModel}"
+             shell:ShellProperty.Title="Performance"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Lines"
+             shell:ShellProperty.Function3Text="Stream"
+             shell:ShellProperty.Function4Text="List"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource ChartGrid}"
+          RowDefinitions="Auto,*">
+        <Label Grid.Row="0"
+               Style="{StaticResource NoteLabel}"
+               Text="{Binding Status}" />
+        <clam:ClamChartView Grid.Row="1"
+                            HeightRequest="360"
+                            IsVisible="{Binding LinesVisible}"
+                            FrameRendered="OnFrameRendered" VerticalOptions="Start">
+            <clam:LineSeries ItemsSource="{Binding First}" />
+            <clam:LineSeries ItemsSource="{Binding Second}" />
+            <clam:LineSeries ItemsSource="{Binding Third}" />
+        </clam:ClamChartView>
+        <clam:ClamChartView Grid.Row="1"
+                            HeightRequest="360"
+                            IsVisible="{Binding StreamVisible}"
+                            FrameRendered="OnFrameRendered" VerticalOptions="Start">
+            <clam:AreaSeries ItemsSource="{Binding Stream}" />
+        </clam:ClamChartView>
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Rows}"
+                        IsVisible="{Binding ListVisible}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="{x:Type module:SparklineRow}">
+                    <Grid Style="{StaticResource RowGrid}"
+                          ColumnDefinitions="*,120,64">
+                        <Label Grid.Column="0"
+                               VerticalTextAlignment="Center"
+                               Text="{Binding Name}" />
+                        <clam:ClamSparklineView Grid.Column="1"
+                                                HeightRequest="28"
+                                                FrameRendered="OnFrameRendered"
+                                                Markers="{Binding Markers}"
+                                                Values="{Binding Values}" />
+                        <Label Grid.Column="2"
+                               HorizontalTextAlignment="End" VerticalTextAlignment="Center"
+                               Text="{Binding Last, StringFormat='{0:N1}'}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+
+</ContentView>
