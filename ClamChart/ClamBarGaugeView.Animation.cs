@@ -27,7 +27,7 @@ public partial class ClamBarGaugeView
         EnsureLayout();
         if (TryStartEntrance())
         {
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
@@ -35,7 +35,7 @@ public partial class ClamBarGaugeView
     {
         dataAnimator.Stop();
         Interpolator.Complete(ChartLayout.Rows);
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool CanAnimate => (ResolveAnimationLength(AnimationDuration) >= 1) && AnimationDriver.CanStart;
@@ -159,6 +159,6 @@ public partial class ClamBarGaugeView
             Interpolator.Complete(ChartLayout.Rows);
         }
 
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 }

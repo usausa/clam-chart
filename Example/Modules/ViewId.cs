@@ -12,6 +12,8 @@ public enum ViewId
     ChartStat,
     ChartBarGauge,
     ChartRadialBar,
+    ChartScatter,
+    ChartThreshold,
     ChartDensity,
     ChartPerformance
 }

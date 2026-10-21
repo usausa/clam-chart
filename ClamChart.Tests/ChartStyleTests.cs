@@ -16,6 +16,7 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#F0FCFCFB"), style.TooltipBackground);
         Assert.Null(style.TrackColor);
         Assert.Equal(0.35, style.DimmedOpacity);
+        Assert.Equal(0.35, style.EmphasisDimmedOpacity);
         Assert.Equal(0.1, style.AreaFillOpacity);
         Assert.Equal(24d, style.MaxBarWidth);
         Assert.Equal(0d, style.BarCornerRadius);
@@ -51,6 +52,8 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#73BF69"), dark.PositiveTextColor);
         Assert.Equal(Color.FromArgb("#F2495C"), dark.NegativeTextColor);
         Assert.Same(ChartPalettes.DefaultDark, dark.Palette);
+        Assert.Equal(0.5, dark.EmphasisDimmedOpacity);
+        Assert.Equal(light.DimmedOpacity, dark.DimmedOpacity);
         Assert.Equal(light.MutedTextColor, dark.MutedTextColor);
         Assert.Equal(light.AxisLabelFontSize, dark.AxisLabelFontSize);
         Assert.Equal(light.CompactSize, dark.CompactSize);
@@ -76,6 +79,19 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#F2CC0C"), ChartPalettes.GrafanaDark[1]);
         Assert.Equal(Color.FromArgb("#B877D9"), ChartPalettes.GrafanaDark[5]);
         Assert.IsNotType<Color[]>(ChartPalettes.GrafanaLight);
+    }
+
+    [Fact]
+    public void MaterialPalettesUseTheTemplateColorsAndTheirLighterTones()
+    {
+        // Act & Assert
+        Assert.Equal(
+            [Color.FromArgb("#2196F3"), Color.FromArgb("#4CAF50"), Color.FromArgb("#FFB300"), Color.FromArgb("#EC407A"), Color.FromArgb("#26C6DA")],
+            ChartPalettes.MaterialLight);
+        Assert.Equal(
+            [Color.FromArgb("#64B5F6"), Color.FromArgb("#81C784"), Color.FromArgb("#FFD54F"), Color.FromArgb("#F06292"), Color.FromArgb("#4DD0E1")],
+            ChartPalettes.MaterialDark);
+        Assert.IsNotType<Color[]>(ChartPalettes.MaterialLight);
     }
 
     [Fact]
@@ -112,6 +128,7 @@ public sealed class ChartStyleTests
             ChartStyles.Light with { GridLineThickness = Double.NaN },
             ChartStyles.Light with { SegmentGap = -1 },
             ChartStyles.Light with { DimmedOpacity = 1.5 },
+            ChartStyles.Light with { EmphasisDimmedOpacity = -0.1 },
             ChartStyles.Light with { AreaFillOpacity = Double.NaN },
             ChartStyles.Light with { CompactSize = new Size(-1, 200) },
             ChartStyles.Light with { MinimalSize = new Size(400, 96) }

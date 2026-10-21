@@ -4,5 +4,6 @@ internal enum ChartSeriesKind
 {
     Line,
     Area,
-    Bar
+    Bar,
+    Scatter
 }

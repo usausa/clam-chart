@@ -88,7 +88,7 @@ A bar gauge that measures its own height (`AutoHeight`) decides the density from
 
 ## 📈 ClamChartView
 
-Draws line, area and bar series on X and Y axes, mixed in one chart, stacked, horizontal or on a date and time axis.  
+Draws line, area, bar and scatter series on X and Y axes, mixed in one chart, stacked, horizontal or on a date and time axis, with thresholds and reference lines and bands.  
 `Series` is the content property, so series are written as child elements in XAML.  
 
 ### 🧩 Properties
@@ -159,6 +159,7 @@ Taps hit wider areas than the drawn shapes.
 
 | Element | Hit area |
 |---|---|
+| Scatter point | 22 DIP from the point in any direction, tested before the other elements; the nearest point wins |
 | Line and area point | Halfway to the neighboring points along X and 22 DIP from the point along Y, the fill included; the nearer point wins |
 | Bar | The whole column of the category, split evenly between grouped bars |
 | `Category` selection | The whole column of the category |
@@ -184,8 +185,25 @@ It draws a hairline in `TrackballLineColor`, markers on line and area points and
 The first line of the tooltip is the X label.  
 On a `DateTimeAxis` with the default format it uses the finer of the tick precision and the precision of the point times, with the date added when the range spans days (`10/9 14:00`).  
 The following rows show the title and the value of each series, formatted by the series or the value axis; 100% stacks show the original values.  
+When every visible series is a `ScatterSeries`, the trackball snaps to the nearest point in both directions instead, draws a crosshair through it and shows only that point in the tooltip.  
 A data or layout change during tracking snaps again at the finger.  
 Tracking ends when the finger is released, a second finger touches, the finger leaves the view or `CancelInteraction()` is called, and is canceled when the view is resized, unloaded, disabled, hidden or loses focus, the handler changes, or `TouchMode` or `TrackballMode` changes.  
+
+#### Thresholds and annotations
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Thresholds` | `IList<ChartThreshold>` | empty `ObservableCollection<ChartThreshold>` | ✓ | Thresholds compared with the values on the primary value axis, not included in the automatic range; `null` throws `ArgumentNullException` |
+| `ThresholdsMode` | `ChartThresholdsMode` | `None` | ✓ | How the thresholds are shown, as flags |
+| `Annotations` | `IList<ChartAnnotation>` | empty `ObservableCollection<ChartAnnotation>` | ✓ | Reference lines and bands (see [Annotations](#-annotations)); an annotation belongs to one chart, and adding it to another throws `InvalidOperationException`; `null` throws `ArgumentNullException` |
+
+| `ThresholdsMode` flag | Drawing |
+|---|---|
+| `Lines` | A dashed line (`10,10`) of 2 DIP in the threshold color at 70% at each threshold but the base, with its `Label` above the right end |
+| `Bands` | Each step up to the next threshold filled with its color at 15%, under the series |
+| `ColorSeries` | Lines and areas on the primary value axis are colored by the region of their values with hard edges; bars, markers, scatter points and tooltip dots take the color of the threshold at their value, and the legend keeps the series colors |
+
+Changes of a notifying list of thresholds are followed while the chart is attached; after changing a threshold in place, call `Invalidate()`.  
 
 ### 📣 Events
 
@@ -281,6 +299,18 @@ Derives from `LineSeries`.
 
 A value axis with bars includes 0 unless `IncludeZero` is `false`, and bars on a numeric or date and time X axis widen the range by half of the smallest gap so that the end bars are not cut.  
 
+### ScatterSeries
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `MarkerSize` | `double?` | `null` | ✓ | Point diameter; `null` uses `ChartStyle.MarkerSize` |
+| `MarkerShape` | `ChartMarkerShape` | `Circle` | ✓ | Shape of the points |
+| `FillOpacity` | `double?` | `null` | ✓ | Opacity of the fill from 0 to 1; `null` is 0.5 |
+
+Points are filled with the series color at `FillOpacity` and outlined with it at 1 DIP, and are not connected.  
+X is a number or a date and time; like a line, the value axis does not include 0 by default, and a fixed X range takes only the points inside it.  
+The legend shows a dot, and the `Auto` entrance fades the points in while they grow from 60% of their size.  
+
 ## 📏 Axes
 
 ### ChartAxis
@@ -356,6 +386,42 @@ Times are local: a `DateTimeOffset` uses `LocalDateTime`, a UTC `DateTime` is co
 
 Categories merge the X values of all series in order of appearance, hidden series included, so the axis does not change when a series is toggled.  
 `LabelFormat` applies only composite formats (`{0} st`).  
+
+## 📌 Annotations
+
+### ChartAnnotation
+
+Base of `ChartReferenceLine` and `ChartReferenceBand`, an `Element` added to `ClamChartView.Annotations` that inherits the `BindingContext` of the chart.  
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Axis` | `ChartAnnotationAxis` | `Y` | ✓ | Axis the annotation is placed on |
+| `YAxis` | `ChartAxisTarget` | `Primary` | ✓ | Value axis of an annotation with `Axis = Y` |
+| `Label` | `string?` | `null` | ✓ | Text drawn with the line or the band |
+| `Color` | `Color?` | `null` | ✓ | Color of the line, the band and the label |
+
+### ChartReferenceLine
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Value` | `double` | `NaN` | ✓ | Position on a value axis, or on a numeric or category X axis |
+| `Time` | `DateTime?` | `null` | ✓ | Position on a date and time X axis |
+| `DashPattern` | `DoubleCollection?` | `null` | ✓ | Dashes in multiples of the line width; `null` is `4,4` and an empty collection draws a solid line |
+
+### ChartReferenceBand
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Start`, `End` | `double` | `NaN` | ✓ | Ends of the band on a value axis, or on a numeric or category X axis, in any order |
+| `StartTime`, `EndTime` | `DateTime?` | `null` | ✓ | Ends of the band on a date and time X axis |
+
+| Item | Rule |
+|---|---|
+| Values | Finite or `NaN`, and infinities throw `ArgumentOutOfRangeException`; `NaN` draws nothing. A date and time X axis uses `Time`, `StartTime` and `EndTime`, and the other X axes use the numbers (positions on a `CategoryAxis`) |
+| Line | 1 DIP dashed in `Color`, or `SecondaryTextColor` when `null`, over the series |
+| Band | `Color`, or `MutedTextColor` when `null`, at 15% under the series |
+| Label | `DataLabelFontSize` in `Color` or `SecondaryTextColor`: above the right end of a horizontal line, right of the top of a vertical line, and inside the top left of a band, truncated to its width |
+| Range | Annotations on a value axis are included in its automatic range; annotations on the X axis are not, so passed times do not stretch a flowing time axis |
 
 ## 🍩 ClamPieChartView
 
@@ -469,10 +535,14 @@ It is drawn without allocations of its own: bars and win-loss allocate nothing, 
 | `Markers` | `ChartSparklineMarkers` | `Last` | ✓ | Points that get a marker on lines and areas: `First`, `Last`, `High` and `Low` combined |
 | `Minimum`, `Maximum` | `double?` | `null` | ✓ | Fixed range; pass the same values to every row to compare rows on one scale |
 | `ReferenceValue` | `double?` | `null` | ✓ | Dashed hairline in `AxisLineColor` for a target or an average, included in the automatic range; not drawn for win-loss |
+| `NormalRangeMinimum`, `NormalRangeMaximum` | `double?` | `null` | ✓ | Normal range drawn as a band in `MutedTextColor` at 15% and included in the automatic range; one end alone reaches the edge; finite values; not drawn for win-loss |
+| `EmphasisMode` | `ChartSparklineEmphasis` | `None` | ✓ | `Last` draws the last segment (the last bar) in the series color and the rest, the fill included, at `ChartStyle.EmphasisDimmedOpacity` |
+| `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Thresholds, not included in the automatic range; `null` throws `ArgumentNullException` |
+| `ThresholdsMode` | `ChartThresholdsMode` | `None` | ✓ | As in `ClamChartView`, with 1 DIP dashed lines (`4,4`); `ColorSeries` colors lines and areas by region and bars, win-loss and markers by value |
 
 | Item | Rule |
 |---|---|
-| Range | Lines and areas span the values, bars include 0 and win-loss uses only the sign; equal values are widened by 1 on each side, and an inverted `Minimum` / `Maximum` falls back to the automatic range with a warning |
+| Range | Lines and areas span the values, bars include 0 and win-loss uses only the sign, together with `ReferenceValue` and the normal range; equal values are widened by 1 on each side, and an inverted `Minimum` / `Maximum` falls back to the automatic range with a warning |
 | Markers | Diameter 2.5 times the line width with a cut-out of half the width, in the line color; the highest and the lowest are their first points, and points sharing a position get one marker |
 | Bars | Width of the slot minus a gap, at most `MaxBarWidth`, from 0 (or the nearer edge) with square corners |
 | Win-loss | Wins fill the upper half and losses the lower half with 1 DIP between them; zeros and missing values are not drawn |
@@ -530,7 +600,7 @@ The value counts up from the shown value when it changes, and counting allocates
 | `Value` | `double` | `Double.NegativeInfinity` | The state applies from this value; leave the first one as the base |
 | `Color` | `Color?` | `null` | Color of the state; `null` uses the color of `Level` |
 | `Level` | `ChartThresholdLevel` | `None` | Level of the state, which chooses the status color and the icon |
-| `Label` | `string?` | `null` | Reserved for threshold lines |
+| `Label` | `string?` | `null` | Text above the right end of the threshold line of `ClamChartView` in `Lines` mode |
 
 The threshold with the largest `Value` at or below the value applies, and the later one wins a tie.  
 Changes of a notifying list are followed; after changing a threshold in place, call `Invalidate()`.  
@@ -702,6 +772,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `TrackballLineColor` | `Color` | `#898781` | `#898781` | Trackball line |
 | `TrackColor` | `Color?` | `null` | `null` | Part of a bar gauge or a radial bar that is not reached, and unlit radial segments; `null` is a neutral gray (black at 7% in light, white at 7% in dark) |
 | `DimmedOpacity` | `double` | `0.35` | `0.35` | Opacity of the elements that are not selected |
+| `EmphasisDimmedOpacity` | `double` | `0.35` | `0.5` | Opacity of a sparkline except its emphasized last segment |
 | `PressedOverlayColor` | `Color` | `#0F000000` | `#14FFFFFF` | Cover of a pressed chart |
 | `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Reserved for the loading placeholder |
 | `Palette` | `IReadOnlyList<Color>` | `ChartPalettes.DefaultLight` | `ChartPalettes.DefaultDark` | Series colors in a fixed order |
@@ -742,9 +813,13 @@ Colors belong to series and slices by position, so hiding a series does not chan
 | `ChartPalettes.DefaultDark` | `#3987E5`, `#D95926`, `#199E70`, `#C98500`, `#D55181`, `#008300`, `#9085E9`, `#E66767` |
 | `ChartPalettes.GrafanaLight` | `#56A64B`, `#E0B400`, `#3274D9`, `#FF780A`, `#E02F44`, `#A352CC` |
 | `ChartPalettes.GrafanaDark` | `#73BF69`, `#F2CC0C`, `#5794F2`, `#FF9830`, `#F2495C`, `#B877D9` |
+| `ChartPalettes.MaterialLight` | `#2196F3`, `#4CAF50`, `#FFB300`, `#EC407A`, `#26C6DA` |
+| `ChartPalettes.MaterialDark` | `#64B5F6`, `#81C784`, `#FFD54F`, `#F06292`, `#4DD0E1` |
 
 `GrafanaLight` and `GrafanaDark` are the first six colors of the classic Grafana palette (green, semi-dark yellow, blue, orange, red and purple) in each theme.  
 They are not checked for color vision deficiencies, so pair them with labels or a legend.  
+`MaterialLight` is the five Material Design colors of the template-maui charts (blue 500, green 500, amber 600, pink 400 and cyan 400), and `MaterialDark` takes the 300 tone of each; neighbors stay distinct for red-green deficiencies, and a sixth series uses `OtherColor`.  
+Any `IReadOnlyList<Color>` works as a palette, on a view through `Palette` or for every chart through `ChartStyle.Palette`; in XAML, list the colors in `x:Array Type="{x:Type Color}"`.  
 
 ## 🔧 ClamChartSettings
 
@@ -901,7 +976,7 @@ Separators follow `Culture` and the suffixes stay in English.
 | `Index` | `int` | Position of the tracked item; `-1` when tracking ends |
 | `Item` | `object?` | Tracked item |
 | `X` | `object?` | X of the trackball, typed as in `ChartItemEventArgs` |
-| `Points` | `IReadOnlyList<ChartTrackingInfo>` | Point of each series at that X; empty when tracking ends |
+| `Points` | `IReadOnlyList<ChartTrackingInfo>` | Point of each series at that X, or only the tracked point with the crosshair of scatter series; empty when tracking ends |
 
 ### ChartTrackingInfo
 
@@ -936,7 +1011,7 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `PassThrough` | Takes no touches |
 | `ChartEntranceAnimation` | `Auto` | Chosen by the kind of chart |
 | | `None` | No entrance |
-| | `Fade` | Opacity rises |
+| | `Fade` | Opacity rises; scatter points also grow from 60% of their size |
 | | `Grow` | Values grow from the baseline; a pie widens from `StartAngle` |
 | | `Reveal` | Drawn from the start of the X axis; a pie is revealed from `StartAngle` |
 | `ChartOrientation` | `Vertical` | X along the bottom |
@@ -988,6 +1063,15 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartSparklineKind` | `Line`, `Area`, `Bar`, `WinLoss` | Shape of a sparkline |
 | `ChartSparklineMarkers` | `None`, `First`, `Last`, `High`, `Low` | Flags of the points with a marker |
 | `ChartThresholdLevel` | `None`, `Good`, `Warning`, `Serious`, `Critical` | Level of a threshold |
+| `ChartThresholdsMode` | `None` | Thresholds are not drawn |
+| | `Lines` | Dashed lines at the thresholds |
+| | `Bands` | Tinted steps between the thresholds |
+| | `ColorSeries` | Series colored by the thresholds |
+| `ChartAnnotationAxis` | `Y` | On a value axis |
+| | `X` | On the X axis |
+| `ChartMarkerShape` | `Circle`, `Square` | Shape of scatter points |
+| `ChartSparklineEmphasis` | `None` | Every segment in the series color |
+| | `Last` | Only the last segment in full color |
 | `ChartDeltaMode` | `Percent` | Ratio to the size of the base |
 | | `Absolute` | Difference of the values |
 | `ChartTrendPlacement` | `Bottom` | Under the text |

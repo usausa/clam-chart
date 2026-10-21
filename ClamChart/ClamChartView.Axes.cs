@@ -113,7 +113,9 @@ public partial class ClamChartView
                 ChartDensity.Compact when DataLabelsMode != ChartDataLabelsMode.None => ChartDataLabelsMode.Last,
                 _ => ChartDataLabelsMode.None
             },
-            LastMarkerOnly = !full
+            LastMarkerOnly = !full,
+            Annotations = layoutAnnotations,
+            Thresholds = Thresholds
         };
     }
 
@@ -141,7 +143,7 @@ public partial class ClamChartView
     {
         foreach (var series in attached)
         {
-            if ((series.Kind != ChartSeriesKind.Line) && ((series.YAxis == target) || !secondary))
+            if ((series.Kind is not (ChartSeriesKind.Line or ChartSeriesKind.Scatter)) && ((series.YAxis == target) || !secondary))
             {
                 return true;
             }

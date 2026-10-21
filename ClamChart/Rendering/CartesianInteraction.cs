@@ -20,6 +20,8 @@ internal sealed class CartesianInteraction
 
     public bool IsTracking { get; set; }
 
+    public bool IsCrosshair { get; set; }
+
     public int LeadSeries { get; set; } = -1;
 
     public int LeadIndex { get; set; } = -1;
@@ -55,6 +57,7 @@ internal sealed class CartesianInteraction
     public void ClearTracking()
     {
         IsTracking = false;
+        IsCrosshair = false;
         LeadSeries = -1;
         LeadIndex = -1;
         TooltipHeader = null;

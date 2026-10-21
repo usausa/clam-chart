@@ -24,6 +24,8 @@ internal sealed class CartesianLayout : IDisposable
     private readonly List<double> slotWidths = [];
     private readonly List<(int Last, int Minimum, int Maximum)> labelPoints = [];
     private readonly List<DataLabel> dataLabels = [];
+    private readonly List<CartesianAnnotation> annotations = [];
+    private readonly List<ChartThreshold> thresholds = [];
     private readonly CategoryMerger categories = new();
     private readonly StackCalculator stacks = new();
     private TimeLabelPrecision? timePrecision;
@@ -58,6 +60,10 @@ internal sealed class CartesianLayout : IDisposable
 
     public bool LastMarkerOnly { get; private set; }
 
+    public IReadOnlyList<CartesianAnnotation> Annotations => annotations;
+
+    public IReadOnlyList<ChartThreshold> Thresholds => thresholds;
+
     public void Dispose()
     {
         foreach (var geometry in geometries)
@@ -91,6 +97,8 @@ internal sealed class CartesianLayout : IDisposable
         Bounds = new ChartRect(padding.Left, padding.Top, Math.Max(0, width - padding.HorizontalThickness), Math.Max(0, height - padding.VerticalThickness));
         HasSecondaryAxis = options.SecondaryYAxis is not null;
         ConfigureAxes(options, culture);
+        PrepareAnnotations(options);
+        PrepareThresholds(options.Thresholds);
         PrepareSeries(series, options.StackMode);
         YAxis.IsPercent = IsPercentAxis(series, ChartAxisTarget.Primary, options.StackMode);
         SecondaryYAxis.IsPercent = HasSecondaryAxis && IsPercentAxis(series, ChartAxisTarget.Secondary, options.StackMode);
@@ -411,7 +419,7 @@ internal sealed class CartesianLayout : IDisposable
             }
 
             var geometry = geometries[s];
-            var interpolation = item.Kind == ChartSeriesKind.Bar ? (ChartLineInterpolation?)null : item.Interpolation;
+            var interpolation = item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.Scatter ? (ChartLineInterpolation?)null : item.Interpolation;
             Include(geometry.X, geometry.End, interpolation, low, high, ref minimum, ref maximum);
             if (geometry.IsStacked)
             {
@@ -419,7 +427,67 @@ internal sealed class CartesianLayout : IDisposable
             }
         }
 
+        IncludeAnnotations(GetValueAxis(target), ref minimum, ref maximum);
         return (minimum, maximum);
+    }
+
+    private void IncludeAnnotations(AxisLayout axis, ref double minimum, ref double maximum)
+    {
+        foreach (var annotation in annotations)
+        {
+            if ((annotation.Axis != ChartAnnotationAxis.Y) || (GetValueAxis(annotation.Target) != axis))
+            {
+                continue;
+            }
+
+            IncludeValue(annotation.From, ref minimum, ref maximum);
+            IncludeValue(annotation.To, ref minimum, ref maximum);
+        }
+    }
+
+    private static void IncludeValue(double value, ref double minimum, ref double maximum)
+    {
+        if (Double.IsFinite(value))
+        {
+            minimum = Double.IsNaN(minimum) ? value : Math.Min(minimum, value);
+            maximum = Double.IsNaN(maximum) ? value : Math.Max(maximum, value);
+        }
+    }
+
+    private void PrepareAnnotations(CartesianLayoutOptions options)
+    {
+        annotations.Clear();
+        var time = XAxis.Options.Kind == ChartAxisKind.DateTime;
+        foreach (var annotation in options.Annotations)
+        {
+            var (from, to) = annotation.Resolve(time && (annotation.Axis == ChartAnnotationAxis.X));
+            if (Double.IsFinite(from) && Double.IsFinite(to))
+            {
+                annotations.Add(annotation with { From = Math.Min(from, to), To = Math.Max(from, to) });
+            }
+        }
+    }
+
+    private void PrepareThresholds(IList<ChartThreshold>? source)
+    {
+        thresholds.Clear();
+        if (source is null)
+        {
+            return;
+        }
+
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < source.Count; i++)
+        {
+            var item = source[i];
+            var index = thresholds.Count;
+            while ((index > 0) && (thresholds[index - 1].Value > item.Value))
+            {
+                index--;
+            }
+
+            thresholds.Insert(index, item);
+        }
     }
 
     private bool IsPercentAxis(IReadOnlyList<CartesianSeries> series, ChartAxisTarget target, ChartStackMode mode)

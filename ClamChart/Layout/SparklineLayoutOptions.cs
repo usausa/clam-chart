@@ -13,4 +13,10 @@ internal sealed record SparklineLayoutOptions
     public double? Maximum { get; init; }
 
     public double? ReferenceValue { get; init; }
+
+    public double? NormalRangeMinimum { get; init; }
+
+    public double? NormalRangeMaximum { get; init; }
+
+    public IList<ChartThreshold>? Thresholds { get; init; }
 }

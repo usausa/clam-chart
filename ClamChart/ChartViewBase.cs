@@ -149,7 +149,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         }
 
         AttachPlatform();
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     protected override void OnPropertyChanged(string? propertyName = null)
@@ -172,7 +172,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         ChartStyle.Validate();
         ResetRenderer();
         layoutDirty = true;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     //--------------------------------------------------------------------------------
@@ -273,12 +273,20 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         }
 
         layoutDirty = true;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     internal void InvalidateRender()
     {
         if (BeginChange())
+        {
+            InvalidateCanvas();
+        }
+    }
+
+    internal void InvalidateCanvas()
+    {
+        if (Handler?.PlatformView is not null)
         {
             InvalidateSurface();
         }
@@ -293,7 +301,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
 
         ResetRenderer();
         layoutDirty = true;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool BeginChange()
@@ -331,7 +339,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         if (!disposed && dataDirty)
         {
             EnsureData();
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
@@ -363,7 +371,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     {
         CancelInput();
         layoutDirty = true;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private void OnUnloaded(object? sender, EventArgs e)

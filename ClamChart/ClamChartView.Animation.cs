@@ -29,7 +29,7 @@ public partial class ClamChartView
         EnsureLayout();
         if (TryStartEntrance())
         {
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
@@ -39,7 +39,7 @@ public partial class ClamChartView
         selectionAnimator.Stop();
         Interpolator.Complete(ChartLayout);
         interaction.SelectionProgress = 1;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool CanAnimate => (ResolveAnimationLength(AnimationDuration) >= 1) && AnimationDriver.CanStart;
@@ -211,12 +211,12 @@ public partial class ClamChartView
             Interpolator.Complete(ChartLayout);
         }
 
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private void OnSelectionProgress(double progress)
     {
         interaction.SelectionProgress = progress;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 }

@@ -21,6 +21,11 @@ public sealed class ClamSparklineViewTests
         Assert.Null(view.Minimum);
         Assert.Null(view.Maximum);
         Assert.Null(view.ReferenceValue);
+        Assert.Null(view.NormalRangeMinimum);
+        Assert.Null(view.NormalRangeMaximum);
+        Assert.Equal(ChartSparklineEmphasis.None, view.EmphasisMode);
+        Assert.Empty(view.Thresholds);
+        Assert.Equal(ChartThresholdsMode.None, view.ThresholdsMode);
         Assert.Equal(ChartEntranceAnimation.Auto, view.EntranceAnimation);
     }
 
@@ -50,6 +55,9 @@ public sealed class ClamSparklineViewTests
         Assert.Throws<ArgumentOutOfRangeException>(() => view.Minimum = Double.NaN);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.Maximum = Double.PositiveInfinity);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.ReferenceValue = Double.NaN);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.NormalRangeMinimum = Double.NaN);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.NormalRangeMaximum = Double.NegativeInfinity);
+        Assert.Throws<ArgumentNullException>(() => view.Thresholds = null!);
         view.Minimum = null;
         view.Thickness = 0;
         Assert.Equal(0, view.Thickness);
@@ -89,6 +97,25 @@ public sealed class ClamSparklineViewTests
         // Assert
         Assert.Equal(4, view.ChartLayout.Count);
         Assert.Equal(10, view.ChartLayout.Scale.Maximum);
+    }
+
+    [Fact]
+    public void ThresholdChangesAreFollowedWhileAttached()
+    {
+        // Arrange
+        using var view = Spark([1, 2, 3]);
+        view.OnAttached();
+        using var first = view.Paint(100, 30);
+
+        // Act
+        view.Thresholds.Add(new ChartThreshold { Value = 2, Level = ChartThresholdLevel.Warning });
+        using var second = view.Paint(100, 30);
+        view.OnDetached();
+        view.Thresholds.Add(new ChartThreshold { Value = 3, Level = ChartThresholdLevel.Critical });
+        using var third = view.Paint(100, 30);
+
+        // Assert
+        Assert.Single(view.ChartLayout.Thresholds);
     }
 
     [Fact]

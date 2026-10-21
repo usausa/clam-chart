@@ -50,6 +50,25 @@ public sealed class ChartSeriesTests
     }
 
     [Fact]
+    public void ScatterSeriesRejectsInvalidSizesAndOpacities()
+    {
+        // Arrange
+        var series = new ScatterSeries();
+
+        // Act & Assert
+        Assert.Equal(ChartMarkerShape.Circle, series.MarkerShape);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.MarkerSize = -1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.MarkerSize = Double.NaN);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.FillOpacity = 1.5);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.FillOpacity = Double.NaN);
+        series.MarkerSize = 0;
+        series.FillOpacity = 0;
+        Assert.Equal(0, series.MarkerSize);
+        Assert.Equal(0, series.FillOpacity);
+        Assert.Equal(ChartSeriesKind.Scatter, series.CreateLayoutSeries().Kind);
+    }
+
+    [Fact]
     public void BarLayoutInputCarriesTheBarSettings()
     {
         // Arrange

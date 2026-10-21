@@ -23,6 +23,12 @@ internal static class CartesianHitMap
         var across = horizontal ? x : y;
         if ((x >= plot.X - PointRadius) && (x <= plot.Right + PointRadius) && (y >= plot.Y - PointRadius) && (y <= plot.Bottom + PointRadius))
         {
+            var (scatter, scatterIndex) = FindNearestPoint(layout, series, x, y, PointRadius);
+            if (scatter >= 0)
+            {
+                return new ChartHit(ChartHitKind.Item, scatter, scatterIndex);
+            }
+
             var point = FindPoint(layout, series, along, across);
             if (point.Kind == ChartHitKind.Item)
             {
@@ -43,6 +49,44 @@ internal static class CartesianHitMap
 
         var area = FindArea(layout, series, along, across);
         return area.Kind == ChartHitKind.Item ? area : new ChartHit(ChartHitKind.Plot);
+    }
+
+    public static (int Series, int Index) FindNearestPoint(CartesianLayout layout, IReadOnlyList<CartesianSeries> series, double x, double y, double radius)
+    {
+        var horizontal = layout.Orientation == ChartOrientation.Horizontal;
+        var result = (-1, -1);
+        var nearest = radius * radius;
+        for (var s = series.Count - 1; s >= 0; s--)
+        {
+            var item = series[s];
+            if (!item.IsVisible || (item.Kind != ChartSeriesKind.Scatter))
+            {
+                continue;
+            }
+
+            var geometry = layout.Geometries[s];
+            var axis = layout.GetValueAxis(item.Axis);
+            for (var i = 0; i < geometry.Count; i++)
+            {
+                if (!Double.IsFinite(geometry.X[i]) || !Double.IsFinite(geometry.End[i]))
+                {
+                    continue;
+                }
+
+                var along = layout.XAxis.ToPixel(geometry.X[i]);
+                var across = axis.ToPixel(geometry.End[i]);
+                var dx = (horizontal ? across : along) - x;
+                var dy = (horizontal ? along : across) - y;
+                var distance = (dx * dx) + (dy * dy);
+                if (distance <= nearest)
+                {
+                    nearest = distance;
+                    result = (s, i);
+                }
+            }
+        }
+
+        return result;
     }
 
     public static int FindNearestIndex(CartesianLayout layout, int seriesIndex, double along) =>
@@ -96,7 +140,7 @@ internal static class CartesianHitMap
         for (var s = series.Count - 1; s >= 0; s--)
         {
             var item = series[s];
-            if (!item.IsVisible || (item.Kind == ChartSeriesKind.Bar))
+            if (!item.IsVisible || (item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.Scatter))
             {
                 continue;
             }

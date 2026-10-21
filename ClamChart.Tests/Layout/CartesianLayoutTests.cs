@@ -10,6 +10,12 @@ public sealed class CartesianLayoutTests
         YAxis = new AxisLayoutOptions { Range = new AxisRangeOptions { IncludeZero = true } }
     };
 
+    private static readonly CartesianLayoutOptions Exact = new()
+    {
+        XAxis = new AxisLayoutOptions { Range = new AxisRangeOptions { NiceRange = false } },
+        YAxis = new AxisLayoutOptions { Range = new AxisRangeOptions { NiceRange = false } }
+    };
+
     [Fact]
     public void PlotLeavesRoomForTheAxisLabels()
     {
@@ -619,6 +625,132 @@ public sealed class CartesianLayoutTests
         Assert.Equal("100", formattedLayout.YAxis.Labels[^1].Text);
         Assert.Contains(zoomedLayout.YAxis.Labels, static x => x.Text == 0.025.ToString("P1", CultureInfo.InvariantCulture));
         Assert.Contains(zoomedLayout.YAxis.Labels, static x => x.Text == 0.05.ToString("P0", CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void YAnnotationsWidenTheValueRangeButXAnnotationsAndThresholdsDoNot()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Line, [(0, 10), (10, 30)]);
+        var options = Exact with
+        {
+            Annotations =
+            [
+                new CartesianAnnotation(0, false, ChartAnnotationAxis.Y, ChartAxisTarget.Primary, 50, 50, Double.NaN, Double.NaN),
+                new CartesianAnnotation(1, true, ChartAnnotationAxis.X, ChartAxisTarget.Primary, 15, -5, Double.NaN, Double.NaN)
+            ],
+            Thresholds = [new ChartThreshold { Value = 80, Level = ChartThresholdLevel.Critical }]
+        };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        Assert.Equal(10, layout.YAxis.Scale.Minimum);
+        Assert.Equal(50, layout.YAxis.Scale.Maximum);
+        Assert.Equal(0, layout.XAxis.Scale.Minimum);
+        Assert.Equal(10, layout.XAxis.Scale.Maximum);
+        Assert.Equal(-5, layout.Annotations[1].From);
+        Assert.Equal(15, layout.Annotations[1].To);
+    }
+
+    [Fact]
+    public void AnnotationOfTheSecondaryAxisWidensOnlyThatAxis()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [10, 30]);
+        set.AddValues(ChartSeriesKind.Line, [10, 30], axis: ChartAxisTarget.Secondary);
+        var options = Exact with { Annotations = [new CartesianAnnotation(0, false, ChartAnnotationAxis.Y, ChartAxisTarget.Secondary, 50, 50, Double.NaN, Double.NaN)] };
+
+        // Act
+        using var single = Update(set, options);
+        using var dual = Update(set, options with { SecondaryYAxis = Exact.YAxis });
+
+        // Assert
+        Assert.Equal(50, single.YAxis.Scale.Maximum);
+        Assert.Equal(30, dual.YAxis.Scale.Maximum);
+        Assert.Equal(50, dual.SecondaryYAxis.Scale.Maximum);
+    }
+
+    [Fact]
+    public void AnnotationsOnATimeAxisUseTheirTimes()
+    {
+        // Arrange
+        var start = new DateTime(2026, 10, 1, 9, 0, 0);
+        var ticks = (double)start.AddHours(1).Ticks;
+        using var times = new TestSeriesSet();
+        times.AddTimes(ChartSeriesKind.Line, [(start, 1), (start.AddHours(2), 2)]);
+        using var numbers = new TestSeriesSet();
+        numbers.AddPoints(ChartSeriesKind.Line, [(0, 1), (10, 2)]);
+        List<CartesianAnnotation> annotations =
+        [
+            new(0, false, ChartAnnotationAxis.X, ChartAxisTarget.Primary, 5, 5, ticks, ticks),
+            new(1, false, ChartAnnotationAxis.X, ChartAxisTarget.Primary, 5, 5, Double.NaN, Double.NaN),
+            new(2, false, ChartAnnotationAxis.Y, ChartAxisTarget.Primary, 1.5, 1.5, Double.NaN, Double.NaN)
+        ];
+
+        // Act
+        using var time = Update(times, Exact with { XAxis = Exact.XAxis with { Kind = ChartAxisKind.DateTime }, Annotations = annotations });
+        using var number = Update(numbers, Exact with { Annotations = annotations });
+
+        // Assert
+        Assert.Equal([0, 2], time.Annotations.Select(static x => x.Index));
+        Assert.Equal(ticks, time.Annotations[0].From);
+        Assert.Equal(1.5, time.Annotations[1].From);
+        Assert.Equal([0, 1, 2], number.Annotations.Select(static x => x.Index));
+        Assert.Equal(5, number.Annotations[0].From);
+    }
+
+    [Fact]
+    public void ThresholdsAreSortedByValueKeepingTheOrderOfTies()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [10, 30]);
+        var good = new ChartThreshold { Level = ChartThresholdLevel.Good };
+        var warning = new ChartThreshold { Value = 20, Level = ChartThresholdLevel.Warning };
+        var serious = new ChartThreshold { Value = 20, Level = ChartThresholdLevel.Serious };
+        var critical = new ChartThreshold { Value = 25, Level = ChartThresholdLevel.Critical };
+
+        // Act
+        using var layout = Update(set, Exact with { Thresholds = [critical, warning, good, serious] });
+
+        // Assert
+        Assert.Equal([good, warning, serious, critical], layout.Thresholds);
+    }
+
+    [Fact]
+    public void ScatterPointsOutsideTheFixedXRangeDoNotWidenTheValueRange()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Scatter, [(0, 100), (10, 20), (20, 30), (30, 200)]);
+
+        // Act
+        using var layout = Update(set, FixedXRange(5, 25));
+
+        // Assert
+        Assert.Equal(20, layout.YAxis.Scale.Minimum);
+        Assert.Equal(30, layout.YAxis.Scale.Maximum);
+    }
+
+    [Fact]
+    public void ScatterIsShownAsADotInTheLegend()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Scatter, [(0, 1), (1, 2)], title: "Points");
+        set.AddPoints(ChartSeriesKind.Line, [(0, 1), (1, 2)], title: "Trend");
+
+        // Act
+        using var layout = Update(set, Exact with { LegendVisible = true });
+
+        // Assert
+        var size = ChartStyles.Light.LegendMarkerSize;
+        Assert.Equal(LegendLayout.GetMarkerWidth(LegendMarkerKind.Dot, size), layout.Legend.Items[0].Marker.Width);
+        Assert.Equal(LegendLayout.GetMarkerWidth(LegendMarkerKind.Line, size), layout.Legend.Items[1].Marker.Width);
     }
 
     private static CartesianLayoutOptions FixedXRange(double minimum, double maximum) =>

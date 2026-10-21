@@ -105,6 +105,41 @@ public sealed class SparklineLayoutTests
     }
 
     [Fact]
+    public void NormalRangeIsIncludedInTheAutomaticRange()
+    {
+        // Act
+        var both = Layout([3, 5, 4], new SparklineLayoutOptions { NormalRangeMinimum = 1, NormalRangeMaximum = 8 });
+        var upper = Layout([3, 5, 4], new SparklineLayoutOptions { NormalRangeMaximum = 8 });
+        var winLoss = Layout([3, -5, 4], new SparklineLayoutOptions { Kind = ChartSparklineKind.WinLoss, NormalRangeMinimum = 1, NormalRangeMaximum = 8 });
+
+        // Assert
+        Assert.Equal(1, both.Scale.Minimum);
+        Assert.Equal(8, both.Scale.Maximum);
+        Assert.True(both.HasNormalRange);
+        Assert.Equal(3, upper.Scale.Minimum);
+        Assert.Equal(8, upper.Scale.Maximum);
+        Assert.True(Double.IsNaN(upper.NormalLow));
+        Assert.True(upper.HasNormalRange);
+        Assert.False(winLoss.HasNormalRange);
+    }
+
+    [Fact]
+    public void ThresholdsAreSortedAndDoNotWidenTheRange()
+    {
+        // Arrange
+        var good = new ChartThreshold { Level = ChartThresholdLevel.Good };
+        var warning = new ChartThreshold { Value = 4, Level = ChartThresholdLevel.Warning };
+        var critical = new ChartThreshold { Value = 8, Level = ChartThresholdLevel.Critical };
+
+        // Act
+        var layout = Layout([3, 5, 4], new SparklineLayoutOptions { Thresholds = [critical, good, warning] });
+
+        // Assert
+        Assert.Equal([good, warning, critical], layout.Thresholds);
+        Assert.Equal(5, layout.Scale.Maximum);
+    }
+
+    [Fact]
     public void MarkerIndicesSkipMissingValues()
     {
         // Act

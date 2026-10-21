@@ -343,6 +343,89 @@ public sealed class ClamChartViewAnimationTests
         Assert.Equal(idle, moving);
     }
 
+    [Fact]
+    public void ScatterFadesInWhileItsPointsGrowToTheirSize()
+    {
+        // Arrange
+        using var view = Scatter();
+        view.AnimationEasing = Easing.Linear;
+        var driver = Driver(view);
+
+        // Act
+        using var first = view.Paint(360, 240);
+        driver.Frame(Data, 0.5);
+        using var middle = view.Paint(360, 240);
+        var entrance = view.Interpolator.GetEntrance(ChartSeriesKind.Scatter);
+        driver.Finish(Data);
+        using var last = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(5);
+        var y = layout.YAxis.ToPixel(4.3);
+        Assert.Equal(ChartEntranceAnimation.Fade, entrance);
+        Assert.Equal(64, GetPixel(middle, x, y).Alpha);
+        Assert.Equal(0, GetPixel(middle, x + 10, y).Alpha);
+        Assert.Equal(128, GetPixel(last, x, y).Alpha);
+        Assert.Equal(255, GetPixel(last, x + 10, y).Alpha);
+    }
+
+    [Fact]
+    public void ScatterPointsRiseFromTheBaselineWithGrow()
+    {
+        // Arrange
+        using var view = Scatter();
+        view.EntranceAnimation = ChartEntranceAnimation.Grow;
+
+        // Act
+        using var first = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(5);
+        Assert.Equal(0, GetPixel(first, x, layout.YAxis.ToPixel(4.3)).Alpha);
+        Assert.Equal(128, GetPixel(first, x, layout.YAxis.ToPixel(0) - 3).Alpha);
+    }
+
+    [Fact]
+    public void ScatterAndOverlayFramesDoNotAllocate()
+    {
+        // Arrange
+        var line = new List<ChartPoint> { new(0, 20), new(4, 50) };
+        var points = new ObservableCollection<ChartPoint> { new(0, 10), new(1, 40), new(2, 30), new(3, 60) };
+        using var plain = Quiet(new LineSeries { ItemsSource = line }, new ScatterSeries { ItemsSource = points.ToList() });
+        using var view = Quiet(new LineSeries { ItemsSource = line }, new ScatterSeries { ItemsSource = points });
+        view.Thresholds = [new ChartThreshold { Level = ChartThresholdLevel.Good, Label = "Base" }, new ChartThreshold { Value = 35, Level = ChartThresholdLevel.Critical, Label = "Limit" }];
+        view.ThresholdsMode = ChartThresholdsMode.Lines | ChartThresholdsMode.Bands | ChartThresholdsMode.ColorSeries;
+        view.Annotations.Add(new ChartReferenceLine { Value = 45, Label = "Target", DashPattern = [2, 1] });
+        view.Annotations.Add(new ChartReferenceBand { Axis = ChartAnnotationAxis.X, Start = 1, End = 2, Label = "Window" });
+        var driver = Driver(view);
+        using var plainFirst = plain.Paint(360, 240);
+        using var first = view.Paint(360, 240);
+        using var surface = SKSurface.Create(new SKImageInfo(720, 480));
+        var baseline = MeasureFrames(plain, Driver(plain), surface.Canvas, false);
+        var idle = MeasureFrames(view, driver, surface.Canvas, false);
+        points.Add(new ChartPoint(4, 20));
+        points.RemoveAt(0);
+        using var changed = view.Paint(360, 240);
+
+        // Act
+        MeasureFrames(view, driver, surface.Canvas, true);
+        var moving = MeasureFrames(view, driver, surface.Canvas, true);
+
+        // Assert
+        Assert.True(view.Interpolator.IsMorphing);
+        Assert.Equal(baseline, idle);
+        Assert.Equal(idle, moving);
+    }
+
+    private static TestClamChartView Scatter()
+    {
+        var view = Chart(new ScatterSeries { ItemsSource = new List<ChartPoint> { new(0, 0), new(10, 10), new(5, 4.3) }, MarkerSize = 20, Color = Colors.Blue });
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
+        return view;
+    }
+
     private static TestClamChartView Chart(params ChartSeries[] series)
     {
         var view = new TestClamChartView { AnimationDriver = new TestAnimationDriver() };

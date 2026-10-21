@@ -23,6 +23,28 @@ internal static class ThresholdResolver
         return active;
     }
 
+    public static ChartThreshold? ResolveSorted(IReadOnlyList<ChartThreshold> sorted, double value)
+    {
+        if (!Double.IsFinite(value))
+        {
+            return null;
+        }
+
+        ChartThreshold? active = null;
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < sorted.Count; i++)
+        {
+            if (sorted[i].Value > value)
+            {
+                break;
+            }
+
+            active = sorted[i];
+        }
+
+        return active;
+    }
+
     public static Color? GetColor(ChartThreshold? threshold, ChartStyle style)
     {
         if (threshold is null)

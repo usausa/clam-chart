@@ -32,6 +32,25 @@ public sealed class ThresholdResolverTests
     }
 
     [Fact]
+    public void SortedThresholdsResolveTheSameWay()
+    {
+        // Arrange
+        var good = new ChartThreshold { Level = ChartThresholdLevel.Good };
+        var first = new ChartThreshold { Value = 70, Level = ChartThresholdLevel.Warning };
+        var second = new ChartThreshold { Value = 70, Level = ChartThresholdLevel.Serious };
+        var critical = new ChartThreshold { Value = 90, Level = ChartThresholdLevel.Critical };
+        ChartThreshold[] sorted = [good, first, second, critical];
+
+        // Act & Assert
+        Assert.Same(good, ThresholdResolver.ResolveSorted(sorted, 10));
+        Assert.Same(second, ThresholdResolver.ResolveSorted(sorted, 70));
+        Assert.Same(second, ThresholdResolver.ResolveSorted(sorted, 89.9));
+        Assert.Same(critical, ThresholdResolver.ResolveSorted(sorted, 95));
+        Assert.Null(ThresholdResolver.ResolveSorted(sorted, Double.NaN));
+        Assert.Null(ThresholdResolver.ResolveSorted([first], 10));
+    }
+
+    [Fact]
     public void ColorComesFromTheThresholdOrItsLevel()
     {
         // Arrange

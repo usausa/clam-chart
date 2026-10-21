@@ -36,7 +36,7 @@ public partial class ClamPieChartView
         if (TryStartEntrance())
         {
             SyncCenterCount(true, false);
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
@@ -47,7 +47,7 @@ public partial class ClamPieChartView
         CenterCount.Complete(CenterCount.Target);
         Interpolator.Complete(ChartLayout);
         interaction.SelectionProgress = 1;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool CanAnimate => (ResolveAnimationLength(AnimationDuration) >= 1) && AnimationDriver.CanStart;
@@ -229,12 +229,12 @@ public partial class ClamPieChartView
             Interpolator.Complete(ChartLayout);
         }
 
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private void OnSelectionProgress(double progress)
     {
         interaction.SelectionProgress = progress;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 }

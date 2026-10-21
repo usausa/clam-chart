@@ -7,6 +7,10 @@ public sealed class ClamChartViewRenderingTests
 {
     private const float Scale = 2;
 
+    private static readonly SKColor Lime = new(0, 255, 0);
+
+    private static readonly SKColor Red = new(255, 0, 0);
+
     [Fact]
     public void BackgroundStaysTransparent()
     {
@@ -369,12 +373,257 @@ public sealed class ClamChartViewRenderingTests
         Assert.True(CountVisiblePixels(bitmap) > 0);
     }
 
+    [Fact]
+    public void ThresholdLinesAreDashedAndTranslucent()
+    {
+        // Arrange
+        using var view = ThresholdChart(null);
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.PlotBounds.X;
+        var y = layout.YAxis.ToPixel(33);
+        Assert.Equal(Red.WithAlpha(178), GetPixel(bitmap, x + 5, y));
+        Assert.Equal(Red.WithAlpha(178), GetPixel(bitmap, x + 5, y - 0.5));
+        Assert.Equal(Red.WithAlpha(178), GetPixel(bitmap, x + 5, y + 0.5));
+        Assert.Equal(0, GetPixelAlpha(bitmap, x + 15, y));
+        Assert.Equal(0, GetPixelAlpha(bitmap, x + 5, y + 1.5));
+    }
+
+    [Fact]
+    public void ThresholdLabelIsDrawnAboveTheRightEndOfItsLine()
+    {
+        // Arrange
+        using var labeled = ThresholdChart("Limit");
+        using var plain = ThresholdChart(null);
+
+        // Act
+        using var labeledBitmap = labeled.Paint(360, 240);
+        using var plainBitmap = plain.Paint(360, 240);
+
+        // Assert
+        var layout = labeled.ChartLayout;
+        var y = (float)layout.YAxis.ToPixel(33);
+        var area = SKRect.Create((float)layout.PlotBounds.Right - 60, y - 16, 60, 14);
+        Assert.True(CountPixels(labeledBitmap, area, IsRed) > 10);
+        Assert.Equal(0, CountPixels(plainBitmap, area, IsRed));
+    }
+
+    [Fact]
+    public void ThresholdBandsTintEachRegionBehindTheSeries()
+    {
+        // Arrange
+        using var view = Bars(new BarSeries { ItemsSource = Entries(80), Color = Colors.Blue });
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
+        view.Thresholds = Steps(50);
+        view.ThresholdsMode = ChartThresholdsMode.Bands;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.PlotBounds.X + 2;
+        var bar = GetBarBounds(view, 0, 0);
+        Assert.Equal(Lime.WithAlpha(38), GetPixel(bitmap, x, layout.YAxis.ToPixel(25)));
+        Assert.Equal(Red.WithAlpha(38), GetPixel(bitmap, x, layout.YAxis.ToPixel(75)));
+        Assert.Equal(new SKColor(0, 0, 255), GetPixel(bitmap, bar.MidX, layout.YAxis.ToPixel(75)));
+    }
+
+    [Fact]
+    public void ColorSeriesPaintsTheLineByRegionButNotTheSecondaryAxis()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.Series.Add(new LineSeries { ItemsSource = new List<double> { 0, 100 } });
+        view.Series.Add(new LineSeries { ItemsSource = new List<double> { 100, 0 }, YAxis = ChartAxisTarget.Secondary, Color = Colors.Blue });
+        view.Thresholds = [.. Steps(50), new ChartThreshold { Value = 500, Color = Colors.Yellow }];
+        view.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        Assert.Equal(Lime, GetPixel(bitmap, layout.XAxis.ToPixel(0.25), layout.YAxis.ToPixel(25)));
+        Assert.Equal(Red, GetPixel(bitmap, layout.XAxis.ToPixel(0.75), layout.YAxis.ToPixel(75)));
+        Assert.Equal(new SKColor(0, 0, 255), GetPixel(bitmap, layout.XAxis.ToPixel(0.25), layout.SecondaryYAxis.ToPixel(75)));
+        Assert.Equal(100, layout.YAxis.Scale.Maximum);
+    }
+
+    [Fact]
+    public void ColorSeriesPaintsBarsByTheirValueAndAreasByRegion()
+    {
+        // Arrange
+        using var bars = Bars(new BarSeries { ItemsSource = Entries(20, 80) });
+        bars.Thresholds = Steps(50);
+        bars.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+        using var area = new TestClamChartView();
+        area.Series.Add(new AreaSeries { ItemsSource = new List<double> { 0, 100 }, FillOpacity = 1 });
+        area.Thresholds = Steps(50);
+        area.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+
+        // Act
+        using var barBitmap = bars.Paint(360, 240);
+        using var areaBitmap = area.Paint(360, 240);
+
+        // Assert
+        var low = GetBarBounds(bars, 0, 0);
+        var high = GetBarBounds(bars, 0, 1);
+        Assert.Equal(Lime, GetPixel(barBitmap, low.MidX, low.MidY));
+        Assert.Equal(Red, GetPixel(barBitmap, high.MidX, high.MidY));
+        Assert.Equal(Red, GetPixel(barBitmap, high.MidX, high.Bottom - 2));
+        var layout = area.ChartLayout;
+        var x = layout.XAxis.ToPixel(0.75);
+        Assert.Equal(Lime, GetPixel(areaBitmap, x, layout.YAxis.ToPixel(30)));
+        Assert.Equal(Red, GetPixel(areaBitmap, x, layout.YAxis.ToPixel(60)));
+    }
+
+    [Fact]
+    public void ReferenceLineIsDashedAndDrawnOverTheSeries()
+    {
+        // Arrange
+        using var view = Bars(new BarSeries { ItemsSource = Entries(80), Color = Colors.Blue });
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
+        view.Annotations.Add(new ChartReferenceLine { Value = 33 });
+        view.Annotations.Add(new ChartReferenceLine { Value = 66, DashPattern = [] });
+        view.Annotations.Add(new ChartReferenceLine { Value = 15, DashPattern = [2, 6], Color = Colors.Red });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var color = ChartStyles.Light.SecondaryTextColor.ToSKColor();
+        var x = layout.PlotBounds.X;
+        var dashed = layout.YAxis.ToPixel(33);
+        var solid = layout.YAxis.ToPixel(66);
+        var custom = layout.YAxis.ToPixel(15);
+        var bar = GetBarBounds(view, 0, 0);
+        Assert.Equal(color, GetPixel(bitmap, x + 2, dashed));
+        Assert.Equal(0, GetPixelAlpha(bitmap, x + 6, dashed));
+        Assert.Equal(color, GetPixel(bitmap, x + 6, solid));
+        Assert.Equal(color, GetPixel(bitmap, bar.MidX, solid));
+        Assert.Equal(new SKColor(0, 0, 255), GetPixel(bitmap, bar.MidX, solid + 2));
+        Assert.Equal(Red, GetPixel(bitmap, x + 1, custom));
+        Assert.Equal(0, GetPixelAlpha(bitmap, x + 4, custom));
+        Assert.Equal(Red, GetPixel(bitmap, x + 9, custom));
+    }
+
+    [Fact]
+    public void ReferenceBandTintsItsRangeUnderTheSeriesWithItsLabel()
+    {
+        // Arrange
+        using var view = Bars(new BarSeries { ItemsSource = Entries(80), Color = Colors.Blue });
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
+        view.Annotations.Add(new ChartReferenceBand { Start = 40, End = 20, Color = Colors.Lime, Label = "Normal" });
+        view.Annotations.Add(new ChartReferenceBand { Start = 60, End = 70 });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.PlotBounds.X + 100;
+        var bar = GetBarBounds(view, 0, 0);
+        var muted = GetPixel(bitmap, x, layout.YAxis.ToPixel(65));
+        var label = SKRect.Create((float)layout.PlotBounds.X, (float)layout.YAxis.ToPixel(40), 60, 16);
+        Assert.Equal(Lime.WithAlpha(38), GetPixel(bitmap, x, layout.YAxis.ToPixel(25)));
+        Assert.Equal(new SKColor(0, 0, 255), GetPixel(bitmap, bar.MidX, layout.YAxis.ToPixel(30)));
+        Assert.Equal(0, GetPixelAlpha(bitmap, x, layout.YAxis.ToPixel(50)));
+        Assert.Equal(38, muted.Alpha);
+        Assert.InRange(muted.Red, 0x85, 0x8D);
+        Assert.True(CountPixels(bitmap, label, static color => (color.Alpha > 128) && (color.Green > 200) && (color.Red < 100)) > 10);
+    }
+
+    [Fact]
+    public void ReferenceLineOnATimeAxisIsDrawnAtItsTime()
+    {
+        // Arrange
+        var start = new DateTime(2026, 10, 1, 9, 0, 0);
+        using var view = new TestClamChartView();
+        view.Series.Add(new LineSeries { ItemsSource = new List<ChartTimePoint> { new(start, 10), new(start.AddHours(4), 10.5) } });
+        view.Annotations.Add(new ChartReferenceLine { Axis = ChartAnnotationAxis.X, Time = start.AddHours(1), DashPattern = [] });
+        view.Annotations.Add(new ChartReferenceLine { Axis = ChartAnnotationAxis.X, Value = 3 });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(start.AddHours(1).Ticks);
+        Assert.Equal(ChartStyles.Light.SecondaryTextColor.ToSKColor(), GetPixel(bitmap, x, layout.PlotBounds.Y + 3));
+        Assert.Single(layout.Annotations);
+    }
+
+    [Fact]
+    public void ScatterPointIsAHalfFilledShapeWithAnOutline()
+    {
+        // Arrange
+        using var circle = Scatter(ChartMarkerShape.Circle);
+        using var square = Scatter(ChartMarkerShape.Square);
+
+        // Act
+        using var circleBitmap = circle.Paint(360, 240);
+        using var squareBitmap = square.Paint(360, 240);
+
+        // Assert
+        var layout = circle.ChartLayout;
+        var x = layout.XAxis.ToPixel(5);
+        var y = layout.YAxis.ToPixel(4.3);
+        var blue = new SKColor(0, 0, 255);
+        Assert.Equal(blue.WithAlpha(128), GetPixel(circleBitmap, x, y));
+        Assert.Equal(blue, GetPixel(circleBitmap, x + 10, y));
+        Assert.Equal(0, GetPixelAlpha(circleBitmap, x + 8, y + 8));
+        Assert.Equal(blue.WithAlpha(128), GetPixel(squareBitmap, x + 8, y + 8));
+        Assert.Equal(blue, GetPixel(squareBitmap, x + 10, y + 5));
+    }
+
+    [Fact]
+    public void ColorSeriesPaintsEachScatterPointByItsValue()
+    {
+        // Arrange
+        using var view = Scatter(ChartMarkerShape.Circle);
+        view.Thresholds = Steps(5);
+        view.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        Assert.Equal(Lime.WithAlpha(128), GetPixel(bitmap, layout.XAxis.ToPixel(5), layout.YAxis.ToPixel(4.3)));
+        Assert.Equal(Red.WithAlpha(128), GetPixel(bitmap, layout.XAxis.ToPixel(10) - 4, layout.YAxis.ToPixel(10) + 4));
+    }
+
     private static SKColor GetPixel(SKBitmap bitmap, double x, double y) => bitmap.GetPixel((int)(x * Scale), (int)(y * Scale));
 
     private static byte GetPixelAlpha(SKBitmap bitmap, double x, double y) => GetPixel(bitmap, x, y).Alpha;
 
     private static List<ChartEntry> Entries(params double[] values) =>
         [.. values.Select(static (value, index) => new ChartEntry($"C{index}", value))];
+
+    private static List<ChartThreshold> Steps(double value) =>
+        [new ChartThreshold { Color = Colors.Lime }, new ChartThreshold { Value = value, Color = Colors.Red }];
+
+    private static TestClamChartView ThresholdChart(string? label)
+    {
+        var view = new TestClamChartView();
+        view.Series.Add(new LineSeries { ItemsSource = new List<double> { 0, 100 } });
+        view.Thresholds = [new ChartThreshold { Color = Colors.Lime }, new ChartThreshold { Value = 33, Color = Colors.Red, Label = label }];
+        view.ThresholdsMode = ChartThresholdsMode.Lines;
+        return view;
+    }
+
+    private static TestClamChartView Scatter(ChartMarkerShape shape)
+    {
+        var view = new TestClamChartView { YAxis = new NumericAxis { GridLinesVisible = false } };
+        view.Series.Add(new ScatterSeries { ItemsSource = new List<ChartPoint> { new(0, 0), new(10, 10), new(5, 4.3) }, MarkerSize = 20, MarkerShape = shape, Color = Colors.Blue });
+        return view;
+    }
 
     private static TestClamChartView Bars(params BarSeries[] series)
     {
@@ -400,6 +649,8 @@ public sealed class ClamChartViewRenderingTests
             ? new SKRect(Math.Min(along1, along2), Math.Min(across1, across2), Math.Max(along1, along2), Math.Max(across1, across2))
             : new SKRect(Math.Min(across1, across2), Math.Min(along1, along2), Math.Max(across1, across2), Math.Max(along1, along2));
     }
+
+    private static bool IsRed(SKColor color) => (color.Alpha > 128) && (color.Red > 200) && (color.Green < 100) && (color.Blue < 100);
 
     private static bool IsWhite(SKColor color) => (color.Alpha > 0) && (color.Red > 200) && (color.Green > 200) && (color.Blue > 200);
 

@@ -6,6 +6,32 @@ using SkiaSharp.Views.Maui;
 
 public sealed class ChartViewBaseTests
 {
+    [Theory]
+    [InlineData(typeof(ClamChartView))]
+    [InlineData(typeof(ClamPieChartView))]
+    [InlineData(typeof(ClamSparklineView))]
+    [InlineData(typeof(ClamStatView))]
+    [InlineData(typeof(ClamBarGaugeView))]
+    [InlineData(typeof(ClamRadialBarView))]
+    public void RedrawIsSkippedWhileTheHandlerHasNoPlatformView(Type type)
+    {
+        // Arrange
+        using var view = (ChartViewBase)Activator.CreateInstance(type)!;
+        var disconnected = new TestViewHandler(null);
+        var connected = new TestViewHandler(new object());
+
+        // Act
+        view.Handler = disconnected;
+        view.FinishAnimations();
+        view.Invalidate();
+        view.Handler = connected;
+        view.FinishAnimations();
+
+        // Assert
+        Assert.Equal(0, disconnected.Redraws);
+        Assert.True(connected.Redraws > 0);
+    }
+
     [Fact]
     public void CommonPropertiesHaveNoValueByDefault()
     {

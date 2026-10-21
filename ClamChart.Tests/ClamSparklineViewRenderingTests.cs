@@ -10,6 +10,10 @@ public sealed class ClamSparklineViewRenderingTests
 
     private static readonly SKColor Critical = new(0xE0, 0x2F, 0x44);
 
+    private static readonly SKColor Lime = new(0, 255, 0);
+
+    private static readonly SKColor Red = new(255, 0, 0);
+
     [Fact]
     public void LineIsDrawnWithTheFirstPaletteColorOnATransparentBackground()
     {
@@ -235,7 +239,179 @@ public sealed class ClamSparklineViewRenderingTests
         Assert.True(allocated <= path * paths, $"allocated={allocated} path={path}");
     }
 
+    [Fact]
+    public void NormalRangeIsTintedBehindTheLine()
+    {
+        // Arrange
+        using var view = Spark([0, 10]);
+        view.Markers = ChartSparklineMarkers.None;
+        view.NormalRangeMinimum = 2;
+        view.NormalRangeMaximum = 4;
+
+        // Act
+        using var bitmap = view.Paint(100, 40);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var (x, y) = Point(layout, 0.8, 3);
+        var (lineX, lineY) = Point(layout, 0.3, 3);
+        var band = GetPixel(bitmap, x, y);
+        Assert.Equal(38, band.Alpha);
+        Assert.InRange(band.Red, 0x85, 0x8D);
+        Assert.Equal(0, GetPixel(bitmap, x, Point(layout, 0.8, 6).Y).Alpha);
+        Assert.Equal(Blue, GetPixel(bitmap, lineX, lineY));
+    }
+
+    [Fact]
+    public void EmphasisOnTheLastDimsTheRest()
+    {
+        // Arrange
+        using var line = Spark([0, 10, 0, 10]);
+        line.Markers = ChartSparklineMarkers.None;
+        line.Thickness = 3;
+        line.EmphasisMode = ChartSparklineEmphasis.Last;
+        using var bars = Spark([4, 8, 6]);
+        bars.Kind = ChartSparklineKind.Bar;
+        bars.EmphasisMode = ChartSparklineEmphasis.Last;
+        using var dark = Spark([0, 10, 0, 10]);
+        dark.Markers = ChartSparklineMarkers.None;
+        dark.Thickness = 3;
+        dark.EmphasisMode = ChartSparklineEmphasis.Last;
+        dark.ChartStyle = ChartStyles.Dark;
+
+        // Act
+        using var lineBitmap = line.Paint(100, 40);
+        using var barBitmap = bars.Paint(100, 40);
+        using var darkBitmap = dark.Paint(100, 40);
+
+        // Assert
+        var dimmed = (byte)Math.Round(255 * ChartStyles.Light.EmphasisDimmedOpacity);
+        var layout = line.ChartLayout;
+        var (firstX, firstY) = Point(layout, 0.5, 5);
+        var (lastX, lastY) = Point(layout, 2.5, 5);
+        Assert.Equal(dimmed, GetPixel(lineBitmap, firstX, firstY).Alpha);
+        Assert.Equal(Blue, GetPixel(lineBitmap, lastX, lastY));
+        var barLayout = bars.ChartLayout;
+        Assert.Equal(dimmed, GetPixel(barBitmap, barLayout.ToX(0, barLayout.Scale), 35).Alpha);
+        Assert.Equal(Blue, GetPixel(barBitmap, barLayout.ToX(2, barLayout.Scale), 35));
+        Assert.Equal((byte)Math.Round(255 * ChartStyles.Dark.EmphasisDimmedOpacity), GetPixel(darkBitmap, firstX, firstY).Alpha);
+        Assert.Equal(255, GetPixel(darkBitmap, lastX, lastY).Alpha);
+    }
+
+    [Fact]
+    public void ColorSeriesPaintsTheLineByRegionAndTheBarsByValue()
+    {
+        // Arrange
+        using var line = Spark([0, 10]);
+        line.Markers = ChartSparklineMarkers.None;
+        line.Thresholds = Steps(5);
+        line.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+        using var bars = Spark([2, 8]);
+        bars.Kind = ChartSparklineKind.Bar;
+        bars.Thresholds = Steps(5);
+        bars.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+
+        // Act
+        using var lineBitmap = line.Paint(100, 40);
+        using var barBitmap = bars.Paint(100, 40);
+
+        // Assert
+        var layout = line.ChartLayout;
+        var (lowX, lowY) = Point(layout, 0.25, 2.5);
+        var (highX, highY) = Point(layout, 0.75, 7.5);
+        Assert.Equal(Lime, GetPixel(lineBitmap, lowX, lowY));
+        Assert.Equal(Red, GetPixel(lineBitmap, highX, highY));
+        var barLayout = bars.ChartLayout;
+        Assert.Equal(Lime, GetPixel(barBitmap, barLayout.ToX(0, barLayout.Scale), 35));
+        Assert.Equal(Red, GetPixel(barBitmap, barLayout.ToX(1, barLayout.Scale), 35));
+    }
+
+    [Fact]
+    public void ThresholdLinesAreThinAndBandsAreFaint()
+    {
+        // Arrange
+        using var lines = Spark([0, 10]);
+        lines.Markers = ChartSparklineMarkers.None;
+        lines.Thresholds = Steps(5);
+        lines.ThresholdsMode = ChartThresholdsMode.Lines;
+        using var bands = Spark([0, 10]);
+        bands.Markers = ChartSparklineMarkers.None;
+        bands.Thresholds = Steps(5);
+        bands.ThresholdsMode = ChartThresholdsMode.Bands;
+
+        // Act
+        using var lineBitmap = lines.Paint(100, 40);
+        using var bandBitmap = bands.Paint(100, 40);
+
+        // Assert
+        var layout = lines.ChartLayout;
+        var x = layout.Plot.X;
+        var y = layout.ToY(5, layout.Scale);
+        var column = (int)((x + 2) * Scale);
+        var rows = Enumerable.Range((int)((y - 3) * Scale), (int)(6 * Scale)).Count(row => lineBitmap.GetPixel(column, row).Alpha > 0);
+        Assert.Equal(new SKColor(255, 0, 0, 178), GetPixel(lineBitmap, x + 2, y));
+        Assert.Equal(0, GetPixel(lineBitmap, x + 6, y).Alpha);
+        Assert.InRange(rows, 2, 3);
+        var (lowX, lowY) = Point(bands.ChartLayout, 0.8, 2);
+        var (highX, highY) = Point(bands.ChartLayout, 0.2, 8);
+        Assert.Equal(Lime.WithAlpha(38), GetPixel(bandBitmap, lowX, lowY));
+        Assert.Equal(Red.WithAlpha(38), GetPixel(bandBitmap, highX, highY));
+    }
+
+    [Theory]
+    [InlineData(ChartSparklineKind.Bar)]
+    [InlineData(ChartSparklineKind.WinLoss)]
+    public void BarFramesWithThresholdsDoNotAllocate(ChartSparklineKind kind)
+    {
+        // Arrange
+        using var view = Spark([3, -1, 4, 1, -5, 9, 2, 6]);
+        view.Kind = kind;
+        view.Thresholds = Steps(3);
+        view.ThresholdsMode = ChartThresholdsMode.Lines | ChartThresholdsMode.Bands | ChartThresholdsMode.ColorSeries;
+        view.NormalRangeMinimum = 1;
+        view.NormalRangeMaximum = 4;
+        view.EmphasisMode = ChartSparklineEmphasis.Last;
+        using var bitmap = view.Paint(120, 28);
+        using var surface = SKSurface.Create(new SKImageInfo(240, 56));
+
+        // Act
+        var allocated = MeasureFrame(view, surface.Canvas);
+
+        // Assert
+        Assert.Equal(0, allocated);
+    }
+
+    [Theory]
+    [InlineData(ChartSparklineKind.Line, 2)]
+    [InlineData(ChartSparklineKind.Area, 3)]
+    public void LineFramesWithThresholdsAllocateOnlyTheSkiaPaths(ChartSparklineKind kind, int paths)
+    {
+        // Arrange
+        using var view = Spark([3, -1, 4, 1, -5, 9, 2, 6]);
+        view.Kind = kind;
+        view.Smooth = true;
+        view.Thresholds = Steps(3);
+        view.ThresholdsMode = ChartThresholdsMode.Lines | ChartThresholdsMode.Bands | ChartThresholdsMode.ColorSeries;
+        view.NormalRangeMinimum = 1;
+        view.NormalRangeMaximum = 4;
+        view.EmphasisMode = ChartSparklineEmphasis.Last;
+        view.Markers = ChartSparklineMarkers.First | ChartSparklineMarkers.Last | ChartSparklineMarkers.High | ChartSparklineMarkers.Low;
+        using var bitmap = view.Paint(120, 28);
+        using var surface = SKSurface.Create(new SKImageInfo(240, 56));
+        var path = MeasurePath();
+
+        // Act
+        var allocated = MeasureFrame(view, surface.Canvas);
+
+        // Assert
+        Assert.True(path > 0);
+        Assert.True(allocated <= path * paths, $"allocated={allocated} path={path}");
+    }
+
     private static TestClamSparklineView Spark(double[] values) => new() { Values = values };
+
+    private static List<ChartThreshold> Steps(double value) =>
+        [new ChartThreshold { Color = Colors.Lime }, new ChartThreshold { Value = value, Color = Colors.Red }];
 
     private static (double X, double Y) Point(SparklineLayout layout, double position, double value) =>
         (layout.ToX(position, layout.Scale), layout.ToY(value, layout.Scale));

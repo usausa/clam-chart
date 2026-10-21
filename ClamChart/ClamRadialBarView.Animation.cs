@@ -38,7 +38,7 @@ public partial class ClamRadialBarView
         if (TryStartEntrance())
         {
             SyncCenterCount(true, false);
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
@@ -49,7 +49,7 @@ public partial class ClamRadialBarView
         CenterCount.Complete(CenterCount.Target);
         Interpolator.Complete(ChartLayout.Rows);
         interaction.SelectionProgress = 1;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool CanAnimate => (ResolveAnimationLength(AnimationDuration) >= 1) && AnimationDriver.CanStart;
@@ -227,12 +227,12 @@ public partial class ClamRadialBarView
             Interpolator.Complete(ChartLayout.Rows);
         }
 
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private void OnSelectionProgress(double progress)
     {
         interaction.SelectionProgress = progress;
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 }

@@ -12,6 +12,8 @@ internal sealed class SparklineLayout
 
     public const float KnockoutRatio = 0.5f;
 
+    private readonly List<ChartThreshold> thresholds = [];
+
     public ChartRect Bounds { get; private set; }
 
     public ChartRect Plot { get; private set; }
@@ -40,6 +42,14 @@ internal sealed class SparklineLayout
 
     public double? Reference { get; private set; }
 
+    public double NormalLow { get; private set; } = Double.NaN;
+
+    public double NormalHigh { get; private set; } = Double.NaN;
+
+    public bool HasNormalRange => !Double.IsNaN(NormalLow) || !Double.IsNaN(NormalHigh);
+
+    public IReadOnlyList<ChartThreshold> Thresholds => thresholds;
+
     public bool HasInvertedBounds { get; private set; }
 
     public bool IsBar => Kind is ChartSparklineKind.Bar or ChartSparklineKind.WinLoss;
@@ -56,6 +66,10 @@ internal sealed class SparklineLayout
         MarkerRadius = Thickness * MarkerRatio;
         MarkerKnockout = Thickness * KnockoutRatio;
         Reference = Kind == ChartSparklineKind.WinLoss ? null : options.ReferenceValue;
+        var winLoss = Kind == ChartSparklineKind.WinLoss;
+        NormalLow = !winLoss && (options.NormalRangeMinimum is { } normalLow) && Double.IsFinite(normalLow) ? normalLow : Double.NaN;
+        NormalHigh = !winLoss && (options.NormalRangeMaximum is { } normalHigh) && Double.IsFinite(normalHigh) ? normalHigh : Double.NaN;
+        PrepareThresholds(options.Thresholds);
         var (low, high) = Scan(values);
         var (minimum, maximum) = ResolveRange(options, low, high);
         Scale = new SparklineScale(minimum, maximum, Math.Max(0, Count - 1));
@@ -76,6 +90,28 @@ internal sealed class SparklineLayout
     }
 
     public double ToY(double value, SparklineScale scale) => Plot.Bottom - ((value - scale.Minimum) / (scale.Maximum - scale.Minimum) * Plot.Height);
+
+    private void PrepareThresholds(IList<ChartThreshold>? source)
+    {
+        thresholds.Clear();
+        if (source is null)
+        {
+            return;
+        }
+
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < source.Count; i++)
+        {
+            var item = source[i];
+            var index = thresholds.Count;
+            while ((index > 0) && (thresholds[index - 1].Value > item.Value))
+            {
+                index--;
+            }
+
+            thresholds.Insert(index, item);
+        }
+    }
 
     private (double Low, double High) Scan(SparklineValues values)
     {
@@ -127,6 +163,18 @@ internal sealed class SparklineLayout
         {
             low = Double.IsNaN(low) ? reference : Math.Min(low, reference);
             high = Double.IsNaN(high) ? reference : Math.Max(high, reference);
+        }
+
+        if (!Double.IsNaN(NormalLow))
+        {
+            low = Double.IsNaN(low) ? NormalLow : Math.Min(low, NormalLow);
+            high = Double.IsNaN(high) ? NormalLow : Math.Max(high, NormalLow);
+        }
+
+        if (!Double.IsNaN(NormalHigh))
+        {
+            low = Double.IsNaN(low) ? NormalHigh : Math.Min(low, NormalHigh);
+            high = Double.IsNaN(high) ? NormalHigh : Math.Max(high, NormalHigh);
         }
 
         if (Kind == ChartSparklineKind.Bar)

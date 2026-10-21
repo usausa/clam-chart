@@ -25,7 +25,7 @@ public partial class ClamStatView
         var started = TryStartEntrance();
         if (trend.TryStartEntrance(ResolveTrendEntrance(), ResolveAnimationLength(AnimationDuration)) || started)
         {
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
@@ -33,7 +33,7 @@ public partial class ClamStatView
     {
         CountUp.Complete(Value);
         trend.Finish();
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool CanAnimate => (ResolveAnimationLength(AnimationDuration) >= 1) && AnimationDriver.CanStart;

@@ -580,6 +580,58 @@ public sealed class ClamChartViewInputTests
         Assert.Equal(idle, tracking);
     }
 
+    [Fact]
+    public void TapSelectsTheScatterPointByTheDistanceInBothDirections()
+    {
+        // Arrange
+        var points = new List<ChartPoint> { new(0, 0), new(5, 5), new(10, 10) };
+        using var view = Chart(new ScatterSeries { ItemsSource = points });
+        view.SelectionMode = ChartSelectionMode.Item;
+        view.TouchMode = ChartTouchMode.Interactive;
+        using var bitmap = view.Paint(360, 240);
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(5);
+        var y = layout.YAxis.ToPixel(5);
+        var diagonal = CartesianHitMap.PointRadius * 0.8;
+
+        // Act
+        Tap(view, new Point(x + 10, y - 10));
+
+        // Assert
+        Assert.Same(points[1], view.SelectedItem);
+
+        // Act
+        Tap(view, new Point(x + diagonal, y - diagonal));
+
+        // Assert
+        Assert.Null(view.SelectedItem);
+    }
+
+    [Fact]
+    public void ScatterTrackballFollowsTheNearestPointWithACrosshair()
+    {
+        // Arrange
+        var points = new List<ChartPoint> { new(0, 10), new(10, 0) };
+        using var view = Chart(new ScatterSeries { Title = "Points", ItemsSource = points });
+        view.TrackballMode = ChartTrackballMode.Touch;
+        using var first = view.Paint(360, 240);
+        var layout = view.ChartLayout;
+        var left = layout.XAxis.ToPixel(0);
+        var right = layout.XAxis.ToPixel(10);
+        var bottom = layout.YAxis.ToPixel(0);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, new Point(left + ((right - left) * 0.4), bottom - 5), 0);
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        Assert.Same(points[1], view.TrackedItem);
+        Assert.Equal(1, view.TrackedIndex);
+        var line = ChartStyles.Light.TrackballLineColor.ToSKColor();
+        Assert.Equal(line, bitmap.GetPixel((int)((layout.PlotBounds.X + 3) * 2), (int)Math.Floor(bottom * 2)));
+        Assert.Equal(line, bitmap.GetPixel((int)Math.Floor(right * 2), (int)((layout.PlotBounds.Y + 3) * 2)));
+    }
+
     private static TestClamChartView Chart(params ChartSeries[] series)
     {
         var view = new TestClamChartView();

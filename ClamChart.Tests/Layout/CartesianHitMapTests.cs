@@ -251,6 +251,50 @@ public sealed class CartesianHitMapTests
         Assert.Equal(new ChartHit(ChartHitKind.Item, 0, 1), hit);
     }
 
+    [Fact]
+    public void ScatterPointIsHitByTheDistanceInBothDirections()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Scatter, [(0, 0), (5, 5), (10, 10)]);
+        using var layout = Update(set, new CartesianLayoutOptions());
+        var x = layout.XAxis.ToPixel(5);
+        var y = layout.YAxis.ToPixel(5);
+        var offset = CartesianHitMap.PointRadius * 0.7;
+
+        // Act
+        var near = CartesianHitMap.HitTest(layout, set.Series, x + offset, y + offset);
+        var far = CartesianHitMap.HitTest(layout, set.Series, x + offset + 1, y + offset + 1);
+        var below = CartesianHitMap.HitTest(layout, set.Series, x, y + CartesianHitMap.PointRadius + 1);
+
+        // Assert
+        Assert.Equal(new ChartHit(ChartHitKind.Item, 0, 1), near);
+        Assert.Equal(new ChartHit(ChartHitKind.Plot), far);
+        Assert.Equal(new ChartHit(ChartHitKind.Plot), below);
+    }
+
+    [Fact]
+    public void NearestScatterPointIsFoundAmongTheVisibleScatterSeries()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Scatter, [(0, 0), (10, 10)]);
+        set.AddPoints(ChartSeriesKind.Scatter, [(4, 6)]);
+        set.AddPoints(ChartSeriesKind.Scatter, [(5, 5)], visible: false);
+        set.AddPoints(ChartSeriesKind.Line, [(5, 5)]);
+        using var layout = Update(set, new CartesianLayoutOptions());
+        var x = layout.XAxis.ToPixel(5);
+        var y = layout.YAxis.ToPixel(5);
+
+        // Act
+        var nearest = CartesianHitMap.FindNearestPoint(layout, set.Series, x, y, Double.PositiveInfinity);
+        var limited = CartesianHitMap.FindNearestPoint(layout, set.Series, x, y, 1);
+
+        // Assert
+        Assert.Equal((1, 0), nearest);
+        Assert.Equal((-1, -1), limited);
+    }
+
     private static CartesianLayout Update(TestSeriesSet set, CartesianLayoutOptions options)
     {
         var layout = new CartesianLayout();

@@ -329,7 +329,7 @@ public abstract partial class ChartViewBase
         IsPressed = value;
         if (!disposed)
         {
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 

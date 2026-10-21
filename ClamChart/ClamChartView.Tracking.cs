@@ -74,7 +74,7 @@ public partial class ClamChartView
         UpdateTrackingTexts();
         UpdateTrackedItem();
         RaiseTracking(TrackingStarted);
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     internal override void OnTrackMoved(Point point)
@@ -87,7 +87,7 @@ public partial class ClamChartView
             RaiseTracking(TrackingChanged);
         }
 
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     internal override void OnTrackEnded()
@@ -95,7 +95,7 @@ public partial class ClamChartView
         interaction.ClearTracking();
         UpdateTrackedItem();
         RaiseTracking(TrackingEnded);
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private static void OnTooltipVisibleChanged(BindableObject bindable, object oldValue, object newValue)
@@ -128,6 +128,12 @@ public partial class ClamChartView
         var layout = ChartLayout;
         var plot = layout.PlotBounds;
         var point = interaction.TrackPoint;
+        interaction.IsCrosshair = IsScatterOnly();
+        if (interaction.IsCrosshair)
+        {
+            return ResolveCrosshair(point);
+        }
+
         var along = layout.Orientation == ChartOrientation.Horizontal ? Math.Clamp(point.Y, plot.Y, plot.Bottom) : Math.Clamp(point.X, plot.X, plot.Right);
         var (leadSeries, leadIndex) = FindSnapPoint(layout.XAxis.ToValue(along));
         var changed = (leadSeries != interaction.LeadSeries) || (leadIndex != interaction.LeadIndex);
@@ -150,6 +156,55 @@ public partial class ClamChartView
         for (var s = 0; s < indices.Count; s++)
         {
             var index = (leadSeries >= 0) && layoutSeries[s].IsVisible ? FindPointAt(s, x) : -1;
+            changed |= indices[s] != index;
+            indices[s] = index;
+        }
+
+        return changed;
+    }
+
+    private bool IsScatterOnly()
+    {
+        var scatter = false;
+        foreach (var series in layoutSeries)
+        {
+            if (!series.IsVisible)
+            {
+                continue;
+            }
+
+            if (series.Kind != ChartSeriesKind.Scatter)
+            {
+                return false;
+            }
+
+            scatter = true;
+        }
+
+        return scatter;
+    }
+
+    private bool ResolveCrosshair(Point point)
+    {
+        var (leadSeries, leadIndex) = CartesianHitMap.FindNearestPoint(ChartLayout, layoutSeries, point.X, point.Y, Double.PositiveInfinity);
+        var changed = (leadSeries != interaction.LeadSeries) || (leadIndex != interaction.LeadIndex);
+        interaction.LeadSeries = leadSeries;
+        interaction.LeadIndex = leadIndex;
+        var indices = interaction.TrackedIndices;
+        while (indices.Count > layoutSeries.Count)
+        {
+            indices.RemoveAt(indices.Count - 1);
+        }
+
+        while (indices.Count < layoutSeries.Count)
+        {
+            indices.Add(-1);
+            changed = true;
+        }
+
+        for (var s = 0; s < indices.Count; s++)
+        {
+            var index = s == leadSeries ? leadIndex : -1;
             changed |= indices[s] != index;
             indices[s] = index;
         }

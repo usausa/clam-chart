@@ -98,6 +98,6 @@ internal sealed class ChartCountUp
             IsEntrance = false;
         }
 
-        owner.InvalidateSurface();
+        owner.InvalidateCanvas();
     }
 }

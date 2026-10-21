@@ -21,4 +21,8 @@ internal sealed record CartesianLayoutOptions
     public ChartDataLabelsMode DataLabelsMode { get; init; }
 
     public bool LastMarkerOnly { get; init; }
+
+    public IReadOnlyList<CartesianAnnotation> Annotations { get; init; } = [];
+
+    public IList<ChartThreshold>? Thresholds { get; init; }
 }

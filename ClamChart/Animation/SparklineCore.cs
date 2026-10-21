@@ -335,6 +335,6 @@ internal sealed class SparklineCore : IDisposable
             Interpolator.Complete(Current, Layout.Scale);
         }
 
-        owner.InvalidateSurface();
+        owner.InvalidateCanvas();
     }
 }

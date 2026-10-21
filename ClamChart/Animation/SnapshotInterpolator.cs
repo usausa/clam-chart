@@ -67,7 +67,17 @@ internal sealed class SnapshotInterpolator : IDisposable
             return ChartEntranceAnimation.None;
         }
 
-        return entrance == ChartEntranceAnimation.Auto ? (kind == ChartSeriesKind.Bar ? ChartEntranceAnimation.Grow : ChartEntranceAnimation.Reveal) : entrance;
+        if (entrance != ChartEntranceAnimation.Auto)
+        {
+            return entrance;
+        }
+
+        return kind switch
+        {
+            ChartSeriesKind.Bar => ChartEntranceAnimation.Grow,
+            ChartSeriesKind.Scatter => ChartEntranceAnimation.Fade,
+            _ => ChartEntranceAnimation.Reveal
+        };
     }
 
     public void Capture(CartesianLayout source, IReadOnlyList<CartesianSeries> series)

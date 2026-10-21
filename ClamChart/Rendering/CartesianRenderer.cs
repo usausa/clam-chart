@@ -7,7 +7,7 @@ using ClamChart.Layout;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
-internal sealed class CartesianRenderer : IDisposable
+internal sealed partial class CartesianRenderer : IDisposable
 {
     private const float TickLength = 4;
 
@@ -68,6 +68,7 @@ internal sealed class CartesianRenderer : IDisposable
 
         dashes.Clear();
         gradients.Clear();
+        DisposeOverlays();
         Return(ref along);
         Return(ref across);
         Return(ref baseAcross);
@@ -75,7 +76,7 @@ internal sealed class CartesianRenderer : IDisposable
         Return(ref baseTangents);
     }
 
-    public void Render(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, float width, float height)
+    public void Render(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state, float width, float height)
     {
         frame++;
         var scale = canvas.TotalMatrix.ScaleX;
@@ -86,9 +87,21 @@ internal sealed class CartesianRenderer : IDisposable
         DrawGrid(canvas, layout, style, scale);
         DrawBaseline(canvas, layout, style, scale);
         DrawSecondaryTicks(canvas, layout, style, scale);
-        DrawSeries(canvas, layout, display, series, colors, style, selection);
-        DrawMarkers(canvas, layout, display, series, colors, style, selection, width, height);
-        DrawTrackball(canvas, layout, display, series, colors, style, interaction, scale, width, height);
+        DrawBands(canvas, layout, state, style);
+        DrawThresholdLines(canvas, layout, state, style);
+        DrawSeries(canvas, layout, display, series, colors, style, selection, state);
+        DrawReferenceLines(canvas, layout, state, style);
+        DrawAnnotationLabels(canvas, layout, state, style);
+        DrawMarkers(canvas, layout, display, series, colors, style, selection, state, width, height);
+        if (interaction.IsCrosshair)
+        {
+            DrawCrosshair(canvas, layout, display, series, colors, style, interaction, state, scale, width, height);
+        }
+        else
+        {
+            DrawTrackball(canvas, layout, display, series, colors, style, interaction, state, scale, width, height);
+        }
+
         DrawDataLabels(canvas, layout, display, series, colors, style, selection);
         DrawAxisLabels(canvas, layout.XAxis, style);
         DrawAxisLabels(canvas, layout.YAxis, style);
@@ -101,7 +114,7 @@ internal sealed class CartesianRenderer : IDisposable
         }
 
         DrawLegend(canvas, layout.Legend, series, colors, style);
-        DrawTooltip(canvas, colors, style, interaction, width, height);
+        DrawTooltip(canvas, interaction.IsTracking ? GetTooltipColors(layout, series, colors, style, interaction, state) : colors, style, interaction, width, height);
         RemoveStaleEntries();
     }
 
@@ -249,15 +262,24 @@ internal sealed class CartesianRenderer : IDisposable
             : new SKRect(low, (float)plot.Y - inflate, high, (float)plot.Bottom + inflate);
     }
 
-    private void DrawSeries(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, SelectionBlend selection)
+    private void DrawSeries(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, SelectionBlend selection, CartesianRenderState state)
     {
         var plot = layout.PlotBounds;
         var inflate = 0f;
         for (var s = 0; s < series.Count; s++)
         {
-            if ((series[s] is LineSeries line) && (display.GetOpacity(s, line.IsVisible) > 0))
+            if (display.GetOpacity(s, series[s].IsVisible) <= 0)
+            {
+                continue;
+            }
+
+            if (series[s] is LineSeries line)
             {
                 inflate = Math.Max(inflate, (float)(line.Thickness ?? style.LineThickness) / 2);
+            }
+            else if (series[s] is ScatterSeries scatter)
+            {
+                inflate = Math.Max(inflate, ((float)(scatter.MarkerSize ?? style.MarkerSize) / 2) + ScatterStrokeWidth);
             }
         }
 
@@ -286,11 +308,15 @@ internal sealed class CartesianRenderer : IDisposable
 
             if (series[s] is BarSeries bar)
             {
-                DrawBars(canvas, layout, display, bar, s, colors[s], style, selection, opacity, entrance);
+                DrawBars(canvas, layout, display, bar, s, colors[s], style, selection, opacity, entrance, state);
             }
             else if (series[s] is LineSeries line)
             {
-                DrawLineSeries(canvas, layout, display, line, s, colors[s], style, opacity * selection.SeriesAlpha(s), entrance);
+                DrawLineSeries(canvas, layout, display, line, s, colors[s], style, opacity * selection.SeriesAlpha(s), entrance, state, inflate);
+            }
+            else if (series[s] is ScatterSeries scatter)
+            {
+                DrawScatter(canvas, layout, display, scatter, s, colors[s], style, selection, opacity, entrance, state);
             }
 
             if (revealed)
@@ -302,19 +328,20 @@ internal sealed class CartesianRenderer : IDisposable
         canvas.Restore();
     }
 
-    private void DrawLineSeries(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, LineSeries line, int seriesIndex, SKColor color, ChartStyle style, double alpha, ChartEntranceAnimation entrance)
+    private void DrawLineSeries(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, LineSeries line, int seriesIndex, SKColor color, ChartStyle style, double alpha, ChartEntranceAnimation entrance, CartesianRenderState state, float inflate)
     {
         var geometry = display.GetGeometry(layout, seriesIndex);
         var count = Project(layout, display, geometry, layout.GetValueAxis(line.YAxis), entrance);
         var horizontal = layout.Orientation == ChartOrientation.Horizontal;
         var interpolation = (line.Interpolation == ChartLineInterpolation.Smooth) && !geometry.IsSorted ? ChartLineInterpolation.Linear : line.Interpolation;
+        var coloring = IsColoring(layout, state, line.YAxis) ? layout : null;
         if (line is AreaSeries area)
         {
             var fill = entrance == ChartEntranceAnimation.Reveal ? alpha * display.Ease(ChartProgress.Delayed(display.Progress, ChartProgress.FillDelay)) : alpha;
-            FillArea(canvas, area, count, interpolation, horizontal, ChartColor.Fade(color, fill), style);
+            FillArea(canvas, area, count, interpolation, horizontal, color, fill, style, coloring, inflate);
         }
 
-        StrokeLine(canvas, line, count, interpolation, horizontal, ChartColor.Fade(color, alpha), (float)(line.Thickness ?? style.LineThickness));
+        StrokeLine(canvas, line, count, interpolation, horizontal, color, alpha, (float)(line.Thickness ?? style.LineThickness), style, coloring, inflate);
     }
 
     private int Project(CartesianLayout layout, SnapshotInterpolator display, SeriesGeometry geometry, AxisLayout axis, ChartEntranceAnimation entrance)
@@ -344,7 +371,7 @@ internal sealed class CartesianRenderer : IDisposable
         return count;
     }
 
-    private void StrokeLine(SKCanvas canvas, LineSeries line, int count, ChartLineInterpolation interpolation, bool horizontal, SKColor color, float thickness)
+    private void StrokeLine(SKCanvas canvas, LineSeries line, int count, ChartLineInterpolation interpolation, bool horizontal, SKColor color, double alpha, float thickness, ChartStyle style, CartesianLayout? coloring, float inflate)
     {
         if (thickness <= 0)
         {
@@ -391,15 +418,23 @@ internal sealed class CartesianRenderer : IDisposable
 
         using var path = builder.Detach();
         var spacing = last > first ? Math.Abs(along[last] - along[first]) / (last - first) : Single.PositiveInfinity;
-        var paint = paints.Stroke(color, thickness, SKStrokeCap.Round, spacing < thickness ? SKStrokeJoin.Bevel : SKStrokeJoin.Round);
+        var paint = paints.Stroke(ChartColor.Fade(color, alpha), thickness, SKStrokeCap.Round, spacing < thickness ? SKStrokeJoin.Bevel : SKStrokeJoin.Round);
         paint.PathEffect = GetDash(line, thickness);
-        canvas.DrawPath(path, paint);
+        if (coloring is null)
+        {
+            canvas.DrawPath(path, paint);
+        }
+        else
+        {
+            DrawThresholdRegions(canvas, coloring, path, paint, color, alpha, style, inflate);
+        }
 
         bool IsPoint(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
     }
 
-    private void FillArea(SKCanvas canvas, AreaSeries area, int count, ChartLineInterpolation interpolation, bool horizontal, SKColor color, ChartStyle style)
+    private void FillArea(SKCanvas canvas, AreaSeries area, int count, ChartLineInterpolation interpolation, bool horizontal, SKColor baseColor, double alpha, ChartStyle style, CartesianLayout? coloring, float inflate)
     {
+        var color = ChartColor.Fade(baseColor, alpha);
         var opacity = area.FillOpacity ?? style.AreaFillOpacity;
         if (opacity <= 0)
         {
@@ -463,6 +498,12 @@ internal sealed class CartesianRenderer : IDisposable
         using var path = builder.Detach();
         var fill = color.WithAlpha((byte)Math.Round(color.Alpha * opacity));
         var paint = paints.Fill(fill);
+        if (coloring is not null)
+        {
+            DrawThresholdRegions(canvas, coloring, path, paint, baseColor, alpha * opacity, style, inflate);
+            return;
+        }
+
         if (area.FillMode == ChartFillMode.Gradient)
         {
             paint.Shader = GetGradient(area, fill, extreme, baseline, horizontal);
@@ -473,7 +514,7 @@ internal sealed class CartesianRenderer : IDisposable
         bool IsFilled(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]) && Single.IsFinite(baseAcross[index]);
     }
 
-    private void DrawBars(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, BarSeries bar, int seriesIndex, SKColor color, ChartStyle style, SelectionBlend selection, double opacity, ChartEntranceAnimation entrance)
+    private void DrawBars(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, BarSeries bar, int seriesIndex, SKColor color, ChartStyle style, SelectionBlend selection, double opacity, ChartEntranceAnimation entrance, CartesianRenderState state)
     {
         var geometry = display.GetGeometry(layout, seriesIndex);
         if (geometry.BarSlot < 0)
@@ -487,6 +528,7 @@ internal sealed class CartesianRenderer : IDisposable
         var radius = (float)(bar.CornerRadius ?? style.BarCornerRadius);
         var gap = (float)style.SegmentGap;
         var values = geometry.Value;
+        var coloring = IsColoring(layout, state, bar.YAxis);
         for (var i = 0; i < geometry.Count; i++)
         {
             if (!TryGetBar(layout, geometry, axis, i, gap, GetGrowth(display, entrance, i, geometry.Count), out var shape))
@@ -496,7 +538,8 @@ internal sealed class CartesianRenderer : IDisposable
 
             var index = display.ToTargetIndex(seriesIndex, i);
             var alpha = opacity * selection.PointAlpha(seriesIndex, index, index >= 0 ? target.X[index] : Double.NaN);
-            DrawBar(canvas, shape, radius, paints.Fill(ChartColor.Fade(values[i] < 0 ? negative : color, alpha)));
+            var barColor = coloring ? GetThresholdColor(layout, style, values[i], color) : values[i] < 0 ? negative : color;
+            DrawBar(canvas, shape, radius, paints.Fill(ChartColor.Fade(barColor, alpha)));
         }
     }
 
@@ -596,7 +639,7 @@ internal sealed class CartesianRenderer : IDisposable
         canvas.DrawRoundRect(roundRect, paint);
     }
 
-    private void DrawMarkers(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, SelectionBlend selection, float width, float height)
+    private void DrawMarkers(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, SelectionBlend selection, CartesianRenderState state, float width, float height)
     {
         var overlay = display.OverlayAlpha;
         if (overlay <= 0)
@@ -621,8 +664,10 @@ internal sealed class CartesianRenderer : IDisposable
                 continue;
             }
 
-            var color = ChartColor.Fade(colors[s], opacity * selection.SeriesAlpha(s));
-            var count = Project(layout, display, display.GetGeometry(layout, s), layout.GetValueAxis(line.YAxis), display.GetEntrance(line.Kind));
+            var alpha = opacity * selection.SeriesAlpha(s);
+            var geometry = display.GetGeometry(layout, s);
+            var values = geometry.Value;
+            var count = Project(layout, display, geometry, layout.GetValueAxis(line.YAxis), display.GetEntrance(line.Kind));
             for (var i = count - 1; i >= 0; i--)
             {
                 if (!Single.IsFinite(along[i]) || !Single.IsFinite(across[i]))
@@ -630,6 +675,7 @@ internal sealed class CartesianRenderer : IDisposable
                     continue;
                 }
 
+                var color = ChartColor.Fade(GetPointColor(layout, state, style, line.YAxis, values[i], colors[s]), alpha);
                 DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[i], across[i], horizontal), radius, knockout, color, width, height);
                 if ((line.MarkerMode == ChartMarkerMode.Auto) || layout.LastMarkerOnly)
                 {
@@ -641,7 +687,8 @@ internal sealed class CartesianRenderer : IDisposable
             if ((selected >= 0) && (selected < count) && Single.IsFinite(along[selected]) && Single.IsFinite(across[selected]))
             {
                 var scale = 0.6f + (0.4f * (float)selection.Progress);
-                DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[selected], across[selected], horizontal), radius * scale, knockout * scale, ChartColor.Fade(colors[s], opacity), width, height);
+                var color = ChartColor.Fade(GetPointColor(layout, state, style, line.YAxis, values[selected], colors[s]), opacity);
+                DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[selected], across[selected], horizontal), radius * scale, knockout * scale, color, width, height);
             }
         }
     }
@@ -670,7 +717,7 @@ internal sealed class CartesianRenderer : IDisposable
         }
     }
 
-    private void DrawTrackball(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, float scale, float width, float height)
+    private void DrawTrackball(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state, float scale, float width, float height)
     {
         var lead = interaction.LeadSeries;
         if (!interaction.IsTracking || (lead < 0) || (lead >= layout.Geometries.Count))
@@ -704,7 +751,7 @@ internal sealed class CartesianRenderer : IDisposable
             if (radius > 0)
             {
                 var point = LinePathBuilder.ToPoint((float)layout.XAxis.ToDisplayPixel(geometry.X[index]), (float)layout.GetValueAxis(line.YAxis).ToDisplayPixel(geometry.End[index]), horizontal);
-                DrawMarkerInPlot(canvas, plot, point, radius, knockout, colors[s], width, height);
+                DrawMarkerInPlot(canvas, plot, point, radius, knockout, GetPointColor(layout, state, style, line.YAxis, geometry.Value[index], colors[s]), width, height);
             }
         }
     }
@@ -1081,6 +1128,7 @@ internal sealed class CartesianRenderer : IDisposable
 
     private void RemoveStaleEntries()
     {
+        RemoveStaleReferenceDashes();
         staleDashes.Clear();
         foreach (var (line, entry) in dashes)
         {

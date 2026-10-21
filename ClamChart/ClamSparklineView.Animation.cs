@@ -16,14 +16,14 @@ public partial class ClamSparklineView
         EnsureLayout();
         if (core.TryStartEntrance(ResolveEntrance(), ResolveAnimationLength(AnimationDuration)))
         {
-            InvalidateSurface();
+            InvalidateCanvas();
         }
     }
 
     internal override void FinishAnimations()
     {
         core.Finish();
-        InvalidateSurface();
+        InvalidateCanvas();
     }
 
     private bool CanAnimate => (ResolveAnimationLength(AnimationDuration) >= 1) && AnimationDriver.CanStart;

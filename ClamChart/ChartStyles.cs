@@ -14,6 +14,7 @@ public static class ChartStyles
         TooltipBackground = Color.FromArgb("#F01F1F1D"),
         TooltipTextColor = Color.FromArgb("#F0EFEC"),
         TooltipBorderColor = Color.FromArgb("#1AF0EFEC"),
+        EmphasisDimmedOpacity = 0.5,
         PressedOverlayColor = Color.FromArgb("#14FFFFFF"),
         SkeletonColor = Color.FromArgb("#232321"),
         SkeletonHighlightColor = Color.FromArgb("#2C2C2A"),

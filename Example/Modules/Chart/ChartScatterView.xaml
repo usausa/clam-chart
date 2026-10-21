@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartScatterView"
+             x:DataType="{x:Type module:ChartScatterViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartScatterViewModel}"
+             shell:ShellProperty.Title="Scatter"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Shape"
+             shell:ShellProperty.Function3Text="Color"
+             shell:ShellProperty.Function4Text="Data"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource ChartGrid}">
+        <clam:ClamChartView SelectionMode="Item"
+                            Thresholds="{Binding LatencyThresholds}"
+                            ThresholdsMode="{Binding ThresholdsMode}"
+                            TrackballMode="Touch">
+            <clam:ClamChartView.XAxis>
+                <clam:NumericAxis Minimum="0" Maximum="100"
+                                  Title="CPU (%)" />
+            </clam:ClamChartView.XAxis>
+            <clam:ClamChartView.YAxis>
+                <clam:NumericAxis Title="応答時間 (ms)" />
+            </clam:ClamChartView.YAxis>
+            <clam:ClamChartView.Annotations>
+                <clam:ChartReferenceBand Axis="X" End="100" Label="高負荷" Start="80" />
+                <clam:ChartReferenceLine Value="400"
+                                         Label="SLO" />
+            </clam:ClamChartView.Annotations>
+            <clam:ScatterSeries ItemsSource="{Binding Web}"
+                                MarkerShape="{Binding MarkerShape}"
+                                Title="web" />
+            <clam:ScatterSeries ItemsSource="{Binding Api}"
+                                MarkerShape="{Binding MarkerShape}"
+                                Title="api" />
+        </clam:ClamChartView>
+    </Grid>
+
+</ContentView>

@@ -48,6 +48,8 @@ public sealed record ChartStyle
 
     public double DimmedOpacity { get; set; } = 0.35;
 
+    public double EmphasisDimmedOpacity { get; set; } = 0.35;
+
     public Color PressedOverlayColor { get; set; } = Color.FromArgb("#0F000000");
 
     public Color SkeletonColor { get; set; } = Color.FromArgb("#ECEBE6");
@@ -112,7 +114,7 @@ public sealed record ChartStyle
             throw new ArgumentException("Widths, radii and gaps must be finite values of zero or more.");
         }
 
-        if (!IsOpacity(DimmedOpacity) || !IsOpacity(AreaFillOpacity))
+        if (!IsOpacity(DimmedOpacity) || !IsOpacity(EmphasisDimmedOpacity) || !IsOpacity(AreaFillOpacity))
         {
             throw new ArgumentException("Opacities must be values from 0 to 1.");
         }

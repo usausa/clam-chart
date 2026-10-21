@@ -124,6 +124,107 @@ public sealed class ClamChartViewTests
     }
 
     [Fact]
+    public void ScatterDoesNotIncludeZero()
+    {
+        // Arrange
+        using var view = Chart(new ScatterSeries { ItemsSource = new List<ChartPoint> { new(1, 50), new(2, 60) } });
+
+        // Act
+        Paint(view);
+
+        // Assert
+        Assert.True(view.ChartLayout.YAxis.Scale.Minimum > 0);
+        Assert.Equal(ChartAxisKind.Numeric, view.ChartLayout.XAxis.Options.Kind);
+    }
+
+    [Fact]
+    public void AnnotationsAreLogicalChildrenThatInheritTheBindingContext()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.BindingContext = "context";
+        var line = new ChartReferenceLine();
+        var band = new ChartReferenceBand();
+
+        // Act
+        view.Annotations.Add(line);
+
+        // Assert
+        Assert.Same(view, line.Parent);
+        Assert.Equal("context", line.BindingContext);
+
+        // Act
+        view.Annotations = new ObservableCollection<ChartAnnotation> { band };
+
+        // Assert
+        Assert.Null(line.Parent);
+        Assert.Same(view, band.Parent);
+        Assert.Throws<ArgumentNullException>(() => view.Annotations = null!);
+        Assert.Throws<ArgumentNullException>(() => view.Thresholds = null!);
+    }
+
+    [Fact]
+    public void AnnotationCannotBeSharedByTwoCharts()
+    {
+        // Arrange
+        using var first = new TestClamChartView();
+        using var second = new TestClamChartView();
+        var line = new ChartReferenceLine();
+        first.Annotations.Add(line);
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => second.Annotations.Add(line));
+    }
+
+    [Fact]
+    public void AnnotationValuesAreFiniteOrNaN()
+    {
+        // Arrange
+        var line = new ChartReferenceLine();
+        var band = new ChartReferenceBand();
+
+        // Act & Assert
+        Assert.True(Double.IsNaN(line.Value));
+        Assert.True(Double.IsNaN(band.Start));
+        Assert.Throws<ArgumentOutOfRangeException>(() => line.Value = Double.PositiveInfinity);
+        Assert.Throws<ArgumentOutOfRangeException>(() => band.Start = Double.NegativeInfinity);
+        Assert.Throws<ArgumentOutOfRangeException>(() => band.End = Double.PositiveInfinity);
+        line.Value = 5;
+        band.End = Double.NaN;
+        Assert.Equal(5, line.Value);
+        Assert.Equal(ChartAnnotationAxis.Y, line.Axis);
+        Assert.Equal(ChartAxisTarget.Primary, band.YAxis);
+    }
+
+    [Fact]
+    public void ChangingAnAnnotationOrTheThresholdsUpdatesTheLayout()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { ItemsSource = new List<double> { 10, 30 } });
+        view.OnAttached();
+        var line = new ChartReferenceLine { Value = 100 };
+        view.Annotations.Add(line);
+        Paint(view);
+        var first = view.ChartLayout.YAxis.Scale.Maximum;
+
+        // Act
+        line.Value = 200;
+        Paint(view);
+        var second = view.ChartLayout.YAxis.Scale.Maximum;
+        view.Annotations.Remove(line);
+        view.Thresholds.Add(new ChartThreshold { Value = 20, Level = ChartThresholdLevel.Warning });
+        Paint(view);
+
+        // Assert
+        Assert.Equal(100, first);
+        Assert.Equal(200, second);
+        Assert.Equal(30, view.ChartLayout.YAxis.Scale.Maximum);
+        Assert.Single(view.ChartLayout.Thresholds);
+        Assert.Empty(view.ChartLayout.Annotations);
+        Assert.Null(line.Parent);
+    }
+
+    [Fact]
     public void SecondaryAxisIsCreatedForSecondarySeries()
     {
         // Arrange

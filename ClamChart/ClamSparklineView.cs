@@ -1,6 +1,8 @@
 namespace ClamChart;
 
 using System.Collections;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 using ClamChart.Animation;
 using ClamChart.Data;
@@ -26,8 +28,14 @@ public partial class ClamSparklineView : ChartViewBase
     public static readonly BindableProperty MinimumProperty = BindableProperty.Create(nameof(Minimum), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(Minimum)), propertyChanged: OnRangeChanged);
     public static readonly BindableProperty MaximumProperty = BindableProperty.Create(nameof(Maximum), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(Maximum)), propertyChanged: OnRangeChanged);
     public static readonly BindableProperty ReferenceValueProperty = BindableProperty.Create(nameof(ReferenceValue), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(ReferenceValue)), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty NormalRangeMinimumProperty = BindableProperty.Create(nameof(NormalRangeMinimum), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(NormalRangeMinimum)), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty NormalRangeMaximumProperty = BindableProperty.Create(nameof(NormalRangeMaximum), typeof(double?), typeof(ClamSparklineView), validateValue: static (_, value) => ValidateFinite(value, nameof(NormalRangeMaximum)), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty EmphasisModeProperty = BindableProperty.Create(nameof(EmphasisMode), typeof(ChartSparklineEmphasis), typeof(ClamSparklineView), ChartSparklineEmphasis.None, propertyChanged: OnRenderInputChanged);
+    public static readonly BindableProperty ThresholdsProperty = BindableProperty.Create(nameof(Thresholds), typeof(IList<ChartThreshold>), typeof(ClamSparklineView), defaultValueCreator: static _ => new ObservableCollection<ChartThreshold>(), validateValue: static (_, value) => ValidateThresholds(value, nameof(Thresholds)), propertyChanged: OnThresholdsChanged);
+    public static readonly BindableProperty ThresholdsModeProperty = BindableProperty.Create(nameof(ThresholdsMode), typeof(ChartThresholdsMode), typeof(ClamSparklineView), ChartThresholdsMode.None, propertyChanged: OnRenderInputChanged);
 
     private readonly SparklineCore core;
+    private readonly ChartCollectionWatcher thresholdsWatcher;
     private SparklineRenderer? renderer;
     private bool invertedBoundsReported;
     private bool released;
@@ -116,6 +124,38 @@ public partial class ClamSparklineView : ChartViewBase
         set => SetValue(ReferenceValueProperty, value);
     }
 
+    public double? NormalRangeMinimum
+    {
+        get => (double?)GetValue(NormalRangeMinimumProperty);
+        set => SetValue(NormalRangeMinimumProperty, value);
+    }
+
+    public double? NormalRangeMaximum
+    {
+        get => (double?)GetValue(NormalRangeMaximumProperty);
+        set => SetValue(NormalRangeMaximumProperty, value);
+    }
+
+    public ChartSparklineEmphasis EmphasisMode
+    {
+        get => (ChartSparklineEmphasis)GetValue(EmphasisModeProperty);
+        set => SetValue(EmphasisModeProperty, value);
+    }
+
+#pragma warning disable CA2227
+    public IList<ChartThreshold> Thresholds
+    {
+        get => (IList<ChartThreshold>)GetValue(ThresholdsProperty);
+        set => SetValue(ThresholdsProperty, value);
+    }
+#pragma warning restore CA2227
+
+    public ChartThresholdsMode ThresholdsMode
+    {
+        get => (ChartThresholdsMode)GetValue(ThresholdsModeProperty);
+        set => SetValue(ThresholdsModeProperty, value);
+    }
+
     public Func<object, double?>? ValueSelector
     {
         get;
@@ -134,6 +174,8 @@ public partial class ClamSparklineView : ChartViewBase
     public ClamSparklineView()
     {
         core = new SparklineCore(this, DataAnimationName, InvalidateData, CreateReader);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher.Watch(Thresholds);
     }
 
     protected override void Dispose(bool disposing)
@@ -145,14 +187,23 @@ public partial class ClamSparklineView : ChartViewBase
         }
 
         released = true;
+        thresholdsWatcher.Deactivate();
         core.Dispose();
     }
 
     internal override ChartDensity ResolveDensity() => ChartDensity.Minimal;
 
-    internal override void OnAttached() => core.Source.Activate();
+    internal override void OnAttached()
+    {
+        core.Source.Activate();
+        thresholdsWatcher.Activate();
+    }
 
-    internal override void OnDetached() => core.Source.Deactivate();
+    internal override void OnDetached()
+    {
+        core.Source.Deactivate();
+        thresholdsWatcher.Deactivate();
+    }
 
     internal override void ResetRenderer()
     {
@@ -172,7 +223,10 @@ public partial class ClamSparklineView : ChartViewBase
             Markers = Markers,
             Minimum = Minimum,
             Maximum = Maximum,
-            ReferenceValue = ReferenceValue
+            ReferenceValue = ReferenceValue,
+            NormalRangeMinimum = NormalRangeMinimum,
+            NormalRangeMaximum = NormalRangeMaximum,
+            Thresholds = Thresholds
         };
         core.UpdateLayout(width, height, EffectiveContentPadding, ChartStyle, options);
         if (ChartLayout.HasInvertedBounds && !invertedBoundsReported)
@@ -201,12 +255,24 @@ public partial class ClamSparklineView : ChartViewBase
         var color = Color ?? (palette.Count > 0 ? palette[0] : ChartStyle.OtherColor);
         Interpolator.Easing = AnimationEasing;
         var line = color.ToSKColor();
-        var paint = new SparklinePaint(line, (NegativeColor ?? ChartStyle.CriticalColor).ToSKColor(), ChartColor.Fade(line, ChartStyle.AreaFillOpacity), 1);
-        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, ChartStyle, Smooth);
+        var weak = EmphasisMode == ChartSparklineEmphasis.Last ? ChartStyle.EmphasisDimmedOpacity : 1;
+        var paint = new SparklinePaint(line, (NegativeColor ?? ChartStyle.CriticalColor).ToSKColor(), ChartColor.Fade(line, ChartStyle.AreaFillOpacity), weak);
+        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, ChartStyle, Smooth, ThresholdsMode);
     }
 
     private static bool ValidateFinite(object? value, string name) =>
         (value is not double number) || Double.IsFinite(number) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be a finite number.");
+
+    private static bool ValidateThresholds(object? value, string name) => value is not null ? true : throw new ArgumentNullException(name);
+
+    private static void OnThresholdsChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (ClamSparklineView)bindable;
+        view.thresholdsWatcher.Watch(newValue);
+        view.InvalidateLayout();
+    }
+
+    private void OnThresholdsCollectionChanged(NotifyCollectionChangedEventArgs e) => InvalidateLayout();
 
     private static void OnSourceChanged(BindableObject bindable, object oldValue, object newValue) =>
         ((ClamSparklineView)bindable).ReplaceSource();

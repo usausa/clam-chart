@@ -92,7 +92,10 @@ public partial class ClamChartView : ChartViewBase
     {
         dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
         selectionAnimator = new ChartAnimator(this, SelectionAnimationName, OnSelectionProgress);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher.Watch(Thresholds);
         ObserveSeries(Series);
+        ObserveAnnotations(Annotations);
     }
 
     protected override void Dispose(bool disposing)
@@ -104,6 +107,7 @@ public partial class ClamChartView : ChartViewBase
         }
 
         released = true;
+        thresholdsWatcher.Deactivate();
         ChartLayout.Dispose();
         Interpolator.Dispose();
         foreach (var series in attached)
@@ -118,6 +122,8 @@ public partial class ClamChartView : ChartViewBase
         {
             series.Source.Activate();
         }
+
+        thresholdsWatcher.Activate();
     }
 
     internal override void OnDetached()
@@ -126,6 +132,8 @@ public partial class ClamChartView : ChartViewBase
         {
             series.Source.Deactivate();
         }
+
+        thresholdsWatcher.Deactivate();
     }
 
     internal override void ResetRenderer()
@@ -165,6 +173,7 @@ public partial class ClamChartView : ChartViewBase
             layoutSeries.Add(series.CreateLayoutSeries());
         }
 
+        PrepareAnnotations();
         var culture = Culture ?? CultureInfo.CurrentCulture;
         var options = CreateLayoutOptions(EffectiveDensity, culture);
         ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, options, layoutSeries, EnsureRenderer().Measurer);
@@ -189,7 +198,7 @@ public partial class ClamChartView : ChartViewBase
         UpdateColors();
         interaction.TooltipVisible = TooltipVisible;
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, ChartStyle, interaction, width, height);
+        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, ChartStyle, interaction, new CartesianRenderState(ThresholdsMode, attachedAnnotations), width, height);
     }
 
     private static void OnDataPropertyChanged(BindableObject bindable, object oldValue, object newValue) =>
