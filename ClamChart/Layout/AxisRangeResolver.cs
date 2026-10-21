@@ -75,8 +75,24 @@ internal static class AxisRangeResolver
         return new AxisScale(low, high, (high - low) / steps);
     }
 
+    public static (double Minimum, double Maximum)? GetWindow(double dataMaximum, AxisRangeOptions options)
+    {
+        if (options.Window is not { } window)
+        {
+            return null;
+        }
+
+        var end = ClampOption(options.Maximum) ?? ClampTime(dataMaximum);
+        return Double.IsNaN(end) || (end <= 0) ? null : (Math.Max(0, end - window), end);
+    }
+
     public static (double Minimum, double Maximum) ResolveTime(double dataMinimum, double dataMaximum, AxisRangeOptions options)
     {
+        if (GetWindow(dataMaximum, options) is { } window)
+        {
+            return window;
+        }
+
         var (minimum, maximum) = GetFixedBounds(options);
         var low = minimum ?? ClampTime(dataMinimum);
         var high = maximum ?? ClampTime(dataMaximum);

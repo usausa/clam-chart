@@ -12,6 +12,8 @@ internal sealed record AxisRangeOptions
 
     public double? Interval { get; init; }
 
+    public double? Window { get; init; }
+
     public bool IncludeZero { get; init; }
 
     public bool NiceRange { get; init; } = true;

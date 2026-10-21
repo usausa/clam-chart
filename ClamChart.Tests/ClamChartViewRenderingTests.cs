@@ -97,6 +97,50 @@ public sealed class ClamChartViewRenderingTests
     }
 
     [Fact]
+    public void LegendTableDrawsALineUnderTheHeaderAndEachRow()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.Series.Add(new LineSeries { Title = "A", ItemsSource = new List<double> { 1, 2 } });
+        view.Series.Add(new LineSeries { Title = "B", ItemsSource = new List<double> { 3, 4 } });
+        view.LegendMode = ChartLegendMode.Table;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var legend = view.ChartLayout.Legend;
+        var grid = new SKColor(0xE1, 0xE0, 0xD9);
+        var x = (int)((legend.Bounds.X + 2) * Scale);
+        Assert.Equal(grid, bitmap.GetPixel(x, (int)Math.Floor((legend.HeaderBounds.Bottom - 0.5) * Scale)));
+        Assert.Equal(grid, bitmap.GetPixel(x, (int)Math.Floor((legend.Items[1].Bounds.Bottom - 0.5) * Scale)));
+        Assert.Equal(grid, bitmap.GetPixel((int)((legend.Bounds.Right - 2) * Scale), (int)Math.Floor((legend.Items[0].Bounds.Bottom - 0.5) * Scale)));
+        Assert.Equal(0, bitmap.GetPixel(x, (int)(legend.Items[0].Bounds.CenterY * Scale)).Alpha);
+    }
+
+    [Fact]
+    public void LegendTableAddsNoAllocationToAFrame()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.Series.Add(new LineSeries { Title = "A", ItemsSource = new List<double> { 1, 2 } });
+        view.Series.Add(new LineSeries { Title = "B", ItemsSource = new List<double> { 3, 4 } });
+        view.LegendValues = ChartLegendValues.Last | ChartLegendValues.Min | ChartLegendValues.Max | ChartLegendValues.Mean;
+        using var list = view.Paint(360, 240);
+        using var surface = SKSurface.Create(new SKImageInfo(720, 480));
+        var idle = MeasureFrame(view, surface.Canvas);
+        view.LegendMode = ChartLegendMode.Table;
+        using var table = view.Paint(360, 240);
+
+        // Act
+        var allocated = MeasureFrame(view, surface.Canvas);
+
+        // Assert
+        Assert.True(view.ChartLayout.Legend.IsTable);
+        Assert.Equal(idle, allocated);
+    }
+
+    [Fact]
     public void BarRoundsOnlyTheDataSide()
     {
         // Arrange
@@ -602,6 +646,19 @@ public sealed class ClamChartViewRenderingTests
     private static SKColor GetPixel(SKBitmap bitmap, double x, double y) => bitmap.GetPixel((int)(x * Scale), (int)(y * Scale));
 
     private static byte GetPixelAlpha(SKBitmap bitmap, double x, double y) => GetPixel(bitmap, x, y).Alpha;
+
+    private static long MeasureFrame(TestClamChartView view, SKCanvas canvas)
+    {
+        canvas.Save();
+        canvas.Scale(Scale);
+        view.Render(canvas, 360, 240);
+        view.Render(canvas, 360, 240);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        view.Render(canvas, 360, 240);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        canvas.Restore();
+        return allocated;
+    }
 
     private static List<ChartEntry> Entries(params double[] values) =>
         [.. values.Select(static (value, index) => new ChartEntry($"C{index}", value))];

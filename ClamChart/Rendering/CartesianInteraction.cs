@@ -1,5 +1,7 @@
 namespace ClamChart.Rendering;
 
+using ClamChart.Layout;
+
 internal sealed class CartesianInteraction
 {
     public int SelectedSeries { get; private set; } = -1;
@@ -21,6 +23,14 @@ internal sealed class CartesianInteraction
     public bool IsTracking { get; set; }
 
     public bool IsCrosshair { get; set; }
+
+    public bool IsFollowing { get; set; }
+
+    public ChartAxisKind FollowKind { get; set; }
+
+    public double FollowX { get; set; } = Double.NaN;
+
+    public string? FollowCategory { get; set; }
 
     public int LeadSeries { get; set; } = -1;
 
@@ -58,6 +68,7 @@ internal sealed class CartesianInteraction
     {
         IsTracking = false;
         IsCrosshair = false;
+        IsFollowing = false;
         LeadSeries = -1;
         LeadIndex = -1;
         TooltipHeader = null;

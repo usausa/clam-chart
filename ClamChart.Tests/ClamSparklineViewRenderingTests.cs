@@ -424,6 +424,25 @@ public sealed class ClamSparklineViewRenderingTests
         return (from.X + (dx / length * distance), from.Y + (dy / length * distance));
     }
 
+    [Fact]
+    public void EdgeToEdgeReachesTheEdgesAndKeepsTheMarkerInside()
+    {
+        // Arrange
+        using var view = new TestClamSparklineView { Values = [2, 2], Minimum = 0, Kind = ChartSparklineKind.Area, EdgeToEdge = true, Color = Colors.Blue };
+        using var inset = new TestClamSparklineView { Values = [2, 2], Minimum = 0, Kind = ChartSparklineKind.Area, Color = Colors.Blue };
+
+        // Act
+        using var bitmap = view.Paint(100, 40);
+        using var insetBitmap = inset.Paint(100, 40);
+
+        // Assert
+        var layout = view.ChartLayout;
+        Assert.Equal(layout.Bounds, layout.Plot);
+        Assert.Equal(new SKColor(0, 0, 255, 26), bitmap.GetPixel(0, 79));
+        Assert.Equal(0, insetBitmap.GetPixel(0, 79).Alpha);
+        Assert.Equal(SKColors.Blue, bitmap.GetPixel((int)((100 - layout.MarkerRadius - layout.MarkerKnockout) * 2), (int)((layout.MarkerRadius + layout.MarkerKnockout) * 2)));
+    }
+
     private static SKColor GetPixel(SKBitmap bitmap, double x, double y) => bitmap.GetPixel((int)(x * Scale), (int)(y * Scale));
 
     private static int CountInk(SKBitmap bitmap)

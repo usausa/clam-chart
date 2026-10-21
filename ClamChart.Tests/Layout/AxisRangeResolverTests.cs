@@ -328,6 +328,40 @@ public sealed class AxisRangeResolverTests
         Assert.Equal((0d, TimeSpan.TicksPerMinute * 2d), AxisRangeResolver.ResolveTime(Double.NaN, Double.NaN, Default));
     }
 
+    [Fact]
+    public void TimeWindowEndsAtTheLatestPointOrTheMaximum()
+    {
+        // Arrange
+        double start = new DateTime(2026, 10, 21, 10, 0, 0).Ticks;
+        double end = new DateTime(2026, 10, 21, 10, 2, 0).Ticks;
+        double maximum = new DateTime(2026, 10, 21, 11, 0, 0).Ticks;
+        var window = (double)TimeSpan.TicksPerMinute * 5;
+
+        // Act & Assert
+        Assert.Equal((end - window, end), AxisRangeResolver.ResolveTime(start, end, new AxisRangeOptions { Window = window }));
+        Assert.Equal((maximum - window, maximum), AxisRangeResolver.ResolveTime(start, end, new AxisRangeOptions { Maximum = maximum, Window = window }));
+        Assert.Equal((end - window, end), AxisRangeResolver.GetWindow(end, new AxisRangeOptions { Window = window }));
+    }
+
+    [Fact]
+    public void TimeWindowWithoutAnEndIsNotUsed()
+    {
+        // Arrange
+        var options = new AxisRangeOptions { Window = TimeSpan.TicksPerMinute };
+
+        // Act & Assert
+        Assert.Null(AxisRangeResolver.GetWindow(Double.NaN, options));
+        Assert.Null(AxisRangeResolver.GetWindow(100, Default));
+        Assert.Equal((0d, TimeSpan.TicksPerMinute * 2d), AxisRangeResolver.ResolveTime(Double.NaN, Double.NaN, options));
+    }
+
+    [Fact]
+    public void TimeWindowDoesNotStartBeforeTheFirstTime()
+    {
+        // Act & Assert
+        Assert.Equal((0d, 100d), AxisRangeResolver.GetWindow(100, new AxisRangeOptions { Window = TimeSpan.TicksPerMinute }));
+    }
+
     [Theory]
     [InlineData(5, ChartLabelPlacement.BetweenTicks, -0.5, 4.5)]
     [InlineData(5, ChartLabelPlacement.OnTicks, 0, 4)]

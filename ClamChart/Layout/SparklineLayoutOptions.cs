@@ -19,4 +19,8 @@ internal sealed record SparklineLayoutOptions
     public double? NormalRangeMaximum { get; init; }
 
     public IList<ChartThreshold>? Thresholds { get; init; }
+
+    public bool EdgeToEdge { get; init; }
+
+    public bool LiveIndicator { get; init; }
 }

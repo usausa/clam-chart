@@ -87,11 +87,11 @@ internal sealed class StatRenderer : IDisposable
         var ink = GetInk(accent, style.IsDark);
         if (gradientMode)
         {
-            DrawGradient(canvas, layout.Bounds, accent, style.IsDark);
+            DrawGradient(canvas, layout.Bounds, accent, style.IsDark, state.Pulse);
         }
         else if ((state.ColorMode == ChartStatColorMode.Background) && (state.StateColor is { } tint))
         {
-            canvas.DrawRect(ToRect(layout.Bounds), paints.Fill(ChartColor.Fade(tint.ToSKColor(), BackgroundOpacity)));
+            canvas.DrawRect(ToRect(layout.Bounds), paints.Fill(ChartColor.Fade(tint.ToSKColor(), BackgroundOpacity * state.Pulse)));
         }
 
         var line = gradientMode ? Brighten(accent, OnColorLineBrighten) : accent;
@@ -101,9 +101,10 @@ internal sealed class StatRenderer : IDisposable
             DrawFadedTrend(canvas, layout.TrendBounds, core, trendPaint, style);
         }
 
+        var indicator = state.ColorMode == ChartStatColorMode.Indicator ? state.Pulse : 1;
         if (!layout.BandBounds.IsEmpty && (state.StateColor is { } band))
         {
-            canvas.DrawRect(ToRect(layout.BandBounds), paints.Fill(band.ToSKColor()));
+            canvas.DrawRect(ToRect(layout.BandBounds), paints.Fill(ChartColor.Fade(band.ToSKColor(), indicator)));
         }
 
         if (layout.HasTrend && (layout.TrendPlacement != ChartTrendPlacement.Background))
@@ -113,11 +114,12 @@ internal sealed class StatRenderer : IDisposable
 
         var overlay = state.CountUp.OverlayAlpha;
         var valueMode = (state.ColorMode == ChartStatColorMode.Value) && !state.IsEmptyValue;
-        var primary = gradientMode ? ink : valueMode ? accent : (state.IsEmptyValue ? style.MutedTextColor : style.PrimaryTextColor).ToSKColor();
+        var valueColor = valueMode ? ChartColor.Fade(accent, state.Pulse) : accent;
+        var primary = gradientMode ? ink : valueMode ? valueColor : (state.IsEmptyValue ? style.MutedTextColor : style.PrimaryTextColor).ToSKColor();
         var secondary = gradientMode ? ink : style.SecondaryTextColor.ToSKColor();
         if (state.StateColor is { } icon)
         {
-            DrawIcon(canvas, layout, ChartColor.Fade(gradientMode ? ink : icon.ToSKColor(), overlay));
+            DrawIcon(canvas, layout, ChartColor.Fade(gradientMode ? ink : icon.ToSKColor(), overlay * indicator));
         }
 
         if (layout.Title is { } title)
@@ -125,7 +127,7 @@ internal sealed class StatRenderer : IDisposable
             text.DrawText(canvas, title, layout.TitleBounds, layout.TitleFontSize, layout.TitleBounds.Width, secondary, style);
         }
 
-        DrawValue(canvas, layout, state, primary, valueMode ? accent : secondary, style);
+        DrawValue(canvas, layout, state, primary, valueMode ? valueColor : secondary, style);
         DrawDelta(canvas, layout, gradientMode ? ink : GetToneColor(layout.Delta.Tone, style), secondary, overlay, style);
     }
 
@@ -184,7 +186,7 @@ internal sealed class StatRenderer : IDisposable
         return GetBaseline(bounds, size) - (cap / 2);
     }
 
-    private void DrawGradient(SKCanvas canvas, ChartRect bounds, SKColor color, bool dark)
+    private void DrawGradient(SKCanvas canvas, ChartRect bounds, SKColor color, bool dark, double opacity)
     {
         var key = (color, (float)bounds.Width, (float)bounds.Height, dark);
         if ((gradient is null) || (gradientKey != key))
@@ -199,6 +201,7 @@ internal sealed class StatRenderer : IDisposable
         }
 
         shaderPaint.Shader = gradient;
+        shaderPaint.Color = ChartColor.Fade(SKColors.Black, opacity);
         canvas.DrawRect(ToRect(bounds), shaderPaint);
     }
 

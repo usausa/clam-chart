@@ -27,6 +27,8 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     private bool layoutDirty = true;
     private bool updateScheduled;
     private bool disposed;
+    private Window? watchedWindow;
+    private bool windowStopped;
 
     public event EventHandler<ChartFrameEventArgs>? FrameRendered;
 
@@ -74,7 +76,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     internal virtual int RenderedPointCount => 0;
 
     internal virtual ChartDensity ResolveDensity() =>
-        Density == ChartDensity.Auto ? DensityResolver.Resolve(Width, Height, ChartStyle.CompactSize, ChartStyle.MinimalSize) : Density;
+        Density == ChartDensity.Auto ? DensityResolver.Resolve(LayoutWidth, LayoutHeight, ChartStyle.CompactSize, ChartStyle.MinimalSize) : Density;
 
     internal static Thickness GetDensityPadding(ChartDensity density) =>
         new(density switch
@@ -114,12 +116,15 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         disposed = true;
         CancelInput(true);
         FinishAnimations();
+        ReleaseSkeleton();
+        StopEffect();
         OnDetached();
         ResetRenderer();
         ReleaseInput();
         Touch -= OnChartTouch;
         SizeChanged -= OnSizeChanged;
         Unloaded -= OnUnloaded;
+        WatchWindow(null);
     }
 
     protected override void OnHandlerChanging(HandlerChangingEventArgs args)
@@ -130,6 +135,8 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
             FinishAnimations();
         }
 
+        ReleaseSkeleton();
+        StopEffect();
         OnDetached();
         DetachPlatform();
         ResetRenderer();
@@ -163,6 +170,13 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         if ((propertyName == nameof(IsVisible)) && !IsVisible)
         {
             FinishAnimations();
+            StopSkeleton();
+            StopEffect();
+        }
+
+        if ((propertyName == nameof(Window)) && !disposed)
+        {
+            WatchWindow(Window);
         }
     }
 
@@ -198,24 +212,31 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         var height = (float)Height;
         if (layoutDirty)
         {
-            layoutDirty = false;
-            UpdateLayout(width, height);
+            RunLayout(width, height);
         }
 
         canvas.Save();
         try
         {
             canvas.Scale((float)(e.Info.Width / Width), (float)(e.Info.Height / Height));
-            Render(canvas, width, height);
-            DrawPressedOverlay(canvas, width, height);
+            if (IsBusy)
+            {
+                DrawSkeleton(canvas, width, height);
+            }
+            else
+            {
+                Render(canvas, width, height);
+                DrawPressedOverlay(canvas, width, height);
+            }
         }
         finally
         {
             canvas.Restore();
         }
 
+        UpdateEffect();
         base.OnPaintSurface(e);
-        FrameRendered?.Invoke(this, new ChartFrameEventArgs(Stopwatch.GetElapsedTime(started).TotalMilliseconds, RenderedPointCount, IsAnimating));
+        FrameRendered?.Invoke(this, new ChartFrameEventArgs(Stopwatch.GetElapsedTime(started).TotalMilliseconds, RenderedPointCount, IsAnimating || IsSkeletonAnimating || IsEffectAnimating));
     }
 
     internal abstract void Render(SKCanvas canvas, float width, float height);
@@ -282,6 +303,12 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         {
             InvalidateCanvas();
         }
+    }
+
+    internal void InvalidateSize()
+    {
+        InvalidateMeasure();
+        InvalidateLayout();
     }
 
     internal void InvalidateCanvas()
@@ -352,8 +379,18 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
 
         if (layoutDirty && (Width > 0) && (Height > 0))
         {
-            layoutDirty = false;
-            UpdateLayout((float)Width, (float)Height);
+            RunLayout((float)Width, (float)Height);
+        }
+    }
+
+    private void RunLayout(float width, float height)
+    {
+        layoutDirty = false;
+        UpdateLayout(width, height);
+        UpdateAutomationSummary();
+        if (!IsSnapshot)
+        {
+            snapshotRestoring = false;
         }
     }
 
@@ -378,6 +415,43 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     {
         CancelInput(true);
         FinishAnimations();
+        StopSkeleton();
+        StopEffect();
+    }
+
+    private void WatchWindow(Window? value)
+    {
+        if (ReferenceEquals(watchedWindow, value))
+        {
+            return;
+        }
+
+        if (watchedWindow is not null)
+        {
+            watchedWindow.Stopped -= OnWindowStopped;
+            watchedWindow.Resumed -= OnWindowResumed;
+        }
+
+        watchedWindow = value;
+        windowStopped = false;
+        if (watchedWindow is not null)
+        {
+            watchedWindow.Stopped += OnWindowStopped;
+            watchedWindow.Resumed += OnWindowResumed;
+        }
+    }
+
+    private void OnWindowStopped(object? sender, EventArgs e)
+    {
+        windowStopped = true;
+        StopSkeleton();
+        StopEffect();
+    }
+
+    private void OnWindowResumed(object? sender, EventArgs e)
+    {
+        windowStopped = false;
+        InvalidateCanvas();
     }
 
     //--------------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 namespace ClamChart;
 
 using ClamChart.Animation;
+using ClamChart.Rendering;
 
 public partial class ClamStatView
 {
@@ -16,6 +17,8 @@ public partial class ClamStatView
     internal SparklineInterpolator TrendInterpolator => trend.Interpolator;
 
     internal override bool IsAnimating => CountUp.IsRunning || trend.IsAnimating;
+
+    internal override double EffectMilliseconds => AlertAnimationEnabled && critical && (ColorMode != ChartStatColorMode.None) ? AlertPulse.Milliseconds : 0;
 
     internal override void StartEntranceAnimation()
     {

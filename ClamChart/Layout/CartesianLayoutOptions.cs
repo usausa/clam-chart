@@ -18,9 +18,19 @@ internal sealed record CartesianLayoutOptions
 
     public int LegendMaxRows { get; init; } = LegendLayout.MaxRows;
 
+    public ChartLegendMode LegendMode { get; init; }
+
+    public ChartLegendValues LegendValues { get; init; }
+
+    public double LegendWidth { get; init; } = LegendLayout.MaxSideWidth;
+
     public ChartDataLabelsMode DataLabelsMode { get; init; }
 
     public bool LastMarkerOnly { get; init; }
+
+    public bool GlowEnabled { get; init; }
+
+    public double LiveIndicatorExtent { get; init; }
 
     public IReadOnlyList<CartesianAnnotation> Annotations { get; init; } = [];
 

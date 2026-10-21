@@ -25,6 +25,7 @@
             <Border Grid.Row="0" Grid.Column="0"
                     Style="{StaticResource StatBorder}">
                 <clam:ClamStatView Value="{Binding Sales}"
+                                   AlertAnimationEnabled="True"
                                    ColorMode="{Binding SalesColorMode}"
                                    ContentPadding="12" DeltaCaption="前月比"
                                    LayoutMode="{Binding LayoutMode}"
@@ -37,7 +38,7 @@
             <Border Grid.Row="0" Grid.Column="1"
                     Style="{StaticResource StatBorder}">
                 <clam:ClamStatView Value="{Binding ErrorRate}"
-                                   ColorMode="Indicator" DeltaCaption="前日比" IncreaseIsGood="False"
+                                   AlertAnimationEnabled="True" ColorMode="Indicator" DeltaCaption="前日比" IncreaseIsGood="False"
                                    LayoutMode="{Binding LayoutMode}"
                                    PreviousValue="{Binding LastErrorRate}"
                                    Thresholds="{Binding ErrorThresholds}"
@@ -48,7 +49,7 @@
             <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                     Style="{StaticResource StatBorder}">
                 <clam:ClamStatView Value="{Binding Cpu}"
-                                   ColorMode="BackgroundGradient"
+                                   AlertAnimationEnabled="True" ColorMode="BackgroundGradient"
                                    LayoutMode="{Binding LayoutMode}"
                                    Thresholds="{Binding CpuThresholds}"
                                    Title="CPU" TrendPlacement="Background"

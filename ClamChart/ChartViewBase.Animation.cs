@@ -65,7 +65,7 @@ public abstract partial class ChartViewBase
     }
 
     internal double ResolveAnimationLength(double milliseconds) =>
-        AnimationEnabled && (AnimationDuration > 0) ? milliseconds * ClamChartSettings.ResolveAnimationScale() : 0;
+        AnimationEnabled && (AnimationDuration > 0) && !IsSnapshot && !snapshotRestoring ? milliseconds * ClamChartSettings.ResolveAnimationScale() : 0;
 
     private static bool ValidateDuration(object? value, string name) =>
         (value is int duration) && (duration >= 0) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be zero or more.");
@@ -79,6 +79,8 @@ public abstract partial class ChartViewBase
         if (!view.AnimationEnabled || (view.AnimationDuration <= 0))
         {
             view.FinishAnimations();
+            view.StopSkeleton();
+            view.StopEffect();
         }
     }
 }

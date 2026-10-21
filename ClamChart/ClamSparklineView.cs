@@ -33,6 +33,8 @@ public partial class ClamSparklineView : ChartViewBase
     public static readonly BindableProperty EmphasisModeProperty = BindableProperty.Create(nameof(EmphasisMode), typeof(ChartSparklineEmphasis), typeof(ClamSparklineView), ChartSparklineEmphasis.None, propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty ThresholdsProperty = BindableProperty.Create(nameof(Thresholds), typeof(IList<ChartThreshold>), typeof(ClamSparklineView), defaultValueCreator: static _ => new ObservableCollection<ChartThreshold>(), validateValue: static (_, value) => ValidateThresholds(value, nameof(Thresholds)), propertyChanged: OnThresholdsChanged);
     public static readonly BindableProperty ThresholdsModeProperty = BindableProperty.Create(nameof(ThresholdsMode), typeof(ChartThresholdsMode), typeof(ClamSparklineView), ChartThresholdsMode.None, propertyChanged: OnRenderInputChanged);
+    public static readonly BindableProperty EdgeToEdgeProperty = BindableProperty.Create(nameof(EdgeToEdge), typeof(bool), typeof(ClamSparklineView), false, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty LiveIndicatorVisibleProperty = BindableProperty.Create(nameof(LiveIndicatorVisible), typeof(bool), typeof(ClamSparklineView), false, propertyChanged: OnLayoutInputChanged);
 
     private readonly SparklineCore core;
     private readonly ChartCollectionWatcher thresholdsWatcher;
@@ -156,6 +158,18 @@ public partial class ClamSparklineView : ChartViewBase
         set => SetValue(ThresholdsModeProperty, value);
     }
 
+    public bool EdgeToEdge
+    {
+        get => (bool)GetValue(EdgeToEdgeProperty);
+        set => SetValue(EdgeToEdgeProperty, value);
+    }
+
+    public bool LiveIndicatorVisible
+    {
+        get => (bool)GetValue(LiveIndicatorVisibleProperty);
+        set => SetValue(LiveIndicatorVisibleProperty, value);
+    }
+
     public Func<object, double?>? ValueSelector
     {
         get;
@@ -205,6 +219,8 @@ public partial class ClamSparklineView : ChartViewBase
         thresholdsWatcher.Deactivate();
     }
 
+    internal override SkeletonShape SkeletonShape => Kind is ChartSparklineKind.Bar or ChartSparklineKind.WinLoss ? SkeletonShape.Bars : SkeletonShape.Line;
+
     internal override void ResetRenderer()
     {
         renderer?.Dispose();
@@ -212,6 +228,31 @@ public partial class ClamSparklineView : ChartViewBase
     }
 
     internal override void UpdateData() => core.Update(Values, ItemsSource);
+
+    internal override string? CreateAutomationSummary(ChartSummaryText text)
+    {
+        var layout = ChartLayout;
+        if ((layout.LastIndex < 0) || (layout.HighIndex < 0) || (layout.LowIndex < 0))
+        {
+            return null;
+        }
+
+        var values = core.Values;
+        var count = 0;
+        for (var i = 0; i < values.Count; i++)
+        {
+            if (Double.IsFinite(values[i]))
+            {
+                count++;
+            }
+        }
+
+        text.AddCount(count, false);
+        text.AddValue(ChartSummaryWord.Last, CompactNumberFormat.Format(values[layout.LastIndex], text.Culture));
+        text.AddValue(ChartSummaryWord.Maximum, CompactNumberFormat.Format(values[layout.HighIndex], text.Culture));
+        text.AddValue(ChartSummaryWord.Minimum, CompactNumberFormat.Format(values[layout.LowIndex], text.Culture));
+        return text.Build();
+    }
 
     internal override void UpdateLayout(float width, float height)
     {
@@ -226,7 +267,9 @@ public partial class ClamSparklineView : ChartViewBase
             ReferenceValue = ReferenceValue,
             NormalRangeMinimum = NormalRangeMinimum,
             NormalRangeMaximum = NormalRangeMaximum,
-            Thresholds = Thresholds
+            Thresholds = Thresholds,
+            EdgeToEdge = EdgeToEdge,
+            LiveIndicator = LiveIndicatorVisible
         };
         core.UpdateLayout(width, height, EffectiveContentPadding, ChartStyle, options);
         if (ChartLayout.HasInvertedBounds && !invertedBoundsReported)
@@ -257,7 +300,7 @@ public partial class ClamSparklineView : ChartViewBase
         var line = color.ToSKColor();
         var weak = EmphasisMode == ChartSparklineEmphasis.Last ? ChartStyle.EmphasisDimmedOpacity : 1;
         var paint = new SparklinePaint(line, (NegativeColor ?? ChartStyle.CriticalColor).ToSKColor(), ChartColor.Fade(line, ChartStyle.AreaFillOpacity), weak);
-        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, ChartStyle, Smooth, ThresholdsMode);
+        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, ChartStyle, Smooth, ThresholdsMode, LiveIndicatorVisible, EffectPhase);
     }
 
     private static bool ValidateFinite(object? value, string name) =>

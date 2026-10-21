@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:models="clr-namespace:Example.Models"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartPaletteView"
+             x:DataType="{x:Type module:ChartPaletteViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartPaletteViewModel}"
+             shell:ShellProperty.Title="Palette"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Palette"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True">
+
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource ChartStack}">
+            <clam:ClamChartView HeightRequest="240"
+                                Palette="{Binding Palette}"
+                                ValueAccessors="{x:Static models:ServiceLoad.Accessors}"
+                                XKey="label">
+                <clam:BarSeries ItemsSource="{Binding Quarters}"
+                                Title="web" YKey="web" />
+                <clam:BarSeries ItemsSource="{Binding Quarters}"
+                                Title="api" YKey="api" />
+                <clam:BarSeries ItemsSource="{Binding Quarters}"
+                                Title="db" YKey="db" />
+                <clam:BarSeries ItemsSource="{Binding Quarters}"
+                                Title="batch" YKey="batch" />
+                <clam:BarSeries ItemsSource="{Binding Quarters}"
+                                Title="cache" YKey="cache" />
+            </clam:ClamChartView>
+            <clam:ClamChartView HeightRequest="240"
+                                Palette="{Binding Palette}"
+                                ValueAccessors="{x:Static models:ServiceLoad.Accessors}"
+                                XKey="label">
+                <clam:LineSeries ItemsSource="{Binding Months}"
+                                 Title="web" YKey="web" />
+                <clam:LineSeries ItemsSource="{Binding Months}"
+                                 Title="api" YKey="api" />
+                <clam:LineSeries ItemsSource="{Binding Months}"
+                                 Title="db" YKey="db" />
+                <clam:LineSeries ItemsSource="{Binding Months}"
+                                 Title="batch" YKey="batch" />
+                <clam:LineSeries ItemsSource="{Binding Months}"
+                                 Title="cache" YKey="cache" />
+            </clam:ClamChartView>
+            <clam:ClamPieChartView HeightRequest="240"
+                                   ItemsSource="{Binding Shares}"
+                                   Palette="{Binding Palette}" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentView>

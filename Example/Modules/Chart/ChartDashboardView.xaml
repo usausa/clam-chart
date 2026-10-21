@@ -1,0 +1,225 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartDashboardView"
+             x:DataType="{x:Type module:ChartDashboardViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartDashboardViewModel}"
+             shell:ShellProperty.Title="Dashboard"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Page"
+             shell:ShellProperty.Function3Text="Theme"
+             shell:ShellProperty.Function4Text="Live"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <ScrollView>
+        <Grid>
+            <Grid Style="{StaticResource StatGrid}"
+                  RowDefinitions="132,180,Auto,Auto"
+                  ColumnDefinitions="*,*"
+                  IsVisible="{Binding BusinessVisible}">
+                <Border Grid.Row="0" Grid.Column="0"
+                        Style="{StaticResource StatBorder}">
+                    <clam:ClamStatView Value="{Binding Sales}"
+                                       ContentPadding="12" DeltaCaption="前月比"
+                                       PreviousValue="{Binding LastSales}"
+                                       Title="今月の売上"
+                                       TrendValues="{Binding SalesTrend}"
+                                       Unit="円" />
+                </Border>
+                <Border Grid.Row="0" Grid.Column="1"
+                        Style="{StaticResource StatBorder}">
+                    <clam:ClamStatView Value="{Binding ErrorRate}"
+                                       AlertAnimationEnabled="True" ColorMode="Indicator" DeltaCaption="前日比" IncreaseIsGood="False"
+                                       PreviousValue="{Binding LastErrorRate}"
+                                       Thresholds="{Binding ErrorThresholds}"
+                                       Title="エラー率" TrendKind="Line"
+                                       TrendValues="{Binding ErrorTrend}"
+                                       Unit="%" />
+                </Border>
+                <Border Grid.Row="1" Grid.Column="0"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="目標の達成率" />
+                        <clam:ClamRadialBarView Grid.Row="1"
+                                                ItemsSource="{Binding Goals}"
+                                                ContentPadding="0" OverflowMode="Wrap" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="1"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="チャネル別の売上" />
+                        <clam:ClamPieChartView Grid.Row="1"
+                                               ItemsSource="{Binding Channels}"
+                                               CenterLabel="合計" ContentPadding="0" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,220">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="リクエスト (件/時)" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0" TrackballMode="LongPress">
+                            <clam:AreaSeries ItemsSource="{Binding Requests}"
+                                             MarkerMode="None" Title="リクエスト" ValueFormat="{}{0:N0} 件" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource StatBorder}">
+                    <VerticalStackLayout Style="{StaticResource PanelStack}">
+                        <Label Style="{StaticResource PanelTitleLabel}"
+                               Text="ストレージ (GB)" />
+                        <clam:ClamBarGaugeView ItemsSource="{Binding Storages}"
+                                               ContentPadding="0" LabelPosition="Left" ValueMode="ValueOfMaximum" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+            <Grid Style="{StaticResource StatGrid}"
+                  RowDefinitions="180,Auto,Auto"
+                  ColumnDefinitions="*,*"
+                  IsVisible="{Binding KitVisible}">
+                <Border Grid.Row="0" Grid.Column="0"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="今日の歩数" />
+                        <clam:ClamRadialBarView Grid.Row="1"
+                                                ItemsSource="{Binding StepProgress}"
+                                                Maximum="10000"
+                                                CenterLabel="歩"
+                                                CenterText="{Binding StepText}"
+                                                ContentPadding="0" DisplayMode="Gradient" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="0" Grid.Column="1"
+                        Style="{StaticResource StatBorder}">
+                    <clam:ClamStatView Value="{Binding HeartAverage}"
+                                       ColorMode="Value" ContentPadding="12"
+                                       Fill="{AppThemeBinding Light=#E02F44,
+                                                              Dark=#F2495C}"
+                                       Title="平均心拍" TrendKind="Line"
+                                       TrendValues="{Binding HeartRates}"
+                                       Unit="bpm" ValueFormat="N0" />
+                </Border>
+                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,220">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="歩数" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0" TrackballMode="LongPress">
+                            <clam:ClamChartView.Annotations>
+                                <clam:ChartReferenceLine Value="10000"
+                                                         Label="目標" />
+                            </clam:ClamChartView.Annotations>
+                            <clam:BarSeries ItemsSource="{Binding Steps}"
+                                            Title="歩数" ValueFormat="{}{0:N0} 歩" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,220">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="心拍 (bpm)" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0" TrackballMode="LongPress">
+                            <clam:LineSeries ItemsSource="{Binding Heart}"
+                                             Color="{AppThemeBinding Light=#E02F44,
+                                                                     Dark=#F2495C}"
+                                             Interpolation="Smooth" MarkerMode="None" Title="心拍" ValueFormat="{}{0:N0} bpm" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid Style="{StaticResource StatGrid}"
+                  RowDefinitions="120,Auto,Auto,Auto"
+                  IsVisible="{Binding MoneyVisible}">
+                <Border Grid.Row="0"
+                        Style="{StaticResource StatBorder}">
+                    <clam:ClamStatView Value="{Binding Balance}"
+                                       ColorMode="BackgroundGradient" DeltaCaption="30 日前比"
+                                       Fill="{AppThemeBinding Light=#A352CC,
+                                                              Dark=#B877D9}"
+                                       PreviousValue="{Binding LastBalance}"
+                                       Title="残高" TrendPlacement="Background"
+                                       TrendValues="{Binding BalanceTrend}"
+                                       Unit="円" ValueFormat="N0" />
+                </Border>
+                <Border Grid.Row="1"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,220">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="残高の推移" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0" TrackballMode="LongPress">
+                            <clam:ClamChartView.YAxis>
+                                <clam:NumericAxis IncludeZero="False" />
+                            </clam:ClamChartView.YAxis>
+                            <clam:AreaSeries ItemsSource="{Binding Balances}"
+                                             Color="{AppThemeBinding Light=#A352CC,
+                                                                     Dark=#B877D9}"
+                                             FillMode="Gradient" MarkerMode="None" Title="残高" ValueFormat="{}{0:N0} 円" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="2"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,220">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="週ごとの支出" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0" DataLabelsMode="All">
+                            <clam:ClamChartView.YAxis>
+                                <clam:NumericAxis GridLinesVisible="False" LabelsVisible="False" />
+                            </clam:ClamChartView.YAxis>
+                            <clam:BarSeries ItemsSource="{Binding Weeks}"
+                                            Title="支出" ValueFormat="{}{0:N0} 円" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="3"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,220">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="カテゴリ別の支出" />
+                        <clam:ClamPieChartView Grid.Row="1"
+                                               ItemsSource="{Binding Expenses}"
+                                               CenterLabel="支出" ContentPadding="0" LegendPosition="Right" LegendValueMode="Percent"
+                                               LegendVisible="True" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollView>
+
+</ContentView>

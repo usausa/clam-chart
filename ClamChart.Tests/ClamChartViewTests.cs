@@ -263,6 +263,38 @@ public sealed class ClamChartViewTests
     }
 
     [Fact]
+    public void LegendTableShowsTheSelectedValues()
+    {
+        // Arrange
+        using var view = Chart(Titled("A"), Titled("B"));
+        view.LegendMode = ChartLegendMode.Table;
+        view.LegendValues = ChartLegendValues.Last | ChartLegendValues.Min;
+
+        // Act
+        Paint(view);
+
+        // Assert
+        var legend = view.ChartLayout.Legend;
+        Assert.True(legend.IsTable);
+        Assert.Equal(["Name", "Last *", "Min", "2", "1", "2", "1"], legend.Cells.Select(static x => x.Text));
+    }
+
+    [Fact]
+    public void LegendTableDefaultsAndWidthValidation()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+
+        // Act & Assert
+        Assert.Equal(ChartLegendMode.List, view.LegendMode);
+        Assert.Equal(ChartLegendValues.None, view.LegendValues);
+        Assert.Equal(180, view.LegendWidth);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.LegendWidth = 0);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.LegendWidth = Double.NaN);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.LegendWidth = Double.PositiveInfinity);
+    }
+
+    [Fact]
     public void CompactDensityReducesLabelsLegendAndMarkers()
     {
         // Arrange

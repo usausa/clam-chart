@@ -33,6 +33,7 @@ public partial class ClamStatView : ChartViewBase
     public static readonly BindableProperty ColorModeProperty = BindableProperty.Create(nameof(ColorMode), typeof(ChartStatColorMode), typeof(ClamStatView), ChartStatColorMode.None, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty FillProperty = BindableProperty.Create(nameof(Fill), typeof(Color), typeof(ClamStatView), propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty LayoutModeProperty = BindableProperty.Create(nameof(LayoutMode), typeof(ChartStatLayoutMode), typeof(ClamStatView), ChartStatLayoutMode.Auto, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty AlertAnimationEnabledProperty = BindableProperty.Create(nameof(AlertAnimationEnabled), typeof(bool), typeof(ClamStatView), false, propertyChanged: OnRenderInputChanged);
 
     private const double TrendThickness = 1;
 
@@ -43,6 +44,8 @@ public partial class ClamStatView : ChartViewBase
     private ChartTextFormat deltaFormat = ChartTextFormat.Default;
     private ChartValueFormatting formatting = ChartValueFormatting.Default;
     private Color? stateColor;
+    private bool critical;
+    private StatLayoutOptions? summaryOptions;
     private bool released;
 
     public string? Title
@@ -169,6 +172,12 @@ public partial class ClamStatView : ChartViewBase
         set => SetValue(LayoutModeProperty, value);
     }
 
+    public bool AlertAnimationEnabled
+    {
+        get => (bool)GetValue(AlertAnimationEnabledProperty);
+        set => SetValue(AlertAnimationEnabledProperty, value);
+    }
+
     public Func<double, string>? ValueFormatter
     {
         get;
@@ -218,6 +227,8 @@ public partial class ClamStatView : ChartViewBase
         thresholdsWatcher.Deactivate();
     }
 
+    internal override SkeletonShape SkeletonShape => SkeletonShape.Tile;
+
     internal override void ResetRenderer()
     {
         renderer?.Dispose();
@@ -236,7 +247,8 @@ public partial class ClamStatView : ChartViewBase
         formatting = new ChartValueFormatting(ValueFormatter, ValueConverter, valueFormat, culture);
         var state = ThresholdResolver.Resolve(Thresholds, value);
         stateColor = ThresholdResolver.GetColor(state, ChartStyle);
-        var options = new StatLayoutOptions
+        critical = finite && (state?.Level == ChartThresholdLevel.Critical);
+        var options = summaryOptions = new StatLayoutOptions
         {
             Title = Title,
             ValueText = finite ? formatting.Format(value) : EmptyText,
@@ -260,13 +272,36 @@ public partial class ClamStatView : ChartViewBase
         TryStartEntrance();
     }
 
+    internal override string? CreateAutomationSummary(ChartSummaryText text)
+    {
+        if (summaryOptions is not { } options)
+        {
+            return null;
+        }
+
+        text.BeginGroup(options.Title);
+        if (options.ValueText is { } value)
+        {
+            text.AddText(options.Unit is { } unit ? value + " " + unit : value);
+        }
+
+        if (options.Delta.Text is { } delta)
+        {
+            var caption = options.Caption;
+            text.AddText(String.IsNullOrEmpty(caption) ? delta : text.IsJapanese ? caption + " " + delta : delta + " " + caption);
+        }
+
+        return text.Build();
+    }
+
     internal override void Render(SKCanvas canvas, float width, float height)
     {
         var painter = EnsureRenderer();
         var palette = Palette ?? ChartStyle.Palette;
         CountUp.Easing = AnimationEasing;
         trend.Interpolator.Easing = AnimationEasing;
-        var state = new StatRenderState(ColorMode, stateColor, Fill, palette.Count > 0 ? palette[0] : ChartStyle.OtherColor, CountUp, formatting, !Double.IsFinite(Value));
+        var pulse = AlertAnimationEnabled && critical ? AlertPulse.GetOpacity(EffectPhase) : 1;
+        var state = new StatRenderState(ColorMode, stateColor, Fill, palette.Count > 0 ? palette[0] : ChartStyle.OtherColor, CountUp, formatting, !Double.IsFinite(Value), pulse);
         painter.Render(canvas, ChartLayout, state, trend, ChartStyle);
     }
 

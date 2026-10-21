@@ -194,6 +194,17 @@ public sealed class SparklineLayoutTests
     }
 
     [Fact]
+    public void EdgeToEdgeUsesTheWholeBounds()
+    {
+        // Act
+        var layout = Layout([1, 2], new SparklineLayoutOptions { Thickness = 2, EdgeToEdge = true });
+
+        // Assert
+        Assert.Equal(new ChartRect(0, 0, 100, 40), layout.Plot);
+        Assert.Equal(ChartSparklineMarkers.Last, layout.Markers);
+    }
+
+    [Fact]
     public void PositionsSpanThePlot()
     {
         // Arrange

@@ -7,6 +7,9 @@ internal sealed class ChartAnimator
     private readonly Action<double> progressChanged;
     private readonly Action<double> frame;
     private readonly Action<double, bool> finished;
+    private readonly Func<bool> repeat;
+    private bool looping;
+    private bool repeating;
 
     public bool IsRunning { get; private set; }
 
@@ -19,9 +22,10 @@ internal sealed class ChartAnimator
         this.progressChanged = progressChanged;
         frame = OnFrame;
         finished = OnFinished;
+        repeat = OnRepeat;
     }
 
-    public bool Start(double length)
+    public bool Start(double length, bool loop = false)
     {
         Stop();
         var driver = owner.AnimationDriver;
@@ -32,7 +36,9 @@ internal sealed class ChartAnimator
 
         IsRunning = true;
         Progress = 0;
-        driver.Start(name, (uint)Math.Round(length), frame, finished);
+        looping = loop;
+        repeating = false;
+        driver.Start(name, (uint)Math.Round(length), frame, finished, loop ? repeat : null);
         return IsRunning;
     }
 
@@ -57,8 +63,20 @@ internal sealed class ChartAnimator
         }
     }
 
+    private bool OnRepeat()
+    {
+        repeating = IsRunning && looping;
+        return repeating;
+    }
+
     private void OnFinished(double value, bool cancelled)
     {
+        if (repeating)
+        {
+            repeating = false;
+            return;
+        }
+
         if (IsRunning)
         {
             IsRunning = false;

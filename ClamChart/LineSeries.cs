@@ -8,7 +8,9 @@ public class LineSeries : ChartSeries
     public static readonly BindableProperty InterpolationProperty = BindableProperty.Create(nameof(Interpolation), typeof(ChartLineInterpolation), typeof(LineSeries), ChartLineInterpolation.Linear, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty DashPatternProperty = BindableProperty.Create(nameof(DashPattern), typeof(DoubleCollection), typeof(LineSeries), propertyChanged: OnRenderChanged);
     public static readonly BindableProperty MarkerModeProperty = BindableProperty.Create(nameof(MarkerMode), typeof(ChartMarkerMode), typeof(LineSeries), ChartMarkerMode.Auto, propertyChanged: OnRenderChanged);
-    public static readonly BindableProperty MarkerSizeProperty = BindableProperty.Create(nameof(MarkerSize), typeof(double?), typeof(LineSeries), validateValue: static (_, value) => ValidateSize(value, nameof(MarkerSize)), propertyChanged: OnRenderChanged);
+    public static readonly BindableProperty MarkerSizeProperty = BindableProperty.Create(nameof(MarkerSize), typeof(double?), typeof(LineSeries), validateValue: static (_, value) => ValidateSize(value, nameof(MarkerSize)), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty GlowRadiusProperty = BindableProperty.Create(nameof(GlowRadius), typeof(double), typeof(LineSeries), 0d, validateValue: static (_, value) => ValidateSize(value, nameof(GlowRadius)), propertyChanged: OnRenderChanged);
+    public static readonly BindableProperty LiveIndicatorVisibleProperty = BindableProperty.Create(nameof(LiveIndicatorVisible), typeof(bool), typeof(LineSeries), false, propertyChanged: OnLayoutChanged);
 
     public double? Thickness
     {
@@ -40,6 +42,18 @@ public class LineSeries : ChartSeries
     {
         get => (double?)GetValue(MarkerSizeProperty);
         set => SetValue(MarkerSizeProperty, value);
+    }
+
+    public double GlowRadius
+    {
+        get => (double)GetValue(GlowRadiusProperty);
+        set => SetValue(GlowRadiusProperty, value);
+    }
+
+    public bool LiveIndicatorVisible
+    {
+        get => (bool)GetValue(LiveIndicatorVisibleProperty);
+        set => SetValue(LiveIndicatorVisibleProperty, value);
     }
 
     internal override ChartSeriesKind Kind => ChartSeriesKind.Line;

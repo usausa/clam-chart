@@ -31,6 +31,7 @@
             <clam:ClamSparklineView Grid.Column="1"
                                     HeightRequest="28"
                                     Kind="{Binding Kind}"
+                                    LiveIndicatorVisible="True"
                                     Markers="{Binding Markers}"
                                     Values="{Binding LiveValues}" />
             <Label Grid.Column="2"

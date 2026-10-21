@@ -8,6 +8,8 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
 {
     private const int PointCount = 1000;
 
+    private const int LargeCount = 10_000;
+
     private const int StreamCount = 60;
 
     private const int RowCount = 100;
@@ -20,11 +22,17 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
 
     private const int IdleSteps = 8;
 
+    private const double FrameGap = 4;
+
+    private static readonly PerformanceScenario[] Scenarios = [PerformanceScenario.Lines, PerformanceScenario.Large, PerformanceScenario.Stream, PerformanceScenario.Dashboard, PerformanceScenario.List];
+
     private readonly List<(long Time, double Elapsed)> frames = [];
 
     private readonly IDispatcherTimer? timer;
 
     private PerformanceScenario scenario;
+
+    private bool started;
 
     private int step;
 
@@ -36,6 +44,26 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
 
     public IReadOnlyList<SparklineRow> Rows { get; }
 
+    public ObservableCollection<double> SalesTrend { get; }
+
+    public ObservableCollection<double> ErrorTrend { get; }
+
+    public IList<ChartThreshold> ErrorThresholds { get; } = DashboardSample.CreateErrorThresholds();
+
+    public ObservableCollection<ChartEntry> Goals { get; } = DashboardSample.CreateGoals();
+
+    public ObservableCollection<ChartEntry> Channels { get; } = DashboardSample.CreateChannels();
+
+    public ObservableCollection<ChartEntry> Requests { get; } = DashboardSample.CreateRequests();
+
+    public ObservableCollection<ChartEntry> Storages { get; } = DashboardSample.CreateStorages();
+
+    public double Sales => SalesTrend[^1];
+
+    public double LastSales => SalesTrend[^2];
+
+    public double ErrorRate => ErrorTrend[^1];
+
     [ObservableProperty]
     public partial IReadOnlyList<double> First { get; set; }
 
@@ -46,10 +74,19 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
     public partial IReadOnlyList<double> Third { get; set; }
 
     [ObservableProperty]
+    public partial IReadOnlyList<double> Large { get; set; }
+
+    [ObservableProperty]
     public partial bool LinesVisible { get; set; } = true;
 
     [ObservableProperty]
+    public partial bool LargeVisible { get; set; }
+
+    [ObservableProperty]
     public partial bool StreamVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool DashboardVisible { get; set; }
 
     [ObservableProperty]
     public partial bool ListVisible { get; set; }
@@ -57,13 +94,18 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial string Status { get; set; } = String.Empty;
 
+    public event EventHandler? EntranceRequested;
+
     public ChartPerformanceViewModel()
     {
         First = SampleData.Walk(PointCount, 60, 4, 0);
         Second = SampleData.Walk(PointCount, 40, 4, 0);
         Third = SampleData.Walk(PointCount, 20, 4, 0);
+        Large = SampleData.Walk(LargeCount, 50, 4, 0);
         Stream = [.. SampleData.Walk(StreamCount, 50, 8, 0)];
         Rows = [.. Enumerable.Range(1, RowCount).Select(static x => new SparklineRow { Name = $"Item {x:D3}", Values = SampleData.Walk(RowPointCount, 0, 8, -100), Markers = ChartSparklineMarkers.Last })];
+        SalesTrend = [.. SampleData.Walk(12, 11_000_000, 900_000, 7_000_000).Select(static x => Math.Round(x))];
+        ErrorTrend = [.. SampleData.Walk(24, 2.0, 0.4, 0.2).Select(static x => Math.Min(x, 4.5))];
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)
         {
@@ -90,19 +132,13 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
 
     protected override Task OnNotifyFunction2()
     {
-        Start(PerformanceScenario.Lines);
+        Start(started ? Scenarios[(Array.IndexOf(Scenarios, scenario) + 1) % Scenarios.Length] : PerformanceScenario.Lines);
         return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction3()
     {
-        Start(PerformanceScenario.Stream);
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction4()
-    {
-        Start(PerformanceScenario.List);
+        Start(started ? scenario : PerformanceScenario.Lines);
         return Task.CompletedTask;
     }
 
@@ -119,9 +155,12 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
 
     private void Start(PerformanceScenario value)
     {
+        started = true;
         scenario = value;
         LinesVisible = value == PerformanceScenario.Lines;
+        LargeVisible = value == PerformanceScenario.Large;
         StreamVisible = value == PerformanceScenario.Stream;
+        DashboardVisible = value == PerformanceScenario.Dashboard;
         ListVisible = value == PerformanceScenario.List;
         step = 0;
         updates = 0;
@@ -138,7 +177,7 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
         {
             if (step % 4 == 0)
             {
-                Status = $"{Describe()}{Environment.NewLine}{FormatDraws(frames.Count)}";
+                Status = $"{Describe()}{Environment.NewLine}{FormatDraws(frames.Count)}{Environment.NewLine}{FormatFrames(frames.Count)}";
             }
 
             return;
@@ -169,23 +208,32 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
 
     private void Update()
     {
-        if (scenario == PerformanceScenario.Lines)
+        switch (scenario)
         {
-            First = SampleData.Walk(PointCount, 60, 4, 0);
-            Second = SampleData.Walk(PointCount, 40, 4, 0);
-            Third = SampleData.Walk(PointCount, 20, 4, 0);
-        }
-        else
-        {
-            Stream.Add(Math.Round(Math.Max(0, Stream[^1] + SampleData.Next(-8, 8)), 1));
-            Stream.RemoveAt(0);
+            case PerformanceScenario.Lines:
+                First = SampleData.Walk(PointCount, 60, 4, 0);
+                Second = SampleData.Walk(PointCount, 40, 4, 0);
+                Third = SampleData.Walk(PointCount, 20, 4, 0);
+                break;
+            case PerformanceScenario.Large:
+                Large = SampleData.Walk(LargeCount, 50, 4, 0);
+                break;
+            case PerformanceScenario.Stream:
+                Stream.Add(Math.Round(Math.Max(0, Stream[^1] + SampleData.Next(-8, 8)), 1));
+                Stream.RemoveAt(0);
+                break;
+            default:
+                EntranceRequested?.Invoke(this, EventArgs.Empty);
+                break;
         }
     }
 
     private string Describe() => scenario switch
     {
         PerformanceScenario.Lines => $"Lines 3 x {PointCount:N0} points, {UpdateCount} updates",
+        PerformanceScenario.Large => $"Line {LargeCount:N0} points, {UpdateCount} updates",
         PerformanceScenario.Stream => $"Streaming {StreamCount} points, {UpdateCount} updates",
+        PerformanceScenario.Dashboard => $"Dashboard 6 views, {UpdateCount} entrances",
         _ => $"{RowCount} sparkline rows"
     };
 
@@ -202,6 +250,41 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
         return $"draws {count}  draw p50 {Percentile(draws, 0.5):F2}  p95 {Percentile(draws, 0.95):F2}  max {maximum:F2} ms";
     }
 
+    private string FormatFrames(int count)
+    {
+        List<double> totals = [];
+        var total = 0d;
+        var end = 0L;
+        for (var i = 0; i < count; i++)
+        {
+            var (time, elapsed) = frames[i];
+            var start = time - (long)(elapsed * Stopwatch.Frequency / 1000);
+            if ((i > 0) && (Stopwatch.GetElapsedTime(end, start).TotalMilliseconds < FrameGap))
+            {
+                total += elapsed;
+            }
+            else
+            {
+                if (i > 0)
+                {
+                    totals.Add(total);
+                }
+
+                total = elapsed;
+            }
+
+            end = time;
+        }
+
+        if (count > 0)
+        {
+            totals.Add(total);
+        }
+
+        var maximum = totals.Count > 0 ? totals.Max() : 0;
+        return $"frames {totals.Count}  frame p95 {Percentile(totals, 0.95):F2}  max {maximum:F2} ms";
+    }
+
     private string Summarize()
     {
         var measured = 0;
@@ -210,6 +293,7 @@ public sealed partial class ChartPerformanceViewModel : ChartViewModelBase
             measured++;
         }
 
-        return $"{Describe()}{Environment.NewLine}{FormatDraws(measured)}{Environment.NewLine}idle draws {frames.Count - measured}";
+        var frameLine = scenario == PerformanceScenario.Dashboard ? $"{Environment.NewLine}{FormatFrames(measured)}" : String.Empty;
+        return $"{Describe()}{Environment.NewLine}{FormatDraws(measured)}{frameLine}{Environment.NewLine}idle draws {frames.Count - measured}";
     }
 }

@@ -14,6 +14,11 @@ public enum ViewId
     ChartRadialBar,
     ChartScatter,
     ChartThreshold,
+    ChartPalette,
+    ChartMonitor,
+    ChartOverlay,
+    ChartLive,
+    ChartDashboard,
     ChartDensity,
     ChartPerformance
 }

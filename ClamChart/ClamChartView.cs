@@ -20,6 +20,7 @@ public partial class ClamChartView : ChartViewBase
     public static readonly BindableProperty LegendVisibleProperty = BindableProperty.Create(nameof(LegendVisible), typeof(bool?), typeof(ClamChartView), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendPositionProperty = BindableProperty.Create(nameof(LegendPosition), typeof(ChartLegendPosition), typeof(ClamChartView), ChartLegendPosition.Bottom, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty DataLabelsModeProperty = BindableProperty.Create(nameof(DataLabelsMode), typeof(ChartDataLabelsMode), typeof(ClamChartView), ChartDataLabelsMode.None, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty DownsamplingProperty = BindableProperty.Create(nameof(Downsampling), typeof(ChartDownsampling), typeof(ClamChartView), ChartDownsampling.Auto, propertyChanged: OnRenderInputChanged);
 
     private readonly List<CartesianSeries> layoutSeries = [];
     private readonly List<SKColor> colors = [];
@@ -69,6 +70,12 @@ public partial class ClamChartView : ChartViewBase
         set => SetValue(DataLabelsModeProperty, value);
     }
 
+    public ChartDownsampling Downsampling
+    {
+        get => (ChartDownsampling)GetValue(DownsamplingProperty);
+        set => SetValue(DownsamplingProperty, value);
+    }
+
     internal CartesianLayout ChartLayout { get; } = new();
 
     internal override int RenderedPointCount
@@ -107,6 +114,7 @@ public partial class ClamChartView : ChartViewBase
         }
 
         released = true;
+        LeaveTrackingGroup(TrackingGroup);
         thresholdsWatcher.Deactivate();
         ChartLayout.Dispose();
         Interpolator.Dispose();
@@ -135,6 +143,8 @@ public partial class ClamChartView : ChartViewBase
 
         thresholdsWatcher.Deactivate();
     }
+
+    internal override SkeletonShape SkeletonShape => HasBarSeries() ? (Orientation == ChartOrientation.Horizontal ? SkeletonShape.Rows : SkeletonShape.Bars) : SkeletonShape.Line;
 
     internal override void ResetRenderer()
     {
@@ -180,6 +190,7 @@ public partial class ClamChartView : ChartViewBase
         ReportInvertedBounds(options);
         CompleteTransition(captured);
         RefreshTracking();
+        UpdateCategoryExtent(width, height);
     }
 
     internal override void Render(SKCanvas canvas, float width, float height)
@@ -198,13 +209,91 @@ public partial class ClamChartView : ChartViewBase
         UpdateColors();
         interaction.TooltipVisible = TooltipVisible;
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, ChartStyle, interaction, new CartesianRenderState(ThresholdsMode, attachedAnnotations), width, height);
+        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, ChartStyle, interaction, new CartesianRenderState(ThresholdsMode, attachedAnnotations, Downsampling, EffectPhase), width, height);
+    }
+
+    internal override string? CreateAutomationSummary(ChartSummaryText text)
+    {
+        var layout = ChartLayout;
+        var named = CountVisibleSeries() > 1;
+        for (var s = 0; (s < layoutSeries.Count) && (s < layout.Geometries.Count); s++)
+        {
+            var item = layoutSeries[s];
+            if (!item.IsVisible)
+            {
+                continue;
+            }
+
+            var x = layout.Geometries[s].X;
+            var y = item.Data.Y;
+            var count = 0;
+            var minimum = -1;
+            var maximum = -1;
+            for (var i = 0; i < y.Length; i++)
+            {
+                if (!Double.IsFinite(x[i]) || !Double.IsFinite(y[i]))
+                {
+                    continue;
+                }
+
+                count++;
+                if ((minimum < 0) || (y[i] < y[minimum]))
+                {
+                    minimum = i;
+                }
+
+                if ((maximum < 0) || (y[i] > y[maximum]))
+                {
+                    maximum = i;
+                }
+            }
+
+            if (count == 0)
+            {
+                continue;
+            }
+
+            var axis = layout.GetValueAxis(item.Axis).Options;
+            text.BeginGroup(!String.IsNullOrEmpty(item.Title) ? item.Title : named ? text.SeriesName(s + 1) : null);
+            text.AddCount(count, false);
+            text.AddValue(ChartSummaryWord.Maximum, CartesianLayout.FormatValue(y[maximum], item, axis, false, text.Culture), layout.GetTrackingLabel(x[maximum], layoutSeries));
+            text.AddValue(ChartSummaryWord.Minimum, CartesianLayout.FormatValue(y[minimum], item, axis, false, text.Culture), layout.GetTrackingLabel(x[minimum], layoutSeries));
+        }
+
+        return text.Build();
     }
 
     private static void OnDataPropertyChanged(BindableObject bindable, object oldValue, object newValue) =>
         ((ClamChartView)bindable).InvalidateData();
 
+    private int CountVisibleSeries()
+    {
+        var count = 0;
+        foreach (var series in layoutSeries)
+        {
+            if (series.IsVisible)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private CartesianRenderer EnsureRenderer() => renderer ??= new CartesianRenderer(ChartStyle.FontFamily);
+
+    private bool HasBarSeries()
+    {
+        foreach (var series in attached)
+        {
+            if (series.Kind == ChartSeriesKind.Bar)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private bool HasVisibleData()
     {

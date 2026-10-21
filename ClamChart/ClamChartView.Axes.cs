@@ -47,6 +47,7 @@ public partial class ClamChartView
         var view = (ClamChartView)bindable;
         view.ReplaceAxis((ChartAxis?)oldValue, (ChartAxis?)newValue);
         view.InvalidateData();
+        view.InvalidateMeasure();
     }
 
     private static void OnValueAxisChanged(BindableObject bindable, object oldValue, object newValue)
@@ -107,6 +108,9 @@ public partial class ClamChartView
             LegendVisible = LegendVisible ?? ((attached.Count >= 2) && full),
             LegendPosition = LegendPosition,
             LegendMaxRows = full ? LegendLayout.MaxRows : 1,
+            LegendMode = LegendMode,
+            LegendValues = LegendValues,
+            LegendWidth = LegendWidth,
             DataLabelsMode = density switch
             {
                 ChartDensity.Full => DataLabelsMode,
@@ -114,9 +118,25 @@ public partial class ClamChartView
                 _ => ChartDataLabelsMode.None
             },
             LastMarkerOnly = !full,
+            GlowEnabled = visible,
+            LiveIndicatorExtent = GetLiveIndicatorExtent(),
             Annotations = layoutAnnotations,
             Thresholds = Thresholds
         };
+    }
+
+    private double GetLiveIndicatorExtent()
+    {
+        var extent = 0d;
+        foreach (var series in attached)
+        {
+            if (series is LineSeries { LiveIndicatorVisible: true } line)
+            {
+                extent = Math.Max(extent, (line.MarkerSize ?? ChartStyle.MarkerSize) / 2 * LiveIndicator.ExtentRatio);
+            }
+        }
+
+        return extent;
     }
 
     private void ReportInvertedBounds(CartesianLayoutOptions options)

@@ -16,11 +16,23 @@ internal sealed class LegendLayout
 
     public const double MaxSideWidth = 180;
 
+    public const double CellPaddingX = 8;
+
+    public const double CellPaddingY = 2;
+
+    public const double SeparatorThickness = 1;
+
+    public const double MinNameWidth = 55;
+
     private const double LineMarkerRatio = 1.5;
 
     private readonly List<LegendItemLayout> items = [];
+    private readonly List<LegendCell> cells = [];
+    private readonly List<double> columnWidths = [];
 
     public IReadOnlyList<LegendItemLayout> Items => items;
+
+    public IReadOnlyList<LegendCell> Cells => cells;
 
     public int OverflowCount { get; private set; }
 
@@ -30,6 +42,10 @@ internal sealed class LegendLayout
 
     public ChartRect Bounds { get; private set; }
 
+    public ChartRect HeaderBounds { get; private set; }
+
+    public bool IsTable { get; private set; }
+
     public bool IsVisible { get; private set; }
 
     public static double GetMarkerWidth(LegendMarkerKind marker, double markerSize) =>
@@ -38,10 +54,13 @@ internal sealed class LegendLayout
     public void Clear()
     {
         items.Clear();
+        cells.Clear();
         OverflowCount = 0;
         OverflowText = String.Empty;
         OverflowBounds = default;
         Bounds = default;
+        HeaderBounds = default;
+        IsTable = false;
         IsVisible = false;
     }
 
@@ -90,7 +109,7 @@ internal sealed class LegendLayout
         return height;
     }
 
-    public double MeasureColumn(IReadOnlyList<LegendEntry> entries, double availableHeight, IChartTextMeasurer measurer, double fontSize, double markerSize)
+    public double MeasureColumn(IReadOnlyList<LegendEntry> entries, double availableHeight, IChartTextMeasurer measurer, double fontSize, double markerSize, double maxWidth = MaxSideWidth)
     {
         Clear();
         var lineHeight = measurer.GetLineHeight(fontSize);
@@ -109,7 +128,7 @@ internal sealed class LegendLayout
         }
 
         var valueSpace = hasValues ? ValueGap + valueColumn : 0;
-        width = Math.Min(width + valueSpace, MaxSideWidth);
+        width = Math.Min(width + valueSpace, maxWidth);
         var capacity = (int)Math.Floor((availableHeight + RowGap) / (rowHeight + RowGap));
         var shown = entries.Count <= capacity ? entries.Count : Math.Max(0, capacity - 1);
         for (var i = 0; i < shown; i++)
@@ -136,6 +155,81 @@ internal sealed class LegendLayout
         return width;
     }
 
+    public double MeasureTable(IReadOnlyList<LegendEntry> entries, IReadOnlyList<string> headers, IReadOnlyList<string> values, double width, double maxHeight, IChartTextMeasurer measurer, double fontSize, double markerSize)
+    {
+        Clear();
+        var lineHeight = measurer.GetLineHeight(fontSize);
+        var contentHeight = Math.Max(lineHeight, markerSize);
+        var rowHeight = contentHeight + (CellPaddingY * 2) + SeparatorThickness;
+        var capacity = (int)Math.Floor(maxHeight / rowHeight) - 1;
+        var shown = entries.Count <= capacity ? entries.Count : capacity - 1;
+        if (shown <= 0)
+        {
+            return 0;
+        }
+
+        var markerColumn = 0d;
+        for (var i = 0; i < shown; i++)
+        {
+            markerColumn = Math.Max(markerColumn, GetMarkerWidth(entries[i].Marker, markerSize));
+        }
+
+        markerColumn += CellPaddingX * 2;
+        var columns = headers.Count - 1;
+        var used = markerColumn + MinNameWidth;
+        columnWidths.Clear();
+        for (var c = 0; c < columns; c++)
+        {
+            var columnWidth = measurer.Measure(headers[c + 1], fontSize, Double.PositiveInfinity);
+            for (var i = 0; i < shown; i++)
+            {
+                columnWidth = Math.Max(columnWidth, measurer.Measure(values[(i * columns) + c], fontSize, Double.PositiveInfinity));
+            }
+
+            columnWidth += CellPaddingX * 2;
+            if (used + columnWidth > width)
+            {
+                break;
+            }
+
+            columnWidths.Add(columnWidth);
+            used += columnWidth;
+        }
+
+        IsTable = true;
+        var nameX = markerColumn + CellPaddingX;
+        var nameMaxWidth = Math.Max(0, width - used + MinNameWidth - (CellPaddingX * 2));
+        var textY = CellPaddingY + ((contentHeight - lineHeight) / 2);
+        HeaderBounds = new ChartRect(0, 0, width, rowHeight);
+        cells.Add(new LegendCell(-1, headers[0], new ChartRect(nameX, textY, measurer.Measure(headers[0], fontSize, nameMaxWidth), lineHeight), nameMaxWidth));
+        AddValueCells(-1, headers, 1, 0, width, textY, lineHeight, measurer, fontSize);
+        for (var i = 0; i < shown; i++)
+        {
+            var entry = entries[i];
+            var y = (i + 1) * rowHeight;
+            items.Add(new LegendItemLayout(
+                entry.SeriesIndex,
+                new ChartRect(0, y, width, rowHeight),
+                new ChartRect(CellPaddingX, y + CellPaddingY + ((contentHeight - markerSize) / 2), GetMarkerWidth(entry.Marker, markerSize), markerSize),
+                new ChartRect(nameX, y + textY, measurer.Measure(entry.Text, fontSize, nameMaxWidth), lineHeight),
+                nameMaxWidth));
+            AddValueCells(i, values, i * columns, y, width, textY, lineHeight, measurer, fontSize);
+        }
+
+        var rows = shown + 1;
+        if (shown < entries.Count)
+        {
+            OverflowCount = entries.Count - shown;
+            OverflowText = FormatOverflow(OverflowCount);
+            OverflowBounds = new ChartRect(CellPaddingX, (rows * rowHeight) + textY, measurer.Measure(OverflowText, fontSize, Math.Max(0, width - (CellPaddingX * 2))), lineHeight);
+            rows++;
+        }
+
+        Bounds = new ChartRect(0, 0, width, rows * rowHeight);
+        IsVisible = true;
+        return Bounds.Height;
+    }
+
     public void Offset(double x, double y)
     {
         for (var i = 0; i < items.Count; i++)
@@ -144,7 +238,14 @@ internal sealed class LegendLayout
             items[i] = item with { Bounds = Move(item.Bounds, x, y), Marker = Move(item.Marker, x, y), Text = Move(item.Text, x, y), Value = item.Value.IsEmpty ? item.Value : Move(item.Value, x, y) };
         }
 
+        for (var i = 0; i < cells.Count; i++)
+        {
+            var cell = cells[i];
+            cells[i] = cell with { Bounds = Move(cell.Bounds, x, y) };
+        }
+
         OverflowBounds = OverflowCount > 0 ? Move(OverflowBounds, x, y) : default;
+        HeaderBounds = IsTable ? Move(HeaderBounds, x, y) : default;
         Bounds = Move(Bounds, x, y);
     }
 
@@ -163,6 +264,26 @@ internal sealed class LegendLayout
             new ChartRect(x + markerWidth + MarkerGap, y + ((rowHeight - lineHeight) / 2), textWidth, lineHeight),
             textMaxWidth,
             valueWidth > 0 ? new ChartRect(x + width - valueWidth, y + ((rowHeight - lineHeight) / 2), valueWidth, lineHeight) : default);
+
+    private void AddValueCells(int row, IReadOnlyList<string> texts, int offset, double y, double width, double textY, double lineHeight, IChartTextMeasurer measurer, double fontSize)
+    {
+        var right = width;
+        foreach (var columnWidth in columnWidths)
+        {
+            right -= columnWidth;
+        }
+
+        for (var c = 0; c < columnWidths.Count; c++)
+        {
+            right += columnWidths[c];
+            var text = texts[offset + c];
+            if (text.Length > 0)
+            {
+                var textWidth = measurer.Measure(text, fontSize, Double.PositiveInfinity);
+                cells.Add(new LegendCell(row, text, new ChartRect(right - CellPaddingX - textWidth, y + textY, textWidth, lineHeight), Double.PositiveInfinity));
+            }
+        }
+    }
 
     private void PlaceOverflowInRow(double availableWidth, IChartTextMeasurer measurer, double fontSize, double rowHeight, double lineHeight)
     {

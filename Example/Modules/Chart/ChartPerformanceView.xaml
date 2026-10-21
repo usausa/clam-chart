@@ -10,13 +10,11 @@
              s:BindingContextResolver.Type="{x:Type module:ChartPerformanceViewModel}"
              shell:ShellProperty.Title="Performance"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Lines"
-             shell:ShellProperty.Function3Text="Stream"
-             shell:ShellProperty.Function4Text="List"
+             shell:ShellProperty.Function2Text="Next"
+             shell:ShellProperty.Function3Text="Again"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
-             shell:ShellProperty.Function4Enabled="True">
+             shell:ShellProperty.Function3Enabled="True">
 
     <Grid Style="{StaticResource ChartGrid}"
           RowDefinitions="Auto,*">
@@ -33,10 +31,57 @@
         </clam:ClamChartView>
         <clam:ClamChartView Grid.Row="1"
                             HeightRequest="360"
+                            IsVisible="{Binding LargeVisible}"
+                            FrameRendered="OnFrameRendered" VerticalOptions="Start">
+            <clam:LineSeries ItemsSource="{Binding Large}" />
+        </clam:ClamChartView>
+        <clam:ClamChartView Grid.Row="1"
+                            HeightRequest="360"
                             IsVisible="{Binding StreamVisible}"
                             FrameRendered="OnFrameRendered" VerticalOptions="Start">
             <clam:AreaSeries ItemsSource="{Binding Stream}" />
         </clam:ClamChartView>
+        <Grid Grid.Row="1"
+              Style="{StaticResource StatGrid}"
+              RowDefinitions="120,160,200,Auto"
+              ColumnDefinitions="*,*"
+              IsVisible="{Binding DashboardVisible}"
+              VerticalOptions="Start">
+            <clam:ClamStatView x:Name="SalesStat"
+                               Grid.Row="0" Grid.Column="0"
+                               Value="{Binding Sales}"
+                               ContentPadding="12" DeltaCaption="前月比" FrameRendered="OnFrameRendered"
+                               PreviousValue="{Binding LastSales}"
+                               Title="今月の売上"
+                               TrendValues="{Binding SalesTrend}"
+                               Unit="円" />
+            <clam:ClamStatView x:Name="ErrorStat"
+                               Grid.Row="0" Grid.Column="1"
+                               Value="{Binding ErrorRate}"
+                               ColorMode="Indicator" FrameRendered="OnFrameRendered" IncreaseIsGood="False"
+                               Thresholds="{Binding ErrorThresholds}"
+                               Title="エラー率" TrendKind="Line"
+                               TrendValues="{Binding ErrorTrend}"
+                               Unit="%" />
+            <clam:ClamRadialBarView x:Name="GoalRadial"
+                                    Grid.Row="1" Grid.Column="0"
+                                    ItemsSource="{Binding Goals}"
+                                    FrameRendered="OnFrameRendered" OverflowMode="Wrap" />
+            <clam:ClamPieChartView x:Name="ChannelPie"
+                                   Grid.Row="1" Grid.Column="1"
+                                   ItemsSource="{Binding Channels}"
+                                   CenterLabel="合計" FrameRendered="OnFrameRendered" />
+            <clam:ClamChartView x:Name="RequestChart"
+                                Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                FrameRendered="OnFrameRendered">
+                <clam:AreaSeries ItemsSource="{Binding Requests}"
+                                 MarkerMode="None" Title="リクエスト" />
+            </clam:ClamChartView>
+            <clam:ClamBarGaugeView x:Name="StorageGauge"
+                                   Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                                   ItemsSource="{Binding Storages}"
+                                   FrameRendered="OnFrameRendered" LabelPosition="Left" ValueMode="ValueOfMaximum" />
+        </Grid>
         <CollectionView Grid.Row="1"
                         ItemsSource="{Binding Rows}"
                         IsVisible="{Binding ListVisible}">

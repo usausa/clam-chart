@@ -22,6 +22,9 @@ Changes after `Dispose()` are ignored and the public methods throw `ObjectDispos
 | `Culture` | `CultureInfo?` | `null` | ✓ | Culture of numbers and dates; `null` uses `CultureInfo.CurrentCulture` |
 | `EmptyText` | `string?` | `null` | ✓ | Text drawn in the center when there is no data; `null` draws nothing |
 | `TouchMode` | `ChartTouchMode` | `Auto` | ✓ | How touches are taken (see [Touch](#-touch)) |
+| `IsBusy` | `bool` | `false` | ✓ | Draws a shimmering placeholder in the shape of the chart instead of the data and lets every touch through (see [Loading](#-loading)) |
+| `HapticFeedbackEnabled` | `bool` | `false` | ✓ | A light vibration when a tap selects an element and a tick when the trackball starts or moves to another point (Android) |
+| `AutomationSummaryFormatter` | `Func<ChartViewBase, string?>?` | `null` | | Description read by screen readers; `null` uses the built-in summary (see [Accessibility](#-accessibility)) |
 | `AnimationEnabled` | `bool` | `true` | ✓ | `false` turns every animation off and always draws the final state |
 | `AnimationDuration` | `int` | `450` | ✓ | Milliseconds of the entrance and update animations; `0` turns every animation off |
 | `AnimationEasing` | `Easing` | `CubicOut` | ✓ | Easing of the entrance and update animations |
@@ -35,6 +38,7 @@ The entrance animation plays when the view has a handler, is visible and its dat
 Data labels, markers and the center value of a pie fade in during the last 30% of the entrance.  
 Selection fades unselected elements over 150 ms.  
 Every duration is multiplied by `ClamChartSettings.AnimationScale` and the animation scale of the system (see [ClamChartSettings](#-clamchartsettings)).  
+Looping effects (the loading shimmer, the rings of `LiveIndicatorVisible` and the pulse of `AlertAnimationEnabled`) run only while they are shown, and stop while the view is hidden, unloaded or in the background and, for the rings and the pulse, while it is busy; with the animations off they are drawn still.  
 
 ### 🛠 Methods
 
@@ -44,6 +48,8 @@ Every duration is multiplied by `ClamChartSettings.AnimationScale` and the anima
 | `PlayEntranceAnimation()` | `void` | Plays the entrance animation again, for example when a tab is shown again |
 | `CompleteAnimations()` | `void` | Moves the running animations to their final state |
 | `CancelInteraction()` | `void` | Cancels a press, a long press or the trackball in progress |
+| `RenderToImage(Size size, float scale)` | `SKImage` | Draws the chart at `size` (DIP) on a new image of `size` × `scale` pixels, without a handler too (see [Images](#-images)) |
+| `SaveAsPngAsync(Stream stream, Size size, float scale)` | `Task` | Writes `RenderToImage` to a stream as PNG |
 | `Dispose()` | `void` | Stops the animations and the input and releases the subscriptions and native resources |
 
 ### 📣 Events
@@ -86,6 +92,35 @@ Explicit settings such as `MaxLabelCount` and `LegendVisible = true` take preced
 A sparkline is always `Minimal`.  
 A bar gauge that measures its own height (`AutoHeight`) decides the density from the width only.  
 
+### ⏳ Loading
+
+While `IsBusy` is `true`, the view draws a placeholder in `SkeletonColor` instead of the data: a line, bars, a ring, rows or the blocks of a tile, following the kind of the chart.  
+A band of `SkeletonHighlightColor` sweeps across it every 1.6 seconds; with the animations off it stays still.  
+Touches pass through while busy, and the entrance animation plays when `IsBusy` returns to `false`.  
+
+### ♿ Accessibility
+
+When `SemanticProperties.Description` is not set by the application, the view sets it to a summary of its data after each layout, and keeps a description set by the application.  
+The summary is in Japanese when `Culture` (or `CultureInfo.CurrentUICulture`) is Japanese and in English otherwise, with values in the formats of the chart.  
+
+| View | Summary |
+|---|---|
+| `ClamChartView` | For each visible series: title, number of points, maximum and minimum with the X labels (`Sales: 12 points, max 120 (Mar), min 40 (Aug)`) |
+| `ClamPieChartView` | Number of slices, total and the percentage of each slice |
+| `ClamSparklineView` | Number of points, last, maximum and minimum |
+| `ClamStatView` | Title, value with the unit and the difference with its caption |
+| `ClamBarGaugeView`, `ClamRadialBarView` | Label and value of each row |
+
+`AutomationSummaryFormatter` replaces the summary with text from the application; return `null` for no description.  
+Set `AutomationProperties.IsInAccessibleTree="False"` on a chart that only decorates a card whose labels already describe it.  
+
+### 🖼 Images
+
+`RenderToImage` lays the chart out at the given size, chooses the density for that size and draws the final state without animations, the trackball or the pressed cover; it works without a handler, for example in a background page.  
+A busy view draws a still placeholder.  
+The view draws itself at its own size again afterwards, without animating from the image layout.  
+`SaveAsPngAsync` encodes the image as PNG and writes it to the stream.  
+
 ## 📈 ClamChartView
 
 Draws line, area, bar and scatter series on X and Y axes, mixed in one chart, stacked, horizontal or on a date and time axis, with thresholds and reference lines and bands.  
@@ -119,13 +154,23 @@ Dates and numbers cannot share one X axis; a `CategoryAxis` takes any X in order
 |---|---|---|:-:|---|
 | `LegendVisible` | `bool?` | `null` | ✓ | `null` shows the legend for two or more series in `Full` density |
 | `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | Rows at the top or the bottom, or a column on the left or the right |
+| `LegendMode` | `ChartLegendMode` | `List` | ✓ | `List` lines up markers and names; `Table` is a table of names and values like the legend table of Grafana |
+| `LegendValues` | `ChartLegendValues` | `None` | ✓ | Value columns of the `Table`: `Last` (headed `Last *`, the last valid value), `Min`, `Max` and `Mean` in this order |
+| `LegendWidth` | `double` | `180` | ✓ | Width of a legend on the left or the right: the width of a `Table` and the largest width of a `List`; greater than 0 |
+| `Downsampling` | `ChartDownsampling` | `Auto` | ✓ | `Auto` draws lines and areas with sorted X through at most two points per DIP of their width, chosen by LTTB; the data, taps and the trackball keep every point |
 | `LegendToggleEnabled` | `bool` | `false` | ✓ | Tapping a legend item shows or hides its series; the last visible series cannot be hidden |
 | `LegendItemTappedCommand` | `ICommand?` | `null` | ✓ | Executed after `LegendItemTapped` |
 | `DataLabelsMode` | `ChartDataLabelsMode` | `None` | ✓ | Points that get a value label |
 
 The legend lists the series with a `Title`, hidden ones included, each with a dot or a short line for line series.  
 Rows wrap and more than two rows end with `+N`.  
-A column on the left or the right is as wide as the longest item up to 180 DIP and is hidden when the plot would be narrower than twice its width.  
+A column on the left or the right is as wide as the longest item up to `LegendWidth` and is hidden when the plot would be narrower than twice its width.  
+
+A `Table` has a header row (`Name` and the value columns in `SecondaryTextColor`) and a row per series with its marker, its name truncated with an ellipsis and its values right-aligned, with a hairline in `GridLineColor` under the header and each row.  
+Values are computed from the valid points in the displayed X range, formatted like the tooltip, and left empty when there is no point.  
+At the top or the bottom the table takes up to 35% of the height; on the left or the right it is `LegendWidth` wide and as high as the plot.  
+Rows that do not fit end with `+N`, and value columns that would leave the names less than 55 DIP are left out from the right.  
+Tapping a row works like tapping a `List` item; a hidden series keeps its values with a faded marker and a muted name.  
 
 Data labels are placed as follows and dropped when they do not fit or overlap a label placed before them (last point, maximum, minimum, then the others).  
 
@@ -174,6 +219,7 @@ Taps hit wider areas than the drawn shapes.
 | `TrackedItem` | `object?` | `null` | ✓ | Item at the trackball (the first series wins at the same X), OneWayToSource; `null` when released |
 | `TrackedIndex` | `int` | `-1` | ✓ | Position of that item in the data of its series, OneWayToSource |
 | `TrackingChangedCommand` | `ICommand?` | `null` | ✓ | Executed when tracking starts, moves to another point and ends |
+| `TrackingGroup` | `string?` | `null` | ✓ | Charts in the same window with the same group show the trackball line and markers of the chart being tracked |
 
 | `TrackballMode` | Start | Suits |
 |---|---|---|
@@ -187,6 +233,7 @@ On a `DateTimeAxis` with the default format it uses the finer of the tick precis
 The following rows show the title and the value of each series, formatted by the series or the value axis; 100% stacks show the original values.  
 When every visible series is a `ScatterSeries`, the trackball snaps to the nearest point in both directions instead, draws a crosshair through it and shows only that point in the tooltip.  
 A data or layout change during tracking snaps again at the finger.  
+The other charts of a `TrackingGroup` snap to their own point at the same X (the same category name on a category axis) and draw only the line and the markers, without a tooltip, `TrackedItem` or events; nothing is shown when that X is outside their range, and charts of only scatter series do not follow.  
 Tracking ends when the finger is released, a second finger touches, the finger leaves the view or `CancelInteraction()` is called, and is canceled when the view is resized, unloaded, disabled, hidden or loses focus, the handler changes, or `TouchMode` or `TrackballMode` changes.  
 
 #### Thresholds and annotations
@@ -273,8 +320,12 @@ A series beyond the palette is drawn with `ChartStyle.OtherColor` and reported o
 | `DashPattern` | `DoubleCollection?` | `null` | ✓ | Dashes in multiples of the line width (`4,3`), as `StrokeDashArray` |
 | `MarkerMode` | `ChartMarkerMode` | `Auto` | ✓ | Points that get a marker |
 | `MarkerSize` | `double?` | `null` | ✓ | Marker diameter; `null` uses `ChartStyle.MarkerSize` |
+| `GlowRadius` | `double` | `0` | ✓ | Spread of a soft glow under the line, 0 or more; `0` draws none |
+| `LiveIndicatorVisible` | `bool` | `false` | ✓ | Draws a dot on the last point and two rings that grow from it every 1.8 seconds |
 
 A marker is cut out of the line by `ChartStyle.MarkerKnockout`, which is really transparent, and points clipped by the plot get no marker.  
+The glow is 1.8 times the line width in the line color at 55%, blurred with a standard deviation of half of `GlowRadius`. It follows dashes and threshold colors, stays in the plot, and is left out in `Minimal` density and for series of more than 500 points.  
+The live dot has the size and the cut-out of a marker, even with `MarkerMode` `None`, and the rings grow in its color from the marker radius to three times it while fading from 45%. The plot keeps the ring radius from the edge of the view on the side where X ends (the right, or the bottom of a horizontal chart), so the rings are not cut there. With the animations off only the dot is drawn.  
 
 ### AreaSeries
 
@@ -370,18 +421,21 @@ With two value axes, the title of each axis carries the colored markers of its s
 | `Minimum`, `Maximum` | `DateTime?` | `null` | ✓ | Fixed ends; bind them to switch between a day, a week and a month |
 | `IntervalType` | `ChartDateTimeIntervalType` | `Auto` | ✓ | Tick unit; a unit alone chooses among that unit and the larger ones |
 | `Interval` | `double?` | `null` | ✓ | Ticks every n units of `IntervalType`, greater than 0; not used with `Auto` (months and years are rounded to whole numbers, fractions of the other units become the smaller unit) |
+| `WindowSize` | `TimeSpan?` | `null` | ✓ | Shows only this span ending at `Maximum`, or at the latest point of the visible series when `Maximum` is `null`; `Minimum` is not used; greater than zero |
 | `LabelFormatter` | `Func<DateTime, string>?` | `null` | | Label text from code |
 
 `Auto` chooses the smallest step whose labels fit: 1, 2, 5, 10, 15 or 30 seconds or minutes, 1, 3, 6 or 12 hours, 1 or 2 days, 1 or 2 weeks, 1, 2, 3 or 6 months, or 1, 2, 5, 10, 20, 50 and more years.  
 Ticks follow the calendar: weeks start on `FirstDayOfWeek` of the culture and months on January.  
 The default format follows the step: `HH:mm:ss` under a minute, `HH:mm` under a day, `M/d` under two months and `yyyy/M` above, with the separators of the culture.  
 Times are local: a `DateTimeOffset` uses `LocalDateTime`, a UTC `DateTime` is converted and other `DateTime` values are used as they are; the same applies to `Minimum` and `Maximum`.  
+With `WindowSize`, short data is drawn at the right with the left side empty, older points are clipped at the edge of the plot, and the automatic value range and the legend table use only the points in the window.  
 
 ### CategoryAxis
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
 | `LabelPlacement` | `ChartLabelPlacement` | `BetweenTicks` | ✓ | Where the categories sit |
+| `CategoryWidth` | `double?` | `null` | ✓ | Length of each category; the chart then requests the width (the height in a horizontal chart) of all categories plus the axes, for a horizontal `ScrollView`; greater than 0; an explicit `WidthRequest` or `HeightRequest` wins |
 | `LabelFormatter` | `Func<string, string>?` | `null` | | Label text from code |
 
 Categories merge the X values of all series in order of appearance, hidden series included, so the axis does not change when a series is toggled.  
@@ -539,6 +593,8 @@ It is drawn without allocations of its own: bars and win-loss allocate nothing, 
 | `EmphasisMode` | `ChartSparklineEmphasis` | `None` | ✓ | `Last` draws the last segment (the last bar) in the series color and the rest, the fill included, at `ChartStyle.EmphasisDimmedOpacity` |
 | `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Thresholds, not included in the automatic range; `null` throws `ArgumentNullException` |
 | `ThresholdsMode` | `ChartThresholdsMode` | `None` | ✓ | As in `ClamChartView`, with 1 DIP dashed lines (`4,4`); `ColorSeries` colors lines and areas by region and bars, win-loss and markers by value |
+| `EdgeToEdge` | `bool` | `false` | ✓ | Draws lines and areas to the edges of the content without the inset for the line caps and the markers, for card backgrounds; markers are kept inside |
+| `LiveIndicatorVisible` | `bool` | `false` | ✓ | Dot and growing rings on the last point of lines and areas, as `LineSeries.LiveIndicatorVisible`; the line is inset by the marker on the left, top and bottom and by the ring radius on the right, except with `EdgeToEdge` |
 
 | Item | Rule |
 |---|---|
@@ -579,6 +635,7 @@ The value counts up from the shown value when it changes, and counting allocates
 | `ColorMode` | `ChartStatColorMode` | `None` | ✓ | How the state and the tile color are shown |
 | `Fill` | `Color?` | `null` | ✓ | Color of the tile used by `Value`, `BackgroundGradient` and the trend; `null` uses the state color, then the first palette color |
 | `LayoutMode` | `ChartStatLayoutMode` | `Auto` | ✓ | Arrangement |
+| `AlertAnimationEnabled` | `bool` | `false` | ✓ | While the value is at a `Critical` threshold, the band and the icon of `Indicator`, the background of `Background` and `BackgroundGradient`, or the value and the unit of `Value` pulse between 100% and 60% opacity every 1.2 seconds; nothing pulses with `None` or with the animations off |
 
 | Item | Rule |
 |---|---|
@@ -774,7 +831,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `DimmedOpacity` | `double` | `0.35` | `0.35` | Opacity of the elements that are not selected |
 | `EmphasisDimmedOpacity` | `double` | `0.35` | `0.5` | Opacity of a sparkline except its emphasized last segment |
 | `PressedOverlayColor` | `Color` | `#0F000000` | `#14FFFFFF` | Cover of a pressed chart |
-| `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Reserved for the loading placeholder |
+| `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Loading placeholder and the band that sweeps over it |
 | `Palette` | `IReadOnlyList<Color>` | `ChartPalettes.DefaultLight` | `ChartPalettes.DefaultDark` | Series colors in a fixed order |
 | `OtherColor` | `Color` | `#B5B3AA` | `#5C5B56` | Merged slices and series beyond the palette |
 | `GoodColor`, `WarningColor`, `SeriousColor`, `CriticalColor` | `Color` | `#56A64B`, `#F2CC0C`, `#FF780A`, `#E02F44` | `#73BF69`, `#FADE2A`, `#FF9830`, `#F2495C` | Status colors used by thresholds: the Grafana named colors green, yellow, orange and red of each theme; `CriticalColor` is the default color of negative sparkline values |
@@ -792,6 +849,8 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 |---|---|
 | `ChartStyles.Light` | Style for light screens and the default of `ChartViewBase.ChartStyle` |
 | `ChartStyles.Dark` | Style for dark screens |
+| `ChartStyles.OverlayLight` | `Light` for charts over light photos and cards: no grid or axis lines, white outline of 1.5 DIP at 80% around text, fill opacity 0.06, placeholder in black at 8% with a white band |
+| `ChartStyles.OverlayDark` | `Dark` for charts over maps, dark photos and video: no grid or axis lines, black outline of 1.5 DIP at 80% around text, fill opacity 0.08, placeholder in white at 12% |
 
 The library does not follow the theme of the system by itself.  
 An implicit style on the base class with `AppThemeBinding` themes every chart at once.  
@@ -813,13 +872,43 @@ Colors belong to series and slices by position, so hiding a series does not chan
 | `ChartPalettes.DefaultDark` | `#3987E5`, `#D95926`, `#199E70`, `#C98500`, `#D55181`, `#008300`, `#9085E9`, `#E66767` |
 | `ChartPalettes.GrafanaLight` | `#56A64B`, `#E0B400`, `#3274D9`, `#FF780A`, `#E02F44`, `#A352CC` |
 | `ChartPalettes.GrafanaDark` | `#73BF69`, `#F2CC0C`, `#5794F2`, `#FF9830`, `#F2495C`, `#B877D9` |
-| `ChartPalettes.MaterialLight` | `#2196F3`, `#4CAF50`, `#FFB300`, `#EC407A`, `#26C6DA` |
-| `ChartPalettes.MaterialDark` | `#64B5F6`, `#81C784`, `#FFD54F`, `#F06292`, `#4DD0E1` |
+| `ChartPalettes.RedShadesLight` | `#E02F44`, `#EF3E4E`, `#D21F39`, `#FE4D58`, `#B81B37`, `#FF5C62`, `#9E1833`, `#FF6A6B`, `#84142E`, `#FF7D79`, `#6A1027` |
+| `ChartPalettes.RedShadesDark` | `#F2495C`, `#FF5866`, `#F02D49`, `#FF6771`, `#EE1136`, `#FF767B`, `#D30F35`, `#FF8484`, `#B70D33`, `#FF9793`, `#9B0B2F` |
+| `ChartPalettes.OrangeShadesLight` | `#FF780A`, `#FF8E19`, `#EB6300`, `#FFA428`, `#CD5100`, `#FFB937`, `#B04000`, `#FFCE45`, `#923100`, `#FFE454`, `#742400` |
+| `ChartPalettes.OrangeShadesDark` | `#FF9830`, `#FFAD3F`, `#FF8312`, `#FFC14E`, `#F36D00`, `#FFD65D`, `#D65A00`, `#FFEA6B`, `#B84800`, `#FFFF7A`, `#9A3800` |
+| `ChartPalettes.YellowShadesLight` | `#F2CC0C`, `#FFE11B`, `#D6AE0B`, `#FFF72A`, `#B99209`, `#FFFF39`, `#9D7808`, `#FFFF47`, `#815F06`, `#FFFF56`, `#644705` |
+| `ChartPalettes.YellowShadesDark` | `#FADE2A`, `#FFF339`, `#F9D30D`, `#FFFF48`, `#E3B905`, `#FFFF57`, `#C69C05`, `#FFFF65`, `#A98004`, `#FFFF74`, `#8C6703` |
+| `ChartPalettes.GreenShadesLight` | `#56A64B`, `#62B55A`, `#4E9142`, `#6FC469`, `#457D38`, `#7BD378`, `#3B692F`, `#87E186`, `#315426`, `#95F097`, `#26401D` |
+| `ChartPalettes.GreenShadesDark` | `#73BF69`, `#80CE78`, `#62B654`, `#8CDD87`, `#57A647`, `#99EC96`, `#4E913E`, `#A4FAA4`, `#457C35`, `#B3FFB5`, `#3B672C` |
+| `ChartPalettes.BlueShadesLight` | `#3274D9`, `#417EE8`, `#256AC8`, `#5089F7`, `#2061AF`, `#5F93FF`, `#1C5696`, `#6D9CFF`, `#174B7D`, `#7CA7FF`, `#123E64` |
+| `ChartPalettes.BlueShadesDark` | `#5794F2`, `#669FFF`, `#3B87F0`, `#75A9FF`, `#207CEE`, `#84B4FF`, `#1173DE`, `#92BEFF`, `#0F6AC3`, `#A1C8FF`, `#0D5FA7` |
+| `ChartPalettes.PurpleShadesLight` | `#A352CC`, `#B561DB`, `#933BC5`, `#C870EA`, `#7F34AF`, `#DA7FF9`, `#6B2D98`, `#EC8DFF`, `#582681`, `#FE9CFF`, `#461F6A` |
+| `ChartPalettes.PurpleShadesDark` | `#B877D9`, `#CA86E8`, `#A960D2`, `#DB95F7`, `#9848CC`, `#EDA4FF`, `#8636C1`, `#FEB2FF`, `#732FAA`, `#FFC1FF`, `#602992` |
 
 `GrafanaLight` and `GrafanaDark` are the first six colors of the classic Grafana palette (green, semi-dark yellow, blue, orange, red and purple) in each theme.  
+The shades are the shades of Grafana: the named color of each hue in each theme followed by five pairs of a lighter and a darker shade (hue turned by up to 10° and brightness changed by up to 35%), eleven colors in all; the twelfth series uses `OtherColor`.  
+In XAML, choose the shades by the theme with `{AppThemeBinding Light={x:Static clam:ChartPalettes.BlueShadesLight}, Dark={x:Static clam:ChartPalettes.BlueShadesDark}}`.  
 They are not checked for color vision deficiencies, so pair them with labels or a legend.  
-`MaterialLight` is the five Material Design colors of the template-maui charts (blue 500, green 500, amber 600, pink 400 and cyan 400), and `MaterialDark` takes the 300 tone of each; neighbors stay distinct for red-green deficiencies, and a sixth series uses `OtherColor`.  
-Any `IReadOnlyList<Color>` works as a palette, on a view through `Palette` or for every chart through `ChartStyle.Palette`; in XAML, list the colors in `x:Array Type="{x:Type Color}"`.  
+Any `IReadOnlyList<Color>` works as a palette, on a view through `Palette` or for every chart through `ChartStyle.Palette`; in XAML, list the colors in `x:Array Type="{x:Type Color}"`. The `AppPalettes.Material` of the Example (the 400 tones of five Material Design colors for both themes) is such an application palette.  
+
+## 🖌 ChartDrawing
+
+Draws on any `SKCanvas` without a view, for custom canvases, list cells, widgets and images made in the background; it touches no MAUI object and can run on any thread.  
+
+| Method | Description |
+|---|---|
+| `DrawSparkline(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in SparklineDrawOptions options)` | Draws a sparkline in `bounds` (canvas units) as `ClamSparklineView` does, without animations or the transparent ring around markers |
+
+| `SparklineDrawOptions` | Type | Default | Description |
+|---|---|---|---|
+| `Kind` | `ChartSparklineKind` | `Line` | Shape |
+| `Color` | `SKColor` | `#2A78D6` | Line, fill and bars |
+| `NegativeColor` | `SKColor` | `#E02F44` | Negative bars and losses |
+| `Thickness` | `float` | `2` | Line width |
+| `AreaOpacity` | `float` | `0.1` | Fill opacity of `Area` |
+| `Smooth` | `bool` | `false` | Monotone cubic interpolation |
+| `Markers` | `ChartSparklineMarkers` | `Last` | Points that get a marker on lines and areas |
+| `Minimum`, `Maximum` | `double?` | `null` | Fixed range |
 
 ## 🔧 ClamChartSettings
 
@@ -829,7 +918,7 @@ Settings for every chart in the application, read when an animation starts.
 |---|---|---|---|
 | `AnimationEnabled` | `bool` | `true` | `false` turns every chart animation off, for kiosks, slow devices and automated screenshots |
 | `AnimationScale` | `double` | `1` | Multiplies every duration |
-| `RespectSystemAnimationScale` | `bool` | `true` | Follows the animator duration scale of Android: `0` turns the animations off and other values multiply the durations |
+| `RespectSystemAnimationScale` | `bool` | `true` | Follows the animator duration scale of Android: `0` turns the animations off and other values multiply the durations; animations are also off while Android disables animators, as in battery saver |
 
 ## 🔤 Fonts
 
@@ -1019,6 +1108,11 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartStackMode` | `Normal` | Stacks the values |
 | | `Percent` | Stacks the shares to 100% |
 | `ChartLegendPosition` | `Top`, `Bottom`, `Left`, `Right` | Place of the legend |
+| `ChartLegendMode` | `List` | Markers and names in rows or a column |
+| | `Table` | A table of names and values |
+| `ChartLegendValues` | `None`, `Last`, `Min`, `Max`, `Mean` | Flags for the value columns of a legend table |
+| `ChartDownsampling` | `None` | Draws every point |
+| | `Auto` | Thins dense lines and areas for drawing |
 | `ChartDataLabelsMode` | `None` | No data labels |
 | | `Last` | The last point of each series |
 | | `MinMax` | The largest and the smallest point of each series |

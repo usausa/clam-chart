@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartOverlayView"
+             x:DataType="{x:Type module:ChartOverlayViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartOverlayViewModel}"
+             shell:ShellProperty.Title="Overlay"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Busy"
+             shell:ShellProperty.Function3Text="Snapshot"
+             shell:ShellProperty.Function4Text="Live"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource ChartStack}">
+            <Border Style="{StaticResource StatBorder}"
+                    HeightRequest="120">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCardTapped" />
+                </Border.GestureRecognizers>
+                <Grid>
+                    <clam:ClamSparklineView AutomationProperties.IsInAccessibleTree="False"
+                                            ChartStyle="{AppThemeBinding Light={x:Static clam:ChartStyles.OverlayLight},
+                                                                         Dark={x:Static clam:ChartStyles.OverlayDark}}"
+                                            ContentPadding="0,56,0,0" EdgeToEdge="True"
+                                            IsBusy="{Binding IsBusy}"
+                                            Kind="Area" Markers="None"
+                                            Values="{Binding Trend}" />
+                    <VerticalStackLayout Padding="16,12">
+                        <Label Style="{StaticResource PanelTitleLabel}"
+                               Text="{Binding TrendTitle}" />
+                        <Label Text="{Binding TrendValue}"
+                               FontSize="28" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+            <Border Style="{StaticResource StatBorder}"
+                    HeightRequest="200">
+                <Border.Background>
+                    <LinearGradientBrush EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#22405E" />
+                        <GradientStop Offset="0.6" Color="#101C2A" />
+                        <GradientStop Offset="1" Color="#2B2238" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <clam:ClamChartView x:Name="OverlayChart"
+                                    ChartStyle="{x:Static clam:ChartStyles.OverlayDark}"
+                                    IsBusy="{Binding IsBusy}">
+                    <clam:ClamChartView.XAxis>
+                        <clam:NumericAxis LabelsVisible="False" NiceRange="False" />
+                    </clam:ClamChartView.XAxis>
+                    <clam:ClamChartView.YAxis>
+                        <clam:NumericAxis Minimum="0" Maximum="100" />
+                    </clam:ClamChartView.YAxis>
+                    <clam:AreaSeries ItemsSource="{Binding Signal}"
+                                     GlowRadius="6" LiveIndicatorVisible="True" MarkerMode="None" Title="signal" />
+                </clam:ClamChartView>
+            </Border>
+            <Border Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,220">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="時間別の気温" />
+                    <ScrollView Grid.Row="1"
+                                Orientation="Horizontal"
+                                HorizontalScrollBarVisibility="Never">
+                        <clam:ClamChartView ContentPadding="0"
+                                            IsBusy="{Binding IsBusy}"
+                                            TrackballMode="LongPress">
+                            <clam:ClamChartView.XAxis>
+                                <clam:CategoryAxis CategoryWidth="36" />
+                            </clam:ClamChartView.XAxis>
+                            <clam:BarSeries ItemsSource="{Binding Hours}"
+                                            Title="気温" ValueFormat="{}{0:N0}°" />
+                        </clam:ClamChartView>
+                    </ScrollView>
+                </Grid>
+            </Border>
+            <Image x:Name="SnapshotImage"
+                   HeightRequest="200"
+                   Aspect="AspectFit" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentView>

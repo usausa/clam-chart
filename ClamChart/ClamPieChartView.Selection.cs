@@ -2,6 +2,8 @@ namespace ClamChart;
 
 using System.Windows.Input;
 
+using ClamChart.Platform;
+
 public partial class ClamPieChartView
 {
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(nameof(SelectionMode), typeof(ChartSelectionMode), typeof(ClamPieChartView), ChartSelectionMode.None, propertyChanged: OnSelectionModeChanged);
@@ -136,6 +138,7 @@ public partial class ClamPieChartView
             selectionFound = true;
             SynchronizeSelection(snapshot.GetItem(index), index);
             SetSelectionState(index, true);
+            PerformHaptic(ChartHaptic.Selection);
         }
 
         InvalidateRender();

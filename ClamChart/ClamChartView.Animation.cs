@@ -2,6 +2,7 @@ namespace ClamChart;
 
 using ClamChart.Animation;
 using ClamChart.Data;
+using ClamChart.Rendering;
 
 public partial class ClamChartView
 {
@@ -22,6 +23,8 @@ public partial class ClamChartView
     internal SnapshotInterpolator Interpolator { get; } = new();
 
     internal override bool IsAnimating => dataAnimator.IsRunning || selectionAnimator.IsRunning;
+
+    internal override double EffectMilliseconds => HasLiveIndicator() ? LiveIndicator.Milliseconds : 0;
 
     internal override void StartEntranceAnimation()
     {
@@ -164,6 +167,19 @@ public partial class ClamChartView
         }
 
         return true;
+    }
+
+    private bool HasLiveIndicator()
+    {
+        foreach (var series in attached)
+        {
+            if ((series is LineSeries { LiveIndicatorVisible: true }) && series.IsVisible && (series.Snapshot.Count > 0))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool HasVisibilityChange()

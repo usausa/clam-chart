@@ -118,13 +118,14 @@ internal static class CartesianHitMap
         }
 
         var items = legend.Items;
+        var gapX = legend.IsTable ? 0 : LegendLayout.ItemGap / 2;
+        var gapY = legend.IsTable ? 0 : LegendLayout.RowGap / 2;
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < items.Count; i++)
         {
             var item = items[i];
             var bounds = item.Bounds;
-            if ((x >= bounds.X - (LegendLayout.ItemGap / 2)) && (x < bounds.Right + (LegendLayout.ItemGap / 2)) &&
-                (y >= bounds.Y - (LegendLayout.RowGap / 2)) && (y < bounds.Bottom + (LegendLayout.RowGap / 2)))
+            if ((x >= bounds.X - gapX) && (x < bounds.Right + gapX) && (y >= bounds.Y - gapY) && (y < bounds.Bottom + gapY))
             {
                 return item.SeriesIndex;
             }

@@ -271,6 +271,145 @@ public sealed class CartesianLayoutTests
     }
 
     [Fact]
+    public void LegendTableShowsTheValuesInTheVisibleRange()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Line, [(0, 5), (1, 1), (2, 9), (3, 3), (4, 7)], title: "cpu0");
+        set.AddPoints(ChartSeriesKind.Line, [(0, 2), (4, Double.NaN)], title: "cpu1");
+        var options = Exact with
+        {
+            XAxis = Exact.XAxis with { Range = Exact.XAxis.Range with { Minimum = 1, Maximum = 3 } },
+            LegendVisible = true,
+            LegendMode = ChartLegendMode.Table,
+            LegendValues = ChartLegendValues.Last | ChartLegendValues.Min | ChartLegendValues.Max | ChartLegendValues.Mean
+        };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        Assert.Equal(["Name", "Last *", "Min", "Max", "Mean", "3", "1", "9", "4.33"], layout.Legend.Cells.Select(static x => x.Text));
+        Assert.Equal(2, layout.Legend.Items.Count);
+        Assert.Equal(new ChartRect(8, 175, 344, 57), layout.Legend.Bounds);
+        Assert.Equal(175 - CartesianLayout.LegendGap, layout.XAxis.Labels[0].Bounds.Bottom, 6);
+    }
+
+    [Fact]
+    public void LegendTableWithoutValuesHasOnlyTheNameColumn()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Line, [(0, 5), (1, 1)], title: "cpu0");
+
+        // Act
+        using var layout = Update(set, Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table });
+
+        // Assert
+        Assert.Equal(["Name"], layout.Legend.Cells.Select(static x => x.Text));
+        Assert.Single(layout.Legend.Items);
+    }
+
+    [Fact]
+    public void LegendTableAtTheBottomTakesUpToAThirdOfTheHeight()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        for (var i = 0; i < 8; i++)
+        {
+            set.AddValues(ChartSeriesKind.Line, [1, 2], title: $"cpu{i}");
+        }
+
+        // Act
+        using var layout = Update(set, Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table });
+
+        // Assert
+        Assert.Equal(2, layout.Legend.Items.Count);
+        Assert.Equal(6, layout.Legend.OverflowCount);
+        Assert.Equal(76, layout.Legend.Bounds.Height);
+        Assert.Equal(232, layout.Legend.Bounds.Bottom);
+    }
+
+    [Fact]
+    public void SideLegendTableUsesTheLegendWidth()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [1, 2], title: "cpu0");
+        var options = Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table, LegendValues = ChartLegendValues.Last, LegendPosition = ChartLegendPosition.Right, LegendWidth = 150 };
+
+        // Act
+        using var narrow = Update(set, options);
+        using var wide = Update(set, options, 800);
+
+        // Assert
+        Assert.False(narrow.Legend.IsVisible);
+        Assert.False(narrow.Legend.IsTable);
+        Assert.True(wide.Legend.IsVisible);
+        Assert.Equal(new ChartRect(792 - 150, wide.PlotBounds.Y, 150, 38), wide.Legend.Bounds);
+        Assert.Equal(792 - 150 - CartesianLayout.LegendGap, wide.PlotBounds.Right);
+    }
+
+    [Fact]
+    public void SideLegendListIsLimitedByTheLegendWidth()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [1, 2], title: new string('A', 40));
+
+        // Act
+        using var layout = Update(set, Exact with { LegendVisible = true, LegendPosition = ChartLegendPosition.Left, LegendWidth = 100 }, 800);
+
+        // Assert
+        Assert.Equal(new ChartRect(8, layout.PlotBounds.Y, 100, 14), layout.Legend.Bounds);
+    }
+
+    [Fact]
+    public void TimeWindowShowsTheLatestPointsAlignedToTheRight()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        var start = new DateTime(2026, 10, 21, 10, 0, 0);
+        set.AddTimes(ChartSeriesKind.Line, [(start, 100), (start.AddMinutes(4), 10), (start.AddMinutes(5), 20), (start.AddMinutes(6), 30)], title: "cpu0");
+        var window = TimeSpan.FromMinutes(3);
+        var options = Exact with
+        {
+            XAxis = new AxisLayoutOptions { Kind = ChartAxisKind.DateTime, Range = new AxisRangeOptions { Window = window.Ticks } },
+            LegendVisible = true,
+            LegendMode = ChartLegendMode.Table,
+            LegendValues = ChartLegendValues.Max
+        };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        var end = start.AddMinutes(6).Ticks;
+        Assert.Equal(new AxisScale(end - window.Ticks, end, window.Ticks), layout.XAxis.Scale);
+        Assert.Equal(10, layout.YAxis.Scale.Minimum);
+        Assert.Equal(32.5, layout.YAxis.Scale.Maximum);
+        Assert.Equal("30", layout.Legend.Cells[^1].Text);
+    }
+
+    [Fact]
+    public void TimeWindowEndsAtTheMaximum()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        var start = new DateTime(2026, 10, 21, 10, 0, 0);
+        set.AddTimes(ChartSeriesKind.Line, [(start, 10), (start.AddMinutes(1), 20)]);
+        var maximum = start.AddMinutes(10);
+        var options = new CartesianLayoutOptions { XAxis = new AxisLayoutOptions { Kind = ChartAxisKind.DateTime, Range = new AxisRangeOptions { Maximum = maximum.Ticks, Window = TimeSpan.FromMinutes(5).Ticks } } };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        Assert.Equal(maximum.AddMinutes(-5).Ticks, layout.XAxis.Scale.Minimum);
+        Assert.Equal(maximum.Ticks, layout.XAxis.Scale.Maximum);
+    }
+
+    [Fact]
     public void TimeAxisChoosesTheIntervalFromItsWidth()
     {
         // Arrange

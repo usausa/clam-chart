@@ -58,7 +58,7 @@ internal sealed partial class SparklineRenderer : IDisposable
 
     public void DrawEmptyText(SKCanvas canvas, string value, ChartRect bounds, ChartStyle style) => text.DrawEmptyText(canvas, value, bounds, style);
 
-    public void Render(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SparklinePaint paint, ChartStyle style, bool smooth, ChartThresholdsMode thresholdsMode = ChartThresholdsMode.None)
+    public void Render(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SparklinePaint paint, ChartStyle style, bool smooth, ChartThresholdsMode thresholdsMode = ChartThresholdsMode.None, bool live = false, double livePhase = Double.NaN)
     {
         var scale = display.IsMorphing ? display.Scale : layout.Scale;
         var entrance = display.Entrance;
@@ -107,9 +107,14 @@ internal sealed partial class SparklineRenderer : IDisposable
 
         if (!layout.IsBar)
         {
-            DrawMarkers(canvas, layout, display, values, count, paint.Color, alpha * overlay, coloring ? style : null);
+            DrawMarkers(canvas, layout, display, values, count, paint.Color, alpha * overlay, coloring ? style : null, live, livePhase);
         }
     }
+
+    private static SKPoint Inside(ChartRect bounds, float x, float y, float outer) =>
+        new(
+            bounds.Width > outer * 2 ? Math.Clamp(x, (float)bounds.X + outer, (float)bounds.Right - outer) : x,
+            bounds.Height > outer * 2 ? Math.Clamp(y, (float)bounds.Y + outer, (float)bounds.Bottom - outer) : y);
 
     private static void Ensure(ref float[] buffer, int count)
     {
@@ -403,14 +408,28 @@ internal sealed partial class SparklineRenderer : IDisposable
         }
     }
 
-    private void DrawMarkers(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, int count, SKColor color, double alpha, ChartStyle? coloring)
+    private void DrawMarkers(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, int count, SKColor color, double alpha, ChartStyle? coloring, bool live, double livePhase)
     {
-        if ((layout.Markers == ChartSparklineMarkers.None) || (color.Alpha == 0) || (alpha <= 0))
+        if ((color.Alpha == 0) || (alpha <= 0))
         {
             return;
         }
 
         var markers = layout.Markers;
+        if (live && TryGetMarker(layout, display, values, count, layout.LastIndex, color, coloring, out var point, out var fill))
+        {
+            LiveIndicator.DrawRings(canvas, paints, point, layout.MarkerRadius, ChartColor.Fade(fill, alpha), livePhase);
+            if ((markers & ChartSparklineMarkers.Last) == 0)
+            {
+                FillMarker(canvas, layout, point, ChartColor.Fade(fill, alpha));
+            }
+        }
+
+        if (markers == ChartSparklineMarkers.None)
+        {
+            return;
+        }
+
         var first = (markers & ChartSparklineMarkers.First) != 0 ? layout.FirstIndex : -1;
         var last = (markers & ChartSparklineMarkers.Last) != 0 ? layout.LastIndex : -1;
         var high = (markers & ChartSparklineMarkers.High) != 0 ? layout.HighIndex : -1;
@@ -434,20 +453,35 @@ internal sealed partial class SparklineRenderer : IDisposable
 
     private void DrawMarker(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, int count, int index, SKColor color, double alpha, ChartStyle? coloring)
     {
+        if (TryGetMarker(layout, display, values, count, index, color, coloring, out var point, out var fill))
+        {
+            FillMarker(canvas, layout, point, ChartColor.Fade(fill, alpha));
+        }
+    }
+
+    private bool TryGetMarker(SparklineLayout layout, SparklineInterpolator display, SparklineValues values, int count, int index, SKColor color, ChartStyle? coloring, out SKPoint point, out SKColor fill)
+    {
         var position = index >= 0 ? display.ToDisplayIndex(index) : -1;
         if ((position < 0) || (position >= count) || !Single.IsFinite(along[position]) || !Single.IsFinite(across[position]))
         {
-            return;
+            point = default;
+            fill = default;
+            return false;
         }
 
-        var point = new SKPoint(along[position], across[position]);
+        point = Inside(layout.Bounds, along[position], across[position], layout.MarkerRadius + layout.MarkerKnockout);
+        var value = display.IsMorphing ? display.Display.End[position] : values[index];
+        fill = coloring is null ? color : GetThresholdColor(layout, coloring, value, color);
+        return true;
+    }
+
+    private void FillMarker(SKCanvas canvas, SparklineLayout layout, SKPoint point, SKColor color)
+    {
         if (layout.MarkerKnockout > 0)
         {
             canvas.DrawCircle(point, layout.MarkerRadius + layout.MarkerKnockout, paints.Clear);
         }
 
-        var value = display.IsMorphing ? display.Display.End[position] : values[index];
-        var fill = coloring is null ? color : GetThresholdColor(layout, coloring, value, color);
-        canvas.DrawCircle(point, layout.MarkerRadius, paints.Fill(ChartColor.Fade(fill, alpha)));
+        canvas.DrawCircle(point, layout.MarkerRadius, paints.Fill(color));
     }
 }

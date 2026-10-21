@@ -1,6 +1,7 @@
 namespace ClamChart;
 
 using ClamChart.Animation;
+using ClamChart.Rendering;
 
 public partial class ClamSparklineView
 {
@@ -9,6 +10,8 @@ public partial class ClamSparklineView
     internal SparklineInterpolator Interpolator => core.Interpolator;
 
     internal override bool IsAnimating => core.IsAnimating;
+
+    internal override double EffectMilliseconds => LiveIndicatorVisible && !ChartLayout.IsBar && (ChartLayout.LastIndex >= 0) ? LiveIndicator.Milliseconds : 0;
 
     internal override void StartEntranceAnimation()
     {

@@ -326,6 +326,33 @@ public sealed class ClamChartViewInputTests
     }
 
     [Fact]
+    public void LegendTableRowTapTogglesTheSeries()
+    {
+        // Arrange
+        var first = new LineSeries { Title = "A", ItemsSource = Entries(1, 2) };
+        var second = new LineSeries { Title = "B", ItemsSource = Entries(3, 4) };
+        using var view = Chart(first, second);
+        view.LegendMode = ChartLegendMode.Table;
+        view.LegendToggleEnabled = true;
+        using var bitmap = view.Paint(360, 240);
+        var legend = view.ChartLayout.Legend;
+
+        // Act
+        Tap(view, new Point(legend.Items[1].Bounds.Right - 4, legend.Items[1].Bounds.Y + 1));
+
+        // Assert
+        Assert.True(first.IsVisible);
+        Assert.False(second.IsVisible);
+
+        // Act
+        Tap(view, new Point(legend.HeaderBounds.CenterX, legend.HeaderBounds.CenterY));
+
+        // Assert
+        Assert.True(first.IsVisible);
+        Assert.False(second.IsVisible);
+    }
+
+    [Fact]
     public void HandledLegendTapKeepsTheSeries()
     {
         // Arrange

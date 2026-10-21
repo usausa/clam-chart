@@ -82,16 +82,79 @@ public sealed class ChartStyleTests
     }
 
     [Fact]
-    public void MaterialPalettesUseTheTemplateColorsAndTheirLighterTones()
+    public void OverlayPresetsHideTheGridAndOutlineTheText()
+    {
+        // Arrange
+        var light = ChartStyles.OverlayLight;
+        var dark = ChartStyles.OverlayDark;
+
+        // Act & Assert
+        light.Validate();
+        dark.Validate();
+        Assert.Equal(Colors.Transparent, light.GridLineColor);
+        Assert.Equal(Colors.Transparent, light.AxisLineColor);
+        Assert.Equal(Color.FromArgb("#CCFFFFFF"), light.TextHaloColor);
+        Assert.Equal(1.5, light.TextHaloWidth);
+        Assert.Equal(0.06, light.AreaFillOpacity);
+        Assert.Same(ChartPalettes.DefaultLight, light.Palette);
+        Assert.False(light.IsDark);
+        Assert.Equal(Colors.Transparent, dark.GridLineColor);
+        Assert.Equal(Colors.Transparent, dark.AxisLineColor);
+        Assert.Equal(Color.FromArgb("#CC000000"), dark.TextHaloColor);
+        Assert.Equal(1.5, dark.TextHaloWidth);
+        Assert.Equal(0.08, dark.AreaFillOpacity);
+        Assert.Same(ChartPalettes.DefaultDark, dark.Palette);
+        Assert.True(dark.IsDark);
+        Assert.Equal(ChartStyles.Dark.PrimaryTextColor, dark.PrimaryTextColor);
+    }
+
+    [Fact]
+    public void ShadesStartWithThePrimaryColorAndAlternateLighterAndDarker()
+    {
+        // Arrange
+        (IReadOnlyList<Color> Palette, string Primary)[] shades =
+        [
+            (ChartPalettes.RedShadesLight, "#E02F44"),
+            (ChartPalettes.RedShadesDark, "#F2495C"),
+            (ChartPalettes.OrangeShadesLight, "#FF780A"),
+            (ChartPalettes.OrangeShadesDark, "#FF9830"),
+            (ChartPalettes.YellowShadesLight, "#F2CC0C"),
+            (ChartPalettes.YellowShadesDark, "#FADE2A"),
+            (ChartPalettes.GreenShadesLight, "#56A64B"),
+            (ChartPalettes.GreenShadesDark, "#73BF69"),
+            (ChartPalettes.BlueShadesLight, "#3274D9"),
+            (ChartPalettes.BlueShadesDark, "#5794F2"),
+            (ChartPalettes.PurpleShadesLight, "#A352CC"),
+            (ChartPalettes.PurpleShadesDark, "#B877D9")
+        ];
+
+        // Act & Assert
+        foreach (var (palette, primary) in shades)
+        {
+            Assert.Equal(11, palette.Count);
+            Assert.Equal(Color.FromArgb(primary), palette[0]);
+            Assert.IsNotType<Color[]>(palette);
+            var luminosity = palette[0].GetLuminosity();
+            for (var i = 1; i < palette.Count; i += 2)
+            {
+                Assert.True(palette[i].GetLuminosity() > luminosity);
+                Assert.True(palette[i + 1].GetLuminosity() < luminosity);
+            }
+        }
+    }
+
+    [Fact]
+    public void ShadesMatchTheCalculationOfGrafana()
     {
         // Act & Assert
         Assert.Equal(
-            [Color.FromArgb("#2196F3"), Color.FromArgb("#4CAF50"), Color.FromArgb("#FFB300"), Color.FromArgb("#EC407A"), Color.FromArgb("#26C6DA")],
-            ChartPalettes.MaterialLight);
+            ["#3274D9", "#417EE8", "#256AC8", "#5089F7", "#2061AF", "#5F93FF", "#1C5696", "#6D9CFF", "#174B7D", "#7CA7FF", "#123E64"],
+            ChartPalettes.BlueShadesLight.Select(static x => x.ToRgbaHex()[..7]));
         Assert.Equal(
-            [Color.FromArgb("#64B5F6"), Color.FromArgb("#81C784"), Color.FromArgb("#FFD54F"), Color.FromArgb("#F06292"), Color.FromArgb("#4DD0E1")],
-            ChartPalettes.MaterialDark);
-        Assert.IsNotType<Color[]>(ChartPalettes.MaterialLight);
+            ["#5794F2", "#669FFF", "#3B87F0", "#75A9FF", "#207CEE", "#84B4FF", "#1173DE", "#92BEFF", "#0F6AC3", "#A1C8FF", "#0D5FA7"],
+            ChartPalettes.BlueShadesDark.Select(static x => x.ToRgbaHex()[..7]));
+        Assert.Equal(Color.FromArgb("#FFFF74"), ChartPalettes.YellowShadesDark[9]);
+        Assert.Equal(Color.FromArgb("#6A1027"), ChartPalettes.RedShadesLight[10]);
     }
 
     [Fact]

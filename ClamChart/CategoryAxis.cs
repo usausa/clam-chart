@@ -5,11 +5,18 @@ using ClamChart.Layout;
 public sealed class CategoryAxis : ChartAxis
 {
     public static readonly BindableProperty LabelPlacementProperty = BindableProperty.Create(nameof(LabelPlacement), typeof(ChartLabelPlacement), typeof(CategoryAxis), ChartLabelPlacement.BetweenTicks, propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty CategoryWidthProperty = BindableProperty.Create(nameof(CategoryWidth), typeof(double?), typeof(CategoryAxis), validateValue: static (_, value) => ValidatePositive(value, nameof(CategoryWidth)), propertyChanged: OnCategoryWidthChanged);
 
     public ChartLabelPlacement LabelPlacement
     {
         get => (ChartLabelPlacement)GetValue(LabelPlacementProperty);
         set => SetValue(LabelPlacementProperty, value);
+    }
+
+    public double? CategoryWidth
+    {
+        get => (double?)GetValue(CategoryWidthProperty);
+        set => SetValue(CategoryWidthProperty, value);
     }
 
     public Func<string, string>? LabelFormatter
@@ -30,4 +37,7 @@ public sealed class CategoryAxis : ChartAxis
             LabelPlacement = LabelPlacement,
             CategoryFormatter = LabelFormatter
         };
+
+    private static void OnCategoryWidthChanged(BindableObject bindable, object oldValue, object newValue) =>
+        ((ChartAxis)bindable).Owner?.InvalidateSize();
 }

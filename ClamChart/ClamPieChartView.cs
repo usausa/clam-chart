@@ -284,6 +284,8 @@ public partial class ClamPieChartView : ChartViewBase
 
     internal override void OnDetached() => source.Deactivate();
 
+    internal override SkeletonShape SkeletonShape => SkeletonShape.Ring;
+
     internal override void ResetRenderer()
     {
         renderer?.Dispose();
@@ -320,6 +322,24 @@ public partial class ClamPieChartView : ChartViewBase
         }
 
         CompleteTransition(captured);
+    }
+
+    internal override string? CreateAutomationSummary(ChartSummaryText text)
+    {
+        var slices = ChartLayout.Slices;
+        if (slices.Count == 0)
+        {
+            return null;
+        }
+
+        text.AddCount(slices.Count, true);
+        text.AddValue(ChartSummaryWord.Total, ChartTextFormat.FormatValue(ChartLayout.Total, ValueFormatter, ValueConverter, valueFormat, text.Culture));
+        foreach (var slice in slices)
+        {
+            text.AddText(String.IsNullOrEmpty(slice.Label) ? slice.PercentText : slice.Label + " " + slice.PercentText);
+        }
+
+        return text.Build();
     }
 
     internal override void Render(SKCanvas canvas, float width, float height)

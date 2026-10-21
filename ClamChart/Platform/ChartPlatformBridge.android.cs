@@ -22,6 +22,9 @@ internal sealed class ChartPlatformBridge : IChartPlatformBridge
 
     void IChartPlatformBridge.SetParentIntercept(bool allow) => view.Parent?.RequestDisallowInterceptTouchEvent(!allow);
 
+    void IChartPlatformBridge.PerformHaptic(ChartHaptic haptic) =>
+        view.PerformHapticFeedback(haptic == ChartHaptic.Tick ? FeedbackConstants.ClockTick : FeedbackConstants.ContextClick);
+
     public void Dispose()
     {
         DetachWindowObserver();

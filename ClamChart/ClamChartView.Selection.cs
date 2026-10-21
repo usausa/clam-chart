@@ -2,6 +2,8 @@ namespace ClamChart;
 
 using System.Windows.Input;
 
+using ClamChart.Platform;
+
 public partial class ClamChartView
 {
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(nameof(SelectionMode), typeof(ChartSelectionMode), typeof(ClamChartView), ChartSelectionMode.None, propertyChanged: OnSelectionModeChanged);
@@ -213,6 +215,7 @@ public partial class ClamChartView
             selectionFound = true;
             SynchronizeSelection(series.Snapshot.GetItem(index), index, SelectionMode == ChartSelectionMode.Item ? series : null);
             SetSelectionState(seriesIndex, index, SelectionMode == ChartSelectionMode.Category, true);
+            PerformHaptic(ChartHaptic.Selection);
         }
 
         InvalidateRender();

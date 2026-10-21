@@ -16,6 +16,7 @@ public abstract partial class ChartViewBase
     public static readonly BindableProperty TouchModeProperty = BindableProperty.Create(nameof(TouchMode), typeof(ChartTouchMode), typeof(ChartViewBase), ChartTouchMode.Auto, propertyChanged: OnInputModeChanged);
     public static readonly BindableProperty ItemTappedCommandProperty = BindableProperty.Create(nameof(ItemTappedCommand), typeof(ICommand), typeof(ChartViewBase));
     public static readonly BindableProperty ChartTappedCommandProperty = BindableProperty.Create(nameof(ChartTappedCommand), typeof(ICommand), typeof(ChartViewBase));
+    public static readonly BindableProperty HapticFeedbackEnabledProperty = BindableProperty.Create(nameof(HapticFeedbackEnabled), typeof(bool), typeof(ChartViewBase), false);
 
     private const int InputTickMilliseconds = 50;
 
@@ -48,7 +49,13 @@ public abstract partial class ChartViewBase
         set => SetValue(ChartTappedCommandProperty, value);
     }
 
-    internal ChartTouchMode EffectiveTouchMode => TouchMode == ChartTouchMode.Auto ? ResolveTouchMode() : TouchMode;
+    public bool HapticFeedbackEnabled
+    {
+        get => (bool)GetValue(HapticFeedbackEnabledProperty);
+        set => SetValue(HapticFeedbackEnabledProperty, value);
+    }
+
+    internal ChartTouchMode EffectiveTouchMode => IsBusy ? ChartTouchMode.PassThrough : TouchMode == ChartTouchMode.Auto ? ResolveTouchMode() : TouchMode;
 
     internal bool HasChartTapHandlers => (ChartTapped is not null) || (ChartTappedCommand is not null);
 
@@ -195,6 +202,14 @@ public abstract partial class ChartViewBase
     }
 
     private void SetParentIntercept(bool allow) => platform?.SetParentIntercept(allow);
+
+    internal void PerformHaptic(ChartHaptic haptic)
+    {
+        if (HapticFeedbackEnabled)
+        {
+            platform?.PerformHaptic(haptic);
+        }
+    }
 
     private void OnChartTouch(object? sender, SKTouchEventArgs e)
     {

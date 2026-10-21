@@ -2,12 +2,35 @@ namespace ClamChart;
 
 using System.Windows.Input;
 
+using ClamChart.Layout;
+
 public partial class ClamChartView
 {
+    public static readonly BindableProperty LegendModeProperty = BindableProperty.Create(nameof(LegendMode), typeof(ChartLegendMode), typeof(ClamChartView), ChartLegendMode.List, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty LegendValuesProperty = BindableProperty.Create(nameof(LegendValues), typeof(ChartLegendValues), typeof(ClamChartView), ChartLegendValues.None, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty LegendWidthProperty = BindableProperty.Create(nameof(LegendWidth), typeof(double), typeof(ClamChartView), LegendLayout.MaxSideWidth, validateValue: static (_, value) => ChartAxis.ValidatePositive(value, nameof(LegendWidth)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendToggleEnabledProperty = BindableProperty.Create(nameof(LegendToggleEnabled), typeof(bool), typeof(ClamChartView), false);
     public static readonly BindableProperty LegendItemTappedCommandProperty = BindableProperty.Create(nameof(LegendItemTappedCommand), typeof(ICommand), typeof(ClamChartView));
 
     public event EventHandler<ChartLegendEventArgs>? LegendItemTapped;
+
+    public ChartLegendMode LegendMode
+    {
+        get => (ChartLegendMode)GetValue(LegendModeProperty);
+        set => SetValue(LegendModeProperty, value);
+    }
+
+    public ChartLegendValues LegendValues
+    {
+        get => (ChartLegendValues)GetValue(LegendValuesProperty);
+        set => SetValue(LegendValuesProperty, value);
+    }
+
+    public double LegendWidth
+    {
+        get => (double)GetValue(LegendWidthProperty);
+        set => SetValue(LegendWidthProperty, value);
+    }
 
     public bool LegendToggleEnabled
     {

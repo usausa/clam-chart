@@ -113,6 +113,37 @@ public sealed class ChartAxisTests
     }
 
     [Fact]
+    public void DateTimeWindowReplacesTheMinimum()
+    {
+        // Arrange
+        var minimum = new DateTime(2026, 10, 21, 11, 0, 0);
+        var maximum = new DateTime(2026, 10, 21, 10, 0, 0);
+        var axis = new DateTimeAxis { Minimum = minimum, Maximum = maximum, WindowSize = TimeSpan.FromMinutes(5) };
+
+        // Act
+        var options = axis.CreateOptions(Context);
+
+        // Assert
+        Assert.Null(options.Range.Minimum);
+        Assert.Equal(maximum.Ticks, options.Range.Maximum);
+        Assert.Equal(TimeSpan.FromMinutes(5).Ticks, options.Range.Window);
+        Assert.False(AxisRangeResolver.HasInvertedBounds(options.Range));
+    }
+
+    [Fact]
+    public void DateTimeAxisRejectsNonPositiveWindows()
+    {
+        // Arrange
+        var axis = new DateTimeAxis();
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => axis.WindowSize = TimeSpan.Zero);
+        Assert.Throws<ArgumentOutOfRangeException>(() => axis.WindowSize = TimeSpan.FromSeconds(-1));
+        axis.WindowSize = null;
+        Assert.Null(axis.WindowSize);
+    }
+
+    [Fact]
     public void DateTimeIntervalNeedsAUnit()
     {
         // Arrange

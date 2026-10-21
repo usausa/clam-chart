@@ -1,5 +1,7 @@
 namespace ClamChart.Layout;
 
+using ClamChart.Rendering;
+
 internal sealed class SparklineLayout
 {
     public const double SmallHeight = 24;
@@ -73,8 +75,9 @@ internal sealed class SparklineLayout
         var (low, high) = Scan(values);
         var (minimum, maximum) = ResolveRange(options, low, high);
         Scale = new SparklineScale(minimum, maximum, Math.Max(0, Count - 1));
-        var inset = IsBar ? 0 : Markers != ChartSparklineMarkers.None ? MarkerRadius + MarkerKnockout : Thickness / 2;
-        Plot = new ChartRect(Bounds.X + inset, Bounds.Y + inset, Math.Max(0, Bounds.Width - (inset * 2)), Math.Max(0, Bounds.Height - (inset * 2)));
+        var inset = IsBar || options.EdgeToEdge ? 0 : (Markers != ChartSparklineMarkers.None) || options.LiveIndicator ? MarkerRadius + MarkerKnockout : Thickness / 2;
+        var end = !IsBar && !options.EdgeToEdge && options.LiveIndicator ? Math.Max(inset, MarkerRadius * LiveIndicator.ExtentRatio) : inset;
+        Plot = new ChartRect(Bounds.X + inset, Bounds.Y + inset, Math.Max(0, Bounds.Width - inset - end), Math.Max(0, Bounds.Height - (inset * 2)));
     }
 
     public double GetSlot(SparklineScale scale) => Plot.Width / (scale.Last + 1);

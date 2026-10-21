@@ -27,4 +27,26 @@ public static class ChartStyles
         PositiveTextColor = Color.FromArgb("#73BF69"),
         NegativeTextColor = Color.FromArgb("#F2495C")
     };
+
+    public static ChartStyle OverlayLight { get; } = Light with
+    {
+        AxisLineColor = Colors.Transparent,
+        GridLineColor = Colors.Transparent,
+        TextHaloColor = Color.FromArgb("#CCFFFFFF"),
+        TextHaloWidth = 1.5,
+        AreaFillOpacity = 0.06,
+        SkeletonColor = Color.FromArgb("#14000000"),
+        SkeletonHighlightColor = Color.FromArgb("#66FFFFFF")
+    };
+
+    public static ChartStyle OverlayDark { get; } = Dark with
+    {
+        AxisLineColor = Colors.Transparent,
+        GridLineColor = Colors.Transparent,
+        TextHaloColor = Color.FromArgb("#CC000000"),
+        TextHaloWidth = 1.5,
+        AreaFillOpacity = 0.08,
+        SkeletonColor = Color.FromArgb("#1FFFFFFF"),
+        SkeletonHighlightColor = Color.FromArgb("#26FFFFFF")
+    };
 }

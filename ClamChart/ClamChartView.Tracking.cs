@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Windows.Input;
 
 using ClamChart.Layout;
+using ClamChart.Platform;
 
 public partial class ClamChartView
 {
@@ -68,23 +69,32 @@ public partial class ClamChartView
 
     internal override void OnTrackStarted(Point point)
     {
+        interaction.IsFollowing = false;
         interaction.IsTracking = true;
         interaction.TrackPoint = point;
         ResolveTracking();
         UpdateTrackingTexts();
         UpdateTrackedItem();
         RaiseTracking(TrackingStarted);
+        ShareTracking();
+        PerformHaptic(ChartHaptic.Tick);
         InvalidateCanvas();
     }
 
     internal override void OnTrackMoved(Point point)
     {
         interaction.TrackPoint = point;
+        var lead = (interaction.LeadSeries, interaction.LeadIndex);
         if (ResolveTracking())
         {
             UpdateTrackingTexts();
             UpdateTrackedItem();
             RaiseTracking(TrackingChanged);
+            ShareTracking();
+            if (lead != (interaction.LeadSeries, interaction.LeadIndex))
+            {
+                PerformHaptic(ChartHaptic.Tick);
+            }
         }
 
         InvalidateCanvas();
@@ -95,6 +105,7 @@ public partial class ClamChartView
         interaction.ClearTracking();
         UpdateTrackedItem();
         RaiseTracking(TrackingEnded);
+        ShareTracking();
         InvalidateCanvas();
     }
 
@@ -116,15 +127,21 @@ public partial class ClamChartView
 
         var changed = ResolveTracking();
         UpdateTrackingTexts();
-        if (changed)
+        if (changed && !interaction.IsFollowing)
         {
             UpdateTrackedItem();
             RaiseTracking(TrackingChanged);
+            ShareTracking();
         }
     }
 
     private bool ResolveTracking()
     {
+        if (interaction.IsFollowing)
+        {
+            return ResolveFollowing();
+        }
+
         var layout = ChartLayout;
         var plot = layout.PlotBounds;
         var point = interaction.TrackPoint;
@@ -135,7 +152,13 @@ public partial class ClamChartView
         }
 
         var along = layout.Orientation == ChartOrientation.Horizontal ? Math.Clamp(point.Y, plot.Y, plot.Bottom) : Math.Clamp(point.X, plot.X, plot.Right);
-        var (leadSeries, leadIndex) = FindSnapPoint(layout.XAxis.ToValue(along));
+        return ResolveTrackingAt(layout.XAxis.ToValue(along));
+    }
+
+    private bool ResolveTrackingAt(double value)
+    {
+        var layout = ChartLayout;
+        var (leadSeries, leadIndex) = Double.IsNaN(value) ? (-1, -1) : FindSnapPoint(value);
         var changed = (leadSeries != interaction.LeadSeries) || (leadIndex != interaction.LeadIndex);
         interaction.LeadSeries = leadSeries;
         interaction.LeadIndex = leadIndex;
@@ -217,7 +240,7 @@ public partial class ClamChartView
         var texts = interaction.TrackedTexts;
         texts.Clear();
         interaction.TooltipHeader = null;
-        if (!interaction.IsTracking || !TooltipVisible || (interaction.LeadSeries < 0))
+        if (!interaction.IsTracking || interaction.IsFollowing || !TooltipVisible || (interaction.LeadSeries < 0))
         {
             return;
         }

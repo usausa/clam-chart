@@ -301,7 +301,7 @@ public partial class ClamBarGaugeView : ChartViewBase
     }
 
     internal override ChartDensity ResolveDensity() =>
-        (Density == ChartDensity.Auto) && IsAutoHeight ? ResolveWidthDensity(Width) : base.ResolveDensity();
+        (Density == ChartDensity.Auto) && IsAutoHeight ? ResolveWidthDensity(LayoutWidth) : base.ResolveDensity();
 
     internal override void OnAttached()
     {
@@ -314,6 +314,8 @@ public partial class ClamBarGaugeView : ChartViewBase
         source.Deactivate();
         thresholdsWatcher.Deactivate();
     }
+
+    internal override SkeletonShape SkeletonShape => Orientation == ChartOrientation.Vertical ? SkeletonShape.Bars : SkeletonShape.Rows;
 
     internal override void ResetRenderer()
     {
@@ -354,6 +356,23 @@ public partial class ClamBarGaugeView : ChartViewBase
         var culture = Culture ?? CultureInfo.CurrentCulture;
         ChartLayout.Update(width, height, ResolvePadding(), ChartStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
         CompleteTransition(captured);
+    }
+
+    internal override string? CreateAutomationSummary(ChartSummaryText text)
+    {
+        foreach (var row in ChartLayout.Rows)
+        {
+            if (row.ValueText is { } value)
+            {
+                text.AddText(String.IsNullOrEmpty(row.Label) ? value : row.Label + " " + value);
+            }
+            else if (!String.IsNullOrEmpty(row.Label))
+            {
+                text.AddText(row.Label);
+            }
+        }
+
+        return text.Build();
     }
 
     internal override void Render(SKCanvas canvas, float width, float height)

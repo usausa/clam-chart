@@ -160,6 +160,148 @@ public sealed class LegendLayoutTests
         Assert.Equal(24, legend.Items[1].TextMaxWidth);
     }
 
+    [Fact]
+    public void TableHasAHeaderAndRightAlignedValues()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+
+        // Act
+        var height = legend.MeasureTable(Entries(LegendMarkerKind.Line, "cpu0", "cpu1"), ["Name", "Last *", "Max"], ["12", "40", "7", "35"], 200, 100, Measurer, FontSize, MarkerSize);
+
+        // Assert
+        Assert.Equal(57, height);
+        Assert.True(legend.IsTable);
+        Assert.Equal(new ChartRect(0, 0, 200, 19), legend.HeaderBounds);
+        Assert.Equal(new ChartRect(0, 0, 200, 57), legend.Bounds);
+        Assert.Equal(
+            [
+                new LegendCell(-1, "Name", new ChartRect(36, 2, 24, 14), 70),
+                new LegendCell(-1, "Last *", new ChartRect(122, 2, 36, 14), Double.PositiveInfinity),
+                new LegendCell(-1, "Max", new ChartRect(174, 2, 18, 14), Double.PositiveInfinity),
+                new LegendCell(0, "12", new ChartRect(146, 21, 12, 14), Double.PositiveInfinity),
+                new LegendCell(0, "40", new ChartRect(180, 21, 12, 14), Double.PositiveInfinity),
+                new LegendCell(1, "7", new ChartRect(152, 40, 6, 14), Double.PositiveInfinity),
+                new LegendCell(1, "35", new ChartRect(180, 40, 12, 14), Double.PositiveInfinity)
+            ],
+            legend.Cells);
+        var first = legend.Items[0];
+        Assert.Equal(new ChartRect(0, 19, 200, 19), first.Bounds);
+        Assert.Equal(new ChartRect(8, 24, 12, 8), first.Marker);
+        Assert.Equal(new ChartRect(36, 21, 24, 14), first.Text);
+        Assert.Equal(70, first.TextMaxWidth);
+        Assert.Equal(new ChartRect(0, 38, 200, 19), legend.Items[1].Bounds);
+    }
+
+    [Fact]
+    public void TableRowsThatDoNotFitAreShownAsACount()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+
+        // Act
+        var height = legend.MeasureTable(Entries(LegendMarkerKind.Dot, "A", "B", "C", "D", "E"), ["Name"], [], 200, 80, Measurer, FontSize, MarkerSize);
+
+        // Assert
+        Assert.Equal(76, height);
+        Assert.Equal(2, legend.Items.Count);
+        Assert.Equal(3, legend.OverflowCount);
+        Assert.Equal("+3", legend.OverflowText);
+        Assert.Equal(new ChartRect(8, 59, 12, 14), legend.OverflowBounds);
+    }
+
+    [Fact]
+    public void TableWithoutRoomForARowIsHidden()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+
+        // Act
+        var height = legend.MeasureTable(Entries(LegendMarkerKind.Dot, "A", "B"), ["Name"], [], 200, 50, Measurer, FontSize, MarkerSize);
+
+        // Assert
+        Assert.Equal(0, height);
+        Assert.False(legend.IsVisible);
+        Assert.False(legend.IsTable);
+        Assert.Empty(legend.Cells);
+    }
+
+    [Fact]
+    public void TableColumnsThatDoNotFitAreLeftOut()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+
+        // Act
+        legend.MeasureTable(Entries(LegendMarkerKind.Line, "cpu0"), ["Name", "Last *", "Max"], ["12", "40"], 150, 100, Measurer, FontSize, MarkerSize);
+
+        // Assert
+        Assert.Equal(["Name", "Last *", "12"], legend.Cells.Select(static x => x.Text));
+        Assert.Equal(new ChartRect(106, 2, 36, 14), legend.Cells[1].Bounds);
+        Assert.Equal(new ChartRect(130, 21, 12, 14), legend.Cells[2].Bounds);
+        Assert.Equal(54, legend.Items[0].TextMaxWidth);
+    }
+
+    [Fact]
+    public void TableLeavesEmptyValuesOut()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+
+        // Act
+        legend.MeasureTable(Entries(LegendMarkerKind.Dot, "A", "B"), ["Name", "Last *"], ["1", String.Empty], 200, 100, Measurer, FontSize, MarkerSize);
+
+        // Assert
+        Assert.Equal([-1, -1, 0], legend.Cells.Select(static x => x.Row));
+    }
+
+    [Fact]
+    public void OffsetMovesTheTable()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+        legend.MeasureTable(Entries(LegendMarkerKind.Line, "cpu0"), ["Name", "Last *"], ["12"], 200, 100, Measurer, FontSize, MarkerSize);
+
+        // Act
+        legend.Offset(10, 20);
+
+        // Assert
+        Assert.Equal(new ChartRect(10, 20, 200, 19), legend.HeaderBounds);
+        Assert.Equal(new ChartRect(46, 22, 24, 14), legend.Cells[0].Bounds);
+        Assert.Equal(new ChartRect(190, 41, 12, 14), legend.Cells[2].Bounds);
+        Assert.Equal(new ChartRect(10, 39, 200, 19), legend.Items[0].Bounds);
+    }
+
+    [Fact]
+    public void ListAfterATableHasNoCells()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+        legend.MeasureTable(Entries(LegendMarkerKind.Dot, "A"), ["Name", "Last *"], ["1"], 200, 100, Measurer, FontSize, MarkerSize);
+
+        // Act
+        legend.MeasureRows(Entries(LegendMarkerKind.Dot, "A"), 200, Measurer, FontSize, MarkerSize);
+
+        // Assert
+        Assert.False(legend.IsTable);
+        Assert.Empty(legend.Cells);
+        Assert.True(legend.HeaderBounds.IsEmpty);
+    }
+
+    [Fact]
+    public void ColumnWidthCanBeLimitedByTheCaller()
+    {
+        // Arrange
+        var legend = new LegendLayout();
+
+        // Act
+        var width = legend.MeasureColumn(Entries(LegendMarkerKind.Dot, new string('A', 40)), 100, Measurer, FontSize, MarkerSize, 120);
+
+        // Assert
+        Assert.Equal(120, width);
+        Assert.Equal(108, legend.Items[0].TextMaxWidth);
+    }
+
     private static LegendEntry[] Entries(LegendMarkerKind marker, params string[] texts) =>
         texts.Select((x, i) => new LegendEntry(i, x, marker)).ToArray();
 }

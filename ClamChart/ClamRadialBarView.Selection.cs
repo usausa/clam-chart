@@ -2,6 +2,8 @@ namespace ClamChart;
 
 using System.Windows.Input;
 
+using ClamChart.Platform;
+
 public partial class ClamRadialBarView
 {
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(nameof(SelectionMode), typeof(ChartSelectionMode), typeof(ClamRadialBarView), ChartSelectionMode.None, propertyChanged: OnSelectionModeChanged);
@@ -136,6 +138,7 @@ public partial class ClamRadialBarView
             selectionFound = true;
             SynchronizeSelection(snapshot.GetItem(index), index);
             SetSelectionState(index, true);
+            PerformHaptic(ChartHaptic.Selection);
         }
 
         InvalidateRender();
