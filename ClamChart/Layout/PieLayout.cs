@@ -562,29 +562,29 @@ internal sealed class PieLayout
 
     private bool SpreadOutsideLabels(ChartRect area)
     {
-        var candidates = CollectionsMarshal.AsSpan(outsideCandidates);
-        if (candidates.IsEmpty)
+        var outside = CollectionsMarshal.AsSpan(outsideCandidates);
+        if (outside.IsEmpty)
         {
             return true;
         }
 
         var next = area.Y;
-        for (var k = 0; k < candidates.Length; k++)
+        for (var k = 0; k < outside.Length; k++)
         {
-            var top = Math.Max(candidates[k].Desired, next);
-            candidates[k] = candidates[k] with { Top = top };
+            var top = Math.Max(outside[k].Desired, next);
+            outside[k] = outside[k] with { Top = top };
             next = top + LabelHeight + OutsideLabelGap;
         }
 
         var limit = area.Bottom;
-        for (var k = candidates.Length - 1; k >= 0; k--)
+        for (var k = outside.Length - 1; k >= 0; k--)
         {
-            var top = Math.Min(candidates[k].Top, limit - LabelHeight);
-            candidates[k] = candidates[k] with { Top = top };
+            var top = Math.Min(outside[k].Top, limit - LabelHeight);
+            outside[k] = outside[k] with { Top = top };
             limit = top - OutsideLabelGap;
         }
 
-        return candidates[0].Top >= area.Y - Tolerance;
+        return outside[0].Top >= area.Y - Tolerance;
     }
 
     private void RemoveSmallestOutsideLabel()

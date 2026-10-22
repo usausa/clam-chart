@@ -11,7 +11,7 @@ public static partial class ChartDrawing
 {
     private const float MarkerRatio = 1.25f;
 
-    private const float SegmentGap = 2;
+    private const float BarGap = 2;
 
     private const float BarGapRatio = 0.25f;
 
@@ -207,7 +207,7 @@ public static partial class ChartDrawing
     private static void DrawBars(SKCanvas canvas, ReadOnlySpan<double> values, Scale scale, bool winLoss, in SparklineDrawOptions options, SKPaint paint)
     {
         var slot = scale.Width / values.Length;
-        var width = Math.Max(0, Math.Min(slot - Math.Min(SegmentGap, slot * BarGapRatio), MaxBarWidth));
+        var width = Math.Max(0, Math.Min(slot - Math.Min(BarGap, slot * BarGapRatio), MaxBarWidth));
         if (width <= 0)
         {
             return;

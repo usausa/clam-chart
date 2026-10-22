@@ -234,8 +234,6 @@ internal sealed class HeatmapLayout
         list.RemoveRange(write, list.Count - write);
     }
 
-    private static bool IsInteger(double value) => Double.IsFinite(value) && (Math.Floor(value) == value);
-
     private void Allocate(bool filled)
     {
         var size = CellCount;
@@ -756,7 +754,7 @@ internal sealed class HeatmapLayout
     private double GetScaleValue(int index, int count)
     {
         var value = Minimum + ((Maximum - Minimum) * index / (count - 1));
-        return IsInteger(Minimum) && IsInteger(Maximum) ? Math.Floor(value + 0.5) : value;
+        return Double.IsInteger(Minimum) && Double.IsInteger(Maximum) ? Math.Floor(value + 0.5) : value;
     }
 
     private void CreateScaleTexts(int count)

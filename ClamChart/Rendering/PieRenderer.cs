@@ -320,7 +320,7 @@ internal sealed class PieRenderer : IDisposable
             var placed = layout.OutsideLabels[target];
             var (x, y) = PieLayout.GetDirection(layout.GetAngle((start + end) / 2));
             var (dx, dy) = GetOffset(layout, start, end, selection.Offset(key));
-            var paint = paints.Stroke(ChartColor.Fade(GetColor(display, i, palette, style), alpha), OutsideLineWidth, SKStrokeCap.Round);
+            var paint = paints.Stroke(ChartColor.Fade(GetColor(display, i, palette, style), alpha), OutsideLineWidth);
             var elbowX = (float)placed.ElbowX;
             var elbowY = (float)placed.ElbowY;
             canvas.DrawLine((float)(layout.CenterX + (x * layout.OuterRadius) + dx), (float)(layout.CenterY + (y * layout.OuterRadius) + dy), elbowX, elbowY, paint);
