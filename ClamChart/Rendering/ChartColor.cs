@@ -1,9 +1,12 @@
 namespace ClamChart.Rendering;
 
 using SkiaSharp;
+using SkiaSharp.Views.Maui;
 
 internal static class ChartColor
 {
+    private const byte TrackAlpha = 18;
+
     private static readonly SKColor DarkText = new(0x0B, 0x0B, 0x0B);
 
     private static readonly double DarkTextLuminance = GetLuminance(DarkText);
@@ -19,6 +22,11 @@ internal static class ChartColor
         var luminance = GetLuminance(background);
         return (luminance + 0.05) / (DarkTextLuminance + 0.05) >= 1.05 / (luminance + 0.05) ? DarkText : SKColors.White;
     }
+
+    public static SKColor GetTrack(ChartStyle style) => GetTrack(style.TrackColor?.ToSKColor(), style.IsDark);
+
+    public static SKColor GetTrack(SKColor? color, bool dark) =>
+        color ?? (dark ? new SKColor(255, 255, 255, TrackAlpha) : new SKColor(0, 0, 0, TrackAlpha));
 
     private static byte Lerp(byte from, byte to, double progress) => (byte)Math.Round(from + ((to - from) * Math.Clamp(progress, 0, 1)));
 

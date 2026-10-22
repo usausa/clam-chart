@@ -53,6 +53,13 @@ internal sealed class StackCalculator : IDisposable
 
     private static void Fill(CartesianSeries series, SeriesGeometry geometry)
     {
+        geometry.IsRange = series.Kind == ChartSeriesKind.RangeBar;
+        if (geometry.IsRange)
+        {
+            FillRange(series.Data.Y, series.Data.Low, geometry);
+            return;
+        }
+
         var y = series.Data.Y;
         var start = geometry.Start;
         var end = geometry.End;
@@ -65,6 +72,22 @@ internal sealed class StackCalculator : IDisposable
             end[i] = value;
             start[i] = Double.IsNaN(value) || (series.Kind == ChartSeriesKind.Line) ? value : baseline;
             values[i] = value;
+            outer[i] = true;
+        }
+    }
+
+    private static void FillRange(ReadOnlySpan<double> high, ReadOnlySpan<double> low, SeriesGeometry geometry)
+    {
+        var start = geometry.Start;
+        var end = geometry.End;
+        var values = geometry.Value;
+        var outer = geometry.Outer;
+        for (var i = 0; i < end.Length; i++)
+        {
+            var other = i < low.Length ? low[i] : Double.NaN;
+            start[i] = Math.Min(high[i], other);
+            end[i] = Math.Max(high[i], other);
+            values[i] = end[i];
             outer[i] = true;
         }
     }
@@ -203,7 +226,7 @@ internal sealed class StackCalculator : IDisposable
         for (var s = 0; s < series.Count; s++)
         {
             var item = series[s];
-            if ((item.Kind != ChartSeriesKind.Bar) || !item.IsVisible)
+            if ((item.Kind is not (ChartSeriesKind.Bar or ChartSeriesKind.RangeBar)) || !item.IsVisible)
             {
                 continue;
             }

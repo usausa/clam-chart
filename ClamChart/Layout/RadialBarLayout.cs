@@ -28,6 +28,8 @@ internal sealed class RadialBarLayout
 
     private const double MinThickness = 1;
 
+    private const double MinSegmentLength = 3;
+
     private const int FitAttempts = 3;
 
     private const string PercentPattern = "P0";
@@ -62,6 +64,8 @@ internal sealed class RadialBarLayout
     public ChartCapStyle CapStyle { get; private set; }
 
     public ChartRadialBarMode DisplayMode { get; private set; }
+
+    public double GlowRadius { get; private set; }
 
     public ChartOverflowMode OverflowMode { get; private set; }
 
@@ -172,6 +176,7 @@ internal sealed class RadialBarLayout
         SweepAngle = options.SweepAngle;
         CapStyle = options.CapStyle;
         DisplayMode = options.DisplayMode;
+        GlowRadius = options.GlowRadius;
         OverflowMode = options.OverflowMode;
         SegmentCount = options.SegmentCount;
         SegmentGap = style.SegmentGap;
@@ -255,44 +260,61 @@ internal sealed class RadialBarLayout
         RingBounds = new ChartRect(left ? area.X + width + LegendGap : area.X, area.Y, area.Width - width - LegendGap, area.Height);
     }
 
-    private void PlaceRings(RadialBarLayoutOptions options)
+    public static (double CenterX, double CenterY, double Radius, double Thickness) FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, double glowRadius, ChartCapStyle capStyle)
     {
-        var area = RingBounds;
-        var (left, top, right, bottom) = PieLayout.GetUnitBounds(StartAngle, SweepAngle, options.InnerRadius);
-        var radius = Math.Max(0, Math.Min(area.Width / Math.Max(right - left, MinExtent), area.Height / Math.Max(bottom - top, MinExtent)));
-        var thickness = ResolveThickness(radius, options);
-        if ((CapStyle == ChartCapStyle.Round) && !IsFullCircle)
+        var (left, top, right, bottom) = PieLayout.GetUnitBounds(startAngle, sweepAngle, innerRadius);
+        var radius = GetRadius(area, left, top, right, bottom);
+        var thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
+        if (glowRadius > 0)
         {
-            radius = Math.Max(0, radius - (thickness / 2));
-            thickness = ResolveThickness(radius, options);
+            var extent = ChartGlow.GetExtent(thickness, glowRadius);
+            area = new ChartRect(area.X + extent, area.Y + extent, Math.Max(0, area.Width - (extent * 2)), Math.Max(0, area.Height - (extent * 2)));
+            radius = GetRadius(area, left, top, right, bottom);
+            thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
         }
 
-        OuterRadius = radius;
-        Thickness = thickness;
-        CenterX = area.CenterX - (radius * (left + right) / 2);
-        CenterY = area.CenterY - (radius * (top + bottom) / 2);
+        if ((capStyle == ChartCapStyle.Round) && (sweepAngle < 360))
+        {
+            radius = Math.Max(0, radius - (thickness / 2));
+            thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
+        }
+
+        return (area.CenterX - (radius * (left + right) / 2), area.CenterY - (radius * (top + bottom) / 2), radius, thickness);
     }
 
-    private double ResolveThickness(double radius, RadialBarLayoutOptions options)
+    public static int GetSegmentCount(double radius, double thickness, double sweepAngle, int segmentCount, double segmentGap)
+    {
+        var inner = Math.Max(0, radius - (thickness / 2));
+        var length = Math.PI * 2 * inner * Math.Min(sweepAngle, 360) / 360;
+        var limit = (int)Math.Floor(length / (segmentGap + MinSegmentLength));
+        return Math.Max(1, Math.Min(segmentCount, limit));
+    }
+
+    private void PlaceRings(RadialBarLayoutOptions options) =>
+        (CenterX, CenterY, OuterRadius, Thickness) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, GlowRadius, CapStyle);
+
+    private static double GetRadius(ChartRect area, double left, double top, double right, double bottom) =>
+        Math.Max(0, Math.Min(area.Width / Math.Max(right - left, MinExtent), area.Height / Math.Max(bottom - top, MinExtent)));
+
+    private static double ResolveThickness(double radius, double innerRadius, double? ringThickness, double spacing, int count)
     {
         if (radius <= 0)
         {
             return 0;
         }
 
-        if (options.RingThickness is { } thickness)
+        if (ringThickness is { } thickness)
         {
             return thickness;
         }
 
         var limit = radius * MaxThicknessRatio;
-        var count = rows.Count;
         if (count == 0)
         {
             return limit;
         }
 
-        var share = ((radius * (1 - options.InnerRadius)) - (Spacing * (count - 1))) / count;
+        var share = ((radius * (1 - innerRadius)) - (spacing * (count - 1))) / count;
         return Math.Max(MinThickness, Math.Min(limit, share));
     }
 

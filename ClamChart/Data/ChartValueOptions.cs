@@ -16,7 +16,15 @@ internal sealed record ChartValueOptions
 
     public string? TargetKey { get; init; }
 
+    public string? LowKey { get; init; }
+
+    public string? SizeKey { get; init; }
+
     public Func<object, double?>? ValueSelector { get; init; }
+
+    public Func<object, double?>? LowSelector { get; init; }
+
+    public Func<object, double?>? SizeSelector { get; init; }
 
     public Func<object, string?>? LabelSelector { get; init; }
 }

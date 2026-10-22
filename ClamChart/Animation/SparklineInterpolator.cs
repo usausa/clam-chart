@@ -48,7 +48,7 @@ internal sealed class SparklineInterpolator : IDisposable
 
         from = Scale;
         to = scale;
-        next.BuildMorph(current, map, identity, target, collapse);
+        next.BuildMorph(current, map, identity, target, collapse ? SeriesCollapse.Base : SeriesCollapse.None);
         (current, next) = (next, current);
         IsMorphing = current.IsMoving || !from.Equals(to);
         if (!IsMorphing)

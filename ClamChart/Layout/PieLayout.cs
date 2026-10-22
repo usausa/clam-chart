@@ -20,6 +20,16 @@ internal sealed class PieLayout
 
     public const double MinCenterFontSize = 6;
 
+    public const double OutsideLineLength = 8;
+
+    public const double OutsideLineRun = 8;
+
+    public const double OutsideTextGap = 4;
+
+    public const double OutsideLabelGap = 2;
+
+    public const double MinOutsideRadiusRatio = 0.5;
+
     public const int TotalCenterKey = -1;
 
     private const double CenterFontRatio = 0.5;
@@ -28,12 +38,16 @@ internal sealed class PieLayout
 
     private const double MinExtent = 1e-6;
 
+    private const double Tolerance = 1e-6;
+
     private const int FitAttempts = 3;
 
     private readonly List<PieCandidate> candidates = [];
     private readonly List<PieSlice> slices = [];
     private readonly List<PieCenterText> sliceCenters = [];
     private readonly List<LegendEntry> legendEntries = [];
+    private readonly List<PieOutsideLabel> outsideLabels = [];
+    private readonly List<OutsideCandidate> outsideCandidates = [];
 
     public ChartRect Bounds { get; private set; }
 
@@ -59,6 +73,8 @@ internal sealed class PieLayout
 
     public bool ShowsLabels { get; private set; }
 
+    public ChartPieLabelsMode LabelsMode { get; private set; }
+
     public double LabelHeight { get; private set; }
 
     public ChartLegendValueMode LegendValueMode { get; private set; }
@@ -70,6 +86,8 @@ internal sealed class PieLayout
     public PieCenterText Center { get; private set; }
 
     public IReadOnlyList<PieCenterText> SliceCenters => sliceCenters;
+
+    public IReadOnlyList<PieOutsideLabel> OutsideLabels => outsideLabels;
 
     public ChartValueFormatting CenterFormatting { get; private set; } = ChartValueFormatting.Default;
 
@@ -127,12 +145,14 @@ internal sealed class PieLayout
         StartAngle = options.StartAngle;
         SweepAngle = options.SweepAngle;
         Gap = options.Gap;
-        ShowsLabels = options.LabelsMode == ChartPieLabelsMode.Inside;
+        LabelsMode = options.LabelsMode;
+        ShowsLabels = LabelsMode != ChartPieLabelsMode.None;
         LabelHeight = measurer.GetLineHeight(style.DataLabelFontSize);
         LegendValueMode = options.LegendValueMode;
         BuildSlices(data, options, style, culture, measurer);
         PlaceLegend(options, style, measurer);
         PlacePie(options);
+        PlaceOutsideLabels(options);
         PrepareCenters(options, style, culture, measurer);
     }
 
@@ -256,7 +276,7 @@ internal sealed class PieLayout
         return count > limit ? limit - 1 : kept;
     }
 
-    private static string? GetInsideText(ChartPieLabelContent content, string? label, string percent, string value) => content switch
+    private static string? GetLabelText(ChartPieLabelContent content, string? label, string percent, string value) => content switch
     {
         ChartPieLabelContent.Value => value,
         ChartPieLabelContent.Label => String.IsNullOrEmpty(label) ? null : label,
@@ -339,9 +359,9 @@ internal sealed class PieLayout
     {
         var percent = (value / total).ToString("P0", culture);
         var text = ChartTextFormat.FormatValue(value, options.ValueFormatter, options.ValueConverter, options.ValueFormat, culture);
-        var inside = ShowsLabels ? GetInsideText(options.LabelContent, label, percent, text) : null;
-        var width = inside is null ? 0 : measurer.Measure(inside, style.DataLabelFontSize, Double.PositiveInfinity);
-        return new PieSlice(index, value, start, end, rank, color, label, percent, text, inside, width);
+        var labelText = ShowsLabels ? GetLabelText(options.LabelContent, label, percent, text) : null;
+        var width = labelText is null ? 0 : measurer.Measure(labelText, style.DataLabelFontSize, Double.PositiveInfinity);
+        return new PieSlice(index, value, start, end, rank, color, label, percent, text, labelText, width);
     }
 
     private void PlaceLegend(PieLayoutOptions options, ChartStyle style, IChartTextMeasurer measurer)
@@ -394,16 +414,191 @@ internal sealed class PieLayout
         PieBounds = new ChartRect(left ? area.X + width + LegendGap : area.X, area.Y, area.Width - width - LegendGap, area.Height);
     }
 
-    private void PlacePie(PieLayoutOptions options)
+    private ChartRect GetPieArea(PieLayoutOptions options)
     {
         var margin = options.ExplodeMargin;
-        var area = new ChartRect(PieBounds.X + margin, PieBounds.Y + margin, Math.Max(0, PieBounds.Width - (margin * 2)), Math.Max(0, PieBounds.Height - (margin * 2)));
-        var (left, top, right, bottom) = GetUnitBounds(StartAngle, SweepAngle, options.InnerRadius);
+        return new ChartRect(PieBounds.X + margin, PieBounds.Y + margin, Math.Max(0, PieBounds.Width - (margin * 2)), Math.Max(0, PieBounds.Height - (margin * 2)));
+    }
+
+    private bool IsRightSide(PieSlice slice) => GetDirection(GetAngle((slice.Start + slice.End) / 2)).X >= 0;
+
+    private void PlacePie(PieLayoutOptions options)
+    {
+        var area = GetPieArea(options);
+        var bounds = GetUnitBounds(StartAngle, SweepAngle, options.InnerRadius);
+        var (left, top, right, bottom) = bounds;
         var radius = Math.Max(0, Math.Min(area.Width / Math.Max(right - left, MinExtent), area.Height / Math.Max(bottom - top, MinExtent)));
+        if ((LabelsMode == ChartPieLabelsMode.Outside) && TryPlaceWithOutsideLabels(area, bounds, radius, options.InnerRadius))
+        {
+            return;
+        }
+
         OuterRadius = radius;
         InnerRadius = radius * options.InnerRadius;
         CenterX = area.CenterX - (radius * (left + right) / 2);
         CenterY = area.CenterY - (radius * (top + bottom) / 2);
+    }
+
+    private bool TryPlaceWithOutsideLabels(ChartRect area, (double Left, double Top, double Right, double Bottom) bounds, double radius, double innerRatio)
+    {
+        var reach = OutsideLineLength + OutsideLineRun + OutsideTextGap;
+        var vertical = OutsideLineLength + (LabelHeight / 2);
+        var height = Math.Max(bounds.Bottom - bounds.Top, MinExtent);
+        var limit = Double.PositiveInfinity;
+        while (true)
+        {
+            var (leftWidth, rightWidth) = MeasureOutsideLabels(limit);
+            if ((leftWidth <= 0) && (rightWidth <= 0))
+            {
+                return false;
+            }
+
+            var leftReach = leftWidth > 0 ? reach + leftWidth : 0;
+            var rightReach = rightWidth > 0 ? reach + rightWidth : 0;
+            var leftUnits = leftWidth > 0 ? 1 : -bounds.Left;
+            var rightUnits = rightWidth > 0 ? 1 : bounds.Right;
+            var fitted = Math.Min((area.Width - leftReach - rightReach) / Math.Max(leftUnits + rightUnits, MinExtent), (area.Height - (vertical * 2)) / height);
+            if (fitted >= radius * MinOutsideRadiusRatio)
+            {
+                OuterRadius = fitted;
+                InnerRadius = fitted * innerRatio;
+                CenterX = area.X + ((area.Width - (fitted * (leftUnits + rightUnits)) - leftReach - rightReach) / 2) + (fitted * leftUnits) + leftReach;
+                CenterY = area.Y + ((area.Height - (fitted * height) - (vertical * 2)) / 2) + vertical - (fitted * bounds.Top);
+                return true;
+            }
+
+            limit = Math.Max(leftWidth, rightWidth);
+        }
+    }
+
+    private (double Left, double Right) MeasureOutsideLabels(double limit)
+    {
+        var left = 0d;
+        var right = 0d;
+        foreach (var slice in slices)
+        {
+            if ((slice.LabelText is null) || (slice.LabelWidth >= limit))
+            {
+                continue;
+            }
+
+            if (IsRightSide(slice))
+            {
+                right = Math.Max(right, slice.LabelWidth);
+            }
+            else
+            {
+                left = Math.Max(left, slice.LabelWidth);
+            }
+        }
+
+        return (left, right);
+    }
+
+    private void PlaceOutsideLabels(PieLayoutOptions options)
+    {
+        outsideLabels.Clear();
+        if (LabelsMode != ChartPieLabelsMode.Outside)
+        {
+            return;
+        }
+
+        for (var i = 0; i < slices.Count; i++)
+        {
+            outsideLabels.Add(default);
+        }
+
+        if (OuterRadius <= 0)
+        {
+            return;
+        }
+
+        var area = GetPieArea(options);
+        PlaceOutsideSide(area, true);
+        PlaceOutsideSide(area, false);
+    }
+
+    private void PlaceOutsideSide(ChartRect area, bool right)
+    {
+        var reach = OuterRadius + OutsideLineLength;
+        var end = right ? CenterX + reach + OutsideLineRun : CenterX - reach - OutsideLineRun;
+        var half = LabelHeight / 2;
+        outsideCandidates.Clear();
+        for (var i = 0; i < slices.Count; i++)
+        {
+            var slice = slices[i];
+            if ((slice.LabelText is null) || (IsRightSide(slice) != right))
+            {
+                continue;
+            }
+
+            var x = right ? end + OutsideTextGap : end - OutsideTextGap - slice.LabelWidth;
+            if ((x < area.X - Tolerance) || (x + slice.LabelWidth > area.Right + Tolerance))
+            {
+                continue;
+            }
+
+            var (_, y) = GetDirection(GetAngle((slice.Start + slice.End) / 2));
+            var desired = CenterY + (reach * y) - half;
+            outsideCandidates.Add(new OutsideCandidate(i, desired, desired));
+        }
+
+        CollectionsMarshal.AsSpan(outsideCandidates).Sort(default(UpperFirst));
+        while (!SpreadOutsideLabels(area))
+        {
+            RemoveSmallestOutsideLabel();
+        }
+
+        foreach (var candidate in outsideCandidates)
+        {
+            var slice = slices[candidate.Slice];
+            var middle = candidate.Top + half;
+            var rise = middle - CenterY;
+            var spread = Math.Sqrt(Math.Max(0, (reach * reach) - (rise * rise)));
+            var x = right ? end + OutsideTextGap : end - OutsideTextGap - slice.LabelWidth;
+            outsideLabels[candidate.Slice] = new PieOutsideLabel(new ChartRect(x, candidate.Top, slice.LabelWidth, LabelHeight), right ? CenterX + spread : CenterX - spread, middle, end);
+        }
+    }
+
+    private bool SpreadOutsideLabels(ChartRect area)
+    {
+        var candidates = CollectionsMarshal.AsSpan(outsideCandidates);
+        if (candidates.IsEmpty)
+        {
+            return true;
+        }
+
+        var next = area.Y;
+        for (var k = 0; k < candidates.Length; k++)
+        {
+            var top = Math.Max(candidates[k].Desired, next);
+            candidates[k] = candidates[k] with { Top = top };
+            next = top + LabelHeight + OutsideLabelGap;
+        }
+
+        var limit = area.Bottom;
+        for (var k = candidates.Length - 1; k >= 0; k--)
+        {
+            var top = Math.Min(candidates[k].Top, limit - LabelHeight);
+            candidates[k] = candidates[k] with { Top = top };
+            limit = top - OutsideLabelGap;
+        }
+
+        return candidates[0].Top >= area.Y - Tolerance;
+    }
+
+    private void RemoveSmallestOutsideLabel()
+    {
+        var smallest = 0;
+        for (var k = 1; k < outsideCandidates.Count; k++)
+        {
+            if (slices[outsideCandidates[k].Slice].Value <= slices[outsideCandidates[smallest].Slice].Value)
+            {
+                smallest = k;
+            }
+        }
+
+        outsideCandidates.RemoveAt(smallest);
     }
 
     private void PrepareCenters(PieLayoutOptions options, ChartStyle style, CultureInfo culture, IChartTextMeasurer measurer)
@@ -471,6 +666,17 @@ internal sealed class PieLayout
     }
 
     private readonly record struct PieCandidate(double Value, int Index, int Rank);
+
+    private readonly record struct OutsideCandidate(int Slice, double Desired, double Top);
+
+    private readonly struct UpperFirst : IComparer<OutsideCandidate>
+    {
+        public int Compare(OutsideCandidate x, OutsideCandidate y)
+        {
+            var value = x.Desired.CompareTo(y.Desired);
+            return value != 0 ? value : x.Slice.CompareTo(y.Slice);
+        }
+    }
 
     private readonly struct LargerFirst : IComparer<PieCandidate>
     {

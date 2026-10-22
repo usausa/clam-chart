@@ -79,6 +79,25 @@ public sealed class TimeIntervalTests
         Assert.Equal(TimeLabelPrecision.Minute, TimeInterval.GetValuePrecision(months, TimeLabelPrecision.Minute));
     }
 
+    [Theory]
+    [InlineData(ChartDateTimeIntervalType.Hours, 3, "00:00:00", "M/d")]
+    [InlineData(ChartDateTimeIntervalType.Hours, 3, "03:00:00", "HH:mm")]
+    [InlineData(ChartDateTimeIntervalType.Hours, 5, "03:00:00", "M/d HH:mm")]
+    [InlineData(ChartDateTimeIntervalType.Hours, 5, "08:00:00", "HH:mm")]
+    [InlineData(ChartDateTimeIntervalType.Hours, 36, "12:00:00", "M/d HH:mm")]
+    [InlineData(ChartDateTimeIntervalType.Seconds, 10, "00:00:00", "M/d")]
+    [InlineData(ChartDateTimeIntervalType.Seconds, 10, "00:00:10", "HH:mm:ss")]
+    [InlineData(ChartDateTimeIntervalType.Days, 1, "00:00:00", "M/d")]
+    [InlineData(ChartDateTimeIntervalType.Months, 3, "00:00:00", "yyyy/M")]
+    public void TickFormatShowsTheDateWhereTheDayChanges(ChartDateTimeIntervalType unit, int count, string time, string format)
+    {
+        // Arrange
+        var tick = new DateTime(2026, 10, 22).Add(TimeSpan.Parse(time, CultureInfo.InvariantCulture)).Ticks;
+
+        // Act & Assert
+        Assert.Equal(format, new TimeInterval(unit, count).GetTickFormat(tick));
+    }
+
     [Fact]
     public void TrackingFormatAddsTheDateWhenTheRangeSpansDays()
     {

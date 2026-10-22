@@ -40,7 +40,12 @@ public sealed partial class ChartScatterViewModel : ChartViewModelBase
 
     protected override Task OnNotifyFunction2()
     {
-        MarkerShape = MarkerShape == ChartMarkerShape.Circle ? ChartMarkerShape.Square : ChartMarkerShape.Circle;
+        MarkerShape = MarkerShape switch
+        {
+            ChartMarkerShape.Circle => ChartMarkerShape.Square,
+            ChartMarkerShape.Square => ChartMarkerShape.Diamond,
+            _ => ChartMarkerShape.Circle
+        };
         return Task.CompletedTask;
     }
 

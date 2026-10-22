@@ -5,5 +5,7 @@ internal enum ChartSeriesKind
     Line,
     Area,
     Bar,
-    Scatter
+    Scatter,
+    RangeBar,
+    Radar
 }

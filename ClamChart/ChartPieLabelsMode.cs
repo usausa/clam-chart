@@ -3,5 +3,6 @@ namespace ClamChart;
 public enum ChartPieLabelsMode
 {
     None,
-    Inside
+    Inside,
+    Outside
 }

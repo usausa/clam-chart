@@ -15,7 +15,7 @@ public sealed class SeriesInterpolationTests
         previous.SetIdentity(before, 1);
 
         // Act
-        next.BuildMorph(previous, [], true, after, false);
+        next.BuildMorph(previous, [], true, after, SeriesCollapse.None);
         next.Apply(0.5);
 
         // Assert
@@ -34,7 +34,7 @@ public sealed class SeriesInterpolationTests
         previous.SetIdentity(geometry, 1);
 
         // Act
-        next.BuildMorph(previous, [], true, geometry, false);
+        next.BuildMorph(previous, [], true, geometry, SeriesCollapse.None);
 
         // Assert
         Assert.False(next.IsMoving);
@@ -51,7 +51,7 @@ public sealed class SeriesInterpolationTests
         previous.SetIdentity(before, 1);
 
         // Act
-        next.BuildMorph(previous, [-1, 0, 1], false, after, false);
+        next.BuildMorph(previous, [-1, 0, 1], false, after, SeriesCollapse.None);
         next.Apply(0);
         var (startX, startEnd) = (next.Display.X.ToArray(), next.Display.End.ToArray());
         next.Apply(1);
@@ -78,8 +78,8 @@ public sealed class SeriesInterpolationTests
         previous.SetIdentity(before, 1);
 
         // Act
-        line.BuildMorph(previous, [0, -1, 1], false, after, false);
-        bar.BuildMorph(previous, [0, -1, 1], false, after, true);
+        line.BuildMorph(previous, [0, -1, 1], false, after, SeriesCollapse.None);
+        bar.BuildMorph(previous, [0, -1, 1], false, after, SeriesCollapse.Base);
         line.Apply(1);
         bar.Apply(1);
 
@@ -101,7 +101,7 @@ public sealed class SeriesInterpolationTests
         previous.SetIdentity(before, 1);
 
         // Act
-        next.BuildMorph(previous, [0, 1], false, after, true);
+        next.BuildMorph(previous, [0, 1], false, after, SeriesCollapse.Base);
         next.Apply(0);
 
         // Assert
@@ -121,11 +121,11 @@ public sealed class SeriesInterpolationTests
         using var middle = Line([0, 1, 2], [20, 30, 40]);
         using var after = Line([0, 1, 2], [30, 40, 50]);
         first.SetIdentity(before, 1);
-        second.BuildMorph(first, [-1, 0, 1], false, middle, false);
+        second.BuildMorph(first, [-1, 0, 1], false, middle, SeriesCollapse.None);
         second.Apply(0.5);
 
         // Act
-        third.BuildMorph(second, [-1, 0, 1], false, after, false);
+        third.BuildMorph(second, [-1, 0, 1], false, after, SeriesCollapse.None);
         third.Apply(0);
         var start = third.Display.X.ToArray();
         third.Apply(1);
@@ -148,8 +148,8 @@ public sealed class SeriesInterpolationTests
         previous.SetIdentity(geometry, 1);
 
         // Act
-        line.BuildHide(previous, false);
-        bar.BuildHide(previous, true);
+        line.BuildHide(previous, SeriesCollapse.None);
+        bar.BuildHide(previous, SeriesCollapse.Base);
         line.Apply(1);
         bar.Apply(1);
 
@@ -169,8 +169,8 @@ public sealed class SeriesInterpolationTests
         using var geometry = Bars([0, 1], [10, 20]);
 
         // Act
-        line.BuildShow(geometry, false);
-        bar.BuildShow(geometry, true);
+        line.BuildShow(geometry, SeriesCollapse.None);
+        bar.BuildShow(geometry, SeriesCollapse.Base);
 
         // Assert
         Assert.Equal(0, line.Opacity);
@@ -179,6 +179,35 @@ public sealed class SeriesInterpolationTests
         Assert.Equal([0d, 0], bar.Display.End.ToArray());
         Assert.True(line.IsMoving);
         Assert.True(bar.IsMoving);
+    }
+
+    [Fact]
+    public void RangesCollapseToTheirMiddle()
+    {
+        // Arrange
+        using var previous = new SeriesInterpolation();
+        using var hidden = new SeriesInterpolation();
+        using var shown = new SeriesInterpolation();
+        using var inserted = new SeriesInterpolation();
+        using var before = Create([0, 1], [10, 20], [30, 40]);
+        using var after = Create([0, 1, 2], [10, 20, 0], [30, 40, 50]);
+        previous.SetIdentity(before, 1);
+
+        // Act
+        hidden.BuildHide(previous, SeriesCollapse.Middle);
+        hidden.Apply(1);
+        shown.BuildShow(before, SeriesCollapse.Middle);
+        inserted.BuildMorph(previous, [0, 1], false, after, SeriesCollapse.Middle);
+        inserted.Apply(0);
+
+        // Assert
+        Assert.Equal([20d, 30], hidden.Display.Start.ToArray());
+        Assert.Equal([20d, 30], hidden.Display.End.ToArray());
+        Assert.Equal(1, hidden.Opacity);
+        Assert.Equal([20d, 30], shown.Display.Start.ToArray());
+        Assert.Equal([20d, 30], shown.Display.End.ToArray());
+        Assert.Equal(25, inserted.Display.Start[2]);
+        Assert.Equal(25, inserted.Display.End[2]);
     }
 
     private static SeriesGeometry Line(double[] x, double[] y) => Create(x, y, y);

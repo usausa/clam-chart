@@ -1,5 +1,7 @@
 namespace ClamChart.Tests.Rendering;
 
+using System.Runtime.InteropServices;
+
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
@@ -57,19 +59,14 @@ public sealed class RadialBarGradientTests
     public void OneColorTurnsTowardTheValue()
     {
         // Arrange
-        var colors = new List<SKColor>();
-        var positions = new List<float>();
         var red = new SKColor(0xFF, 0, 0);
 
         // Act
-        RadialBarGradient.GetColorStops(red, 0.25, true, colors, positions);
-        var dark = colors.ToArray();
-        var darkPositions = positions.ToArray();
-        RadialBarGradient.GetColorStops(red, 0.25, false, colors, positions);
-        var light = colors.ToArray();
+        var (dark, darkPositions) = RadialBarGradient.GetColorStops(red, 0.25, true);
+        var (light, _) = RadialBarGradient.GetColorStops(red, 0.25, false);
 
         // Assert
-        AssertPositions([0, 0.25f, 1], [.. darkPositions]);
+        AssertPositions([0, 0.25f, 1], darkPositions);
         Assert.Equal(dark[1], dark[2]);
         Assert.Equal(light[1], light[2]);
         Assert.Equal(dark[1], light[0]);
@@ -101,12 +98,11 @@ public sealed class RadialBarGradientTests
         new() { Value = 80, Level = ChartThresholdLevel.Critical }
     ];
 
-    private static (List<SKColor> Colors, List<float> Positions) GetThresholdStops(IList<ChartThreshold> thresholds)
+    private static (SKColor[] Colors, float[] Positions) GetThresholdStops(IList<ChartThreshold> thresholds)
     {
-        var colors = new List<SKColor>();
-        var positions = new List<float>();
-        RadialBarGradient.GetThresholdStops(thresholds, Base, Style, colors, positions);
-        return (colors, positions);
+        var steps = new List<ChartDrawingThreshold>();
+        ThresholdSteps.Resolve(thresholds, Base, Style, steps);
+        return RadialBarGradient.GetThresholdStops(CollectionsMarshal.AsSpan(steps), Base);
     }
 
     private static float GetLightness(SKColor color)
@@ -115,9 +111,9 @@ public sealed class RadialBarGradientTests
         return lightness;
     }
 
-    private static void AssertPositions(float[] expected, List<float> actual)
+    private static void AssertPositions(float[] expected, float[] actual)
     {
-        Assert.Equal(expected.Length, actual.Count);
+        Assert.Equal(expected.Length, actual.Length);
         for (var i = 0; i < expected.Length; i++)
         {
             Assert.Equal(expected[i], actual[i], Precision);

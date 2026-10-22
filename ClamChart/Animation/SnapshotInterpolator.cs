@@ -74,7 +74,7 @@ internal sealed class SnapshotInterpolator : IDisposable
 
         return kind switch
         {
-            ChartSeriesKind.Bar => ChartEntranceAnimation.Grow,
+            ChartSeriesKind.Bar or ChartSeriesKind.RangeBar => ChartEntranceAnimation.Grow,
             ChartSeriesKind.Scatter => ChartEntranceAnimation.Fade,
             _ => ChartEntranceAnimation.Reveal
         };
@@ -115,7 +115,7 @@ internal sealed class SnapshotInterpolator : IDisposable
         {
             var item = series[s];
             var geometry = target.Geometries[s];
-            var collapse = (item.Kind == ChartSeriesKind.Bar) || geometry.IsStacked || current[s].Display.IsStacked;
+            var collapse = GetCollapse(item.Kind, geometry, s);
             var builder = next[s];
             var was = visible[s];
             if (was && item.IsVisible)
@@ -203,5 +203,15 @@ internal sealed class SnapshotInterpolator : IDisposable
             current.Add(new SeriesInterpolation());
             next.Add(new SeriesInterpolation());
         }
+    }
+
+    private SeriesCollapse GetCollapse(ChartSeriesKind kind, SeriesGeometry geometry, int index)
+    {
+        if (kind == ChartSeriesKind.RangeBar)
+        {
+            return SeriesCollapse.Middle;
+        }
+
+        return (kind == ChartSeriesKind.Bar) || geometry.IsStacked || current[index].Display.IsStacked ? SeriesCollapse.Base : SeriesCollapse.None;
     }
 }

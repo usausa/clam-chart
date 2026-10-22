@@ -267,8 +267,16 @@ internal sealed partial class CartesianRenderer
         var fill = scatter.FillOpacity ?? ScatterFillOpacity;
         var coloring = IsColoring(layout, state, scatter.YAxis);
         var values = geometry.Value;
-        for (var i = 0; i < count; i++)
+        var sizes = geometry.Size;
+        var bubbles = scatter is BubbleSeries;
+        if (bubbles)
         {
+            SortBySize(sizes, count);
+        }
+
+        for (var k = 0; k < count; k++)
+        {
+            var i = bubbles ? drawOrder[k] : k;
             if (!Single.IsFinite(along[i]) || !Single.IsFinite(across[i]))
             {
                 continue;
@@ -282,27 +290,33 @@ internal sealed partial class CartesianRenderer
             }
 
             var pointColor = coloring ? GetThresholdColor(layout, style, values[i], color) : color;
-            DrawScatterPoint(canvas, LinePathBuilder.ToPoint(along[i], across[i], horizontal), radius, scatter.MarkerShape, ChartColor.Fade(pointColor, alpha * fill), ChartColor.Fade(pointColor, alpha));
+            var pointRadius = bubbles ? (float)sizes[i] * scale / 2 : radius;
+            DrawScatterPoint(canvas, LinePathBuilder.ToPoint(along[i], across[i], horizontal), pointRadius, scatter.MarkerShape, ChartColor.Fade(pointColor, alpha * fill), ChartColor.Fade(pointColor, alpha));
         }
+    }
+
+    private void SortBySize(Span<double> sizes, int count)
+    {
+        Ensure(ref orderKeys, count);
+        Ensure(ref drawOrder, count);
+        for (var i = 0; i < count; i++)
+        {
+            orderKeys[i] = -(float)sizes[i];
+            drawOrder[i] = i;
+        }
+
+        Array.Sort(orderKeys, drawOrder, 0, count);
     }
 
     private void DrawScatterPoint(SKCanvas canvas, SKPoint point, float radius, ChartMarkerShape shape, SKColor fill, SKColor stroke)
     {
-        if (radius <= 0)
+        if (!(radius > 0))
         {
             return;
         }
 
-        if (shape == ChartMarkerShape.Square)
-        {
-            var rect = new SKRect(point.X - radius, point.Y - radius, point.X + radius, point.Y + radius);
-            canvas.DrawRect(rect, paints.Fill(fill));
-            canvas.DrawRect(rect, paints.Stroke(stroke, ScatterStrokeWidth, SKStrokeCap.Butt, SKStrokeJoin.Miter));
-            return;
-        }
-
-        canvas.DrawCircle(point, radius, paints.Fill(fill));
-        canvas.DrawCircle(point, radius, paints.Stroke(stroke, ScatterStrokeWidth, SKStrokeCap.Butt, SKStrokeJoin.Miter));
+        DrawMarkerShape(canvas, point, radius, shape, paints.Fill(fill));
+        DrawMarkerShape(canvas, point, radius, shape, paints.Stroke(stroke, ScatterStrokeWidth, SKStrokeCap.Butt, SKStrokeJoin.Miter));
     }
 
     private void DrawCrosshair(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state, float scale, float width, float height)
@@ -326,10 +340,12 @@ internal sealed partial class CartesianRenderer
         var paint = paints.Stroke(style.TrackballLineColor.ToSKColor(), 0, SKStrokeCap.Butt);
         DrawLine(canvas, layout.XAxis.IsVertical, Snap(layout.XAxis.ToDisplayPixel(geometry.X[index]), scale), plot, paint);
         DrawLine(canvas, axis.IsVertical, Snap(axis.ToDisplayPixel(geometry.End[index]), scale), plot, paint);
-        var size = item is ScatterSeries scatter ? scatter.MarkerSize ?? style.MarkerSize : style.MarkerSize;
+        var scatter = item as ScatterSeries;
+        var size = scatter?.MarkerSize ?? style.MarkerSize;
+        var shape = scatter?.MarkerShape ?? ChartMarkerShape.Circle;
         var point = LinePathBuilder.ToPoint((float)layout.XAxis.ToDisplayPixel(geometry.X[index]), (float)axis.ToDisplayPixel(geometry.End[index]), layout.Orientation == ChartOrientation.Horizontal);
         var color = GetPointColor(layout, state, style, item.YAxis, geometry.Value[index], colors[lead]);
-        DrawMarkerInPlot(canvas, plot, point, (float)size / 2, (float)style.MarkerKnockout, color, width, height);
+        DrawMarkerInPlot(canvas, plot, point, (float)size / 2, (float)style.MarkerKnockout, shape, color, width, height);
     }
 
     private List<SKColor> GetTooltipColors(CartesianLayout layout, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state)

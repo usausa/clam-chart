@@ -34,7 +34,7 @@
                 <clam:LineSeries ItemsSource="{Binding Sales}"
                                  DashPattern="4,3"
                                  Interpolation="{Binding Interpolation}"
-                                 Title="Target" YKey="target" />
+                                 MarkerShape="Diamond" Title="Target" YKey="target" />
             </clam:ClamChartView>
             <Grid Style="{StaticResource TableRowGrid}"
                   ColumnDefinitions="*,*,*">

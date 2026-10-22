@@ -24,6 +24,18 @@ internal readonly record struct TimeInterval(ChartDateTimeIntervalType Unit, int
         _ => TimeSpan.TicksPerSecond
     };
 
+    public string GetTickFormat(double value)
+    {
+        var precision = LabelPrecision;
+        var ticks = (long)value;
+        if ((precision > TimeLabelPrecision.Minute) || ((ticks / TimeSpan.TicksPerDay) == ((ticks - MinimumTicks) / TimeSpan.TicksPerDay)))
+        {
+            return DefaultFormat;
+        }
+
+        return (ticks % TimeSpan.TicksPerDay) == 0 ? GetDefaultFormat(TimeLabelPrecision.Day) : GetTrackingFormat(precision, true);
+    }
+
     public static TimeInterval FromUnits(ChartDateTimeIntervalType unit, double count)
     {
         while ((unit is > ChartDateTimeIntervalType.Seconds and < ChartDateTimeIntervalType.Months) && (Math.Abs(count - Math.Round(count)) > NiceScale.Tolerance))

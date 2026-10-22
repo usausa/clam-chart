@@ -25,6 +25,12 @@ internal sealed class SkeletonPainter : IDisposable
 
     private const float TileGap = 8;
 
+    private const int GridRows = 4;
+
+    private const int GridColumns = 8;
+
+    private const float GridGap = 2;
+
     private static readonly float[] LineLevels = [0.62f, 0.4f, 0.5f, 0.28f, 0.42f, 0.22f, 0.34f];
 
     private static readonly float[] BarLevels = [0.45f, 0.7f, 0.55f, 0.85f, 0.6f, 0.75f, 0.5f];
@@ -98,6 +104,9 @@ internal sealed class SkeletonPainter : IDisposable
             case SkeletonShape.Tile:
                 AddTile(bounds);
                 break;
+            case SkeletonShape.Grid:
+                AddGrid(bounds);
+                break;
             default:
                 AddLine(bounds, thickness);
                 break;
@@ -169,6 +178,21 @@ internal sealed class SkeletonPainter : IDisposable
         builder.AddRect(new SKRect(x, y, x + ((float)bounds.Width * TitleRatio), y + title));
         var top = y + title + Math.Min(TileGap, height / 8);
         builder.AddRect(new SKRect(x, top, x + ((float)bounds.Width * ValueRatio), top + Math.Min(ValueHeight, height / 2)));
+    }
+
+    private void AddGrid(ChartRect bounds)
+    {
+        var width = (float)bounds.Width / GridColumns;
+        var height = (float)bounds.Height / GridRows;
+        for (var r = 0; r < GridRows; r++)
+        {
+            for (var c = 0; c < GridColumns; c++)
+            {
+                var x = (float)bounds.X + (c * width);
+                var y = (float)bounds.Y + (r * height);
+                builder.AddRect(new SKRect(x, y, x + Math.Max(0, width - GridGap), y + Math.Max(0, height - GridGap)));
+            }
+        }
     }
 
     private void EnsureShader(float width, SKColor color)

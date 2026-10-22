@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:models="clr-namespace:Example.Models"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartRadarView"
+             x:DataType="{x:Type module:ChartRadarViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartRadarViewModel}"
+             shell:ShellProperty.Title="Radar"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Shape"
+             shell:ShellProperty.Function3Text="Select"
+             shell:ShellProperty.Function4Text="Data"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource ChartGrid}">
+        <clam:ClamRadarChartView Maximum="100"
+                                 GridShape="{Binding GridShape}"
+                                 LegendToggleEnabled="True"
+                                 SelectionMode="{Binding SelectionMode}"
+                                 TrackballMode="Touch"
+                                 ValueAccessors="{x:Static models:SkillScore.Accessors}"
+                                 XKey="skill">
+            <clam:RadarSeries ItemsSource="{Binding Premium}"
+                              Title="プレミアム" YKey="score" />
+            <clam:RadarSeries ItemsSource="{Binding Standard}"
+                              Title="スタンダード" YKey="score" />
+            <clam:RadarSeries ItemsSource="{Binding Lite}"
+                              Title="ライト" YKey="score" />
+        </clam:ClamRadarChartView>
+    </Grid>
+
+</ContentView>

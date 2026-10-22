@@ -427,6 +427,36 @@ public sealed class CartesianLayoutTests
     }
 
     [Fact]
+    public void BubbleAreaGrowsFromZeroToTheLargestValue()
+    {
+        // Act & Assert
+        Assert.Equal(8, CartesianLayout.GetBubbleSize(0, 100, 8, 40));
+        Assert.Equal(8, CartesianLayout.GetBubbleSize(-5, 100, 8, 40));
+        Assert.Equal(40, CartesianLayout.GetBubbleSize(100, 100, 8, 40));
+        Assert.Equal(Math.Sqrt(448), CartesianLayout.GetBubbleSize(25, 100, 8, 40), 9);
+        Assert.Equal(8, CartesianLayout.GetBubbleSize(25, 0, 8, 40));
+    }
+
+    [Fact]
+    public void TimeAxisWritesTheDateWhereTheDayChanges()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        var start = new DateTime(2026, 10, 21, 18, 0, 0);
+        set.AddTimes(ChartSeriesKind.Line, [(start, 1), (start.AddHours(12), 2)]);
+        var options = new CartesianLayoutOptions { XAxis = new AxisLayoutOptions { Kind = ChartAxisKind.DateTime, TimeInterval = new TimeInterval(ChartDateTimeIntervalType.Hours, 3) } };
+        var formatted = options with { XAxis = options.XAxis with { LabelFormat = ChartTextFormat.Parse("HH:mm") } };
+
+        // Act
+        using var layout = Update(set, options);
+        using var formattedLayout = Update(set, formatted);
+
+        // Assert
+        Assert.Equal(["18:00", "21:00", "10/22", "03:00", "06:00"], layout.XAxis.Labels.Select(static x => x.Text));
+        Assert.Equal("00:00", formattedLayout.XAxis.Labels[2].Text);
+    }
+
+    [Fact]
     public void BarsOnANumericAxisArePaddedByHalfAColumn()
     {
         // Arrange

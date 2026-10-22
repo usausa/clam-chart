@@ -33,6 +33,7 @@ public partial class ClamRadialBarView : ChartViewBase
     public static readonly BindableProperty DisplayModeProperty = BindableProperty.Create(nameof(DisplayMode), typeof(ChartRadialBarMode), typeof(ClamRadialBarView), ChartRadialBarMode.Basic, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty SegmentCountProperty = BindableProperty.Create(nameof(SegmentCount), typeof(int), typeof(ClamRadialBarView), 20, validateValue: static (_, value) => ValidateSegmentCount(value, nameof(SegmentCount)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty TrackVisibleProperty = BindableProperty.Create(nameof(TrackVisible), typeof(bool), typeof(ClamRadialBarView), true, propertyChanged: OnRenderInputChanged);
+    public static readonly BindableProperty GlowRadiusProperty = BindableProperty.Create(nameof(GlowRadius), typeof(double), typeof(ClamRadialBarView), 0d, validateValue: static (_, value) => ValidateNonNegative(value, nameof(GlowRadius)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty OverflowModeProperty = BindableProperty.Create(nameof(OverflowMode), typeof(ChartOverflowMode), typeof(ClamRadialBarView), ChartOverflowMode.Clamp, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty ThresholdsProperty = BindableProperty.Create(nameof(Thresholds), typeof(IList<ChartThreshold>), typeof(ClamRadialBarView), defaultValueCreator: static _ => new ObservableCollection<ChartThreshold>(), validateValue: static (_, value) => ValidateThresholds(value, nameof(Thresholds)), propertyChanged: OnThresholdsChanged);
     public static readonly BindableProperty CenterValueModeProperty = BindableProperty.Create(nameof(CenterValueMode), typeof(ChartCenterValueMode), typeof(ClamRadialBarView), ChartCenterValueMode.Auto, propertyChanged: OnLayoutInputChanged);
@@ -160,6 +161,12 @@ public partial class ClamRadialBarView : ChartViewBase
     {
         get => (bool)GetValue(TrackVisibleProperty);
         set => SetValue(TrackVisibleProperty, value);
+    }
+
+    public double GlowRadius
+    {
+        get => (double)GetValue(GlowRadiusProperty);
+        set => SetValue(GlowRadiusProperty, value);
     }
 
     public ChartOverflowMode OverflowMode
@@ -443,6 +450,7 @@ public partial class ClamRadialBarView : ChartViewBase
             DisplayMode = DisplayMode,
             SegmentCount = SegmentCount,
             OverflowMode = OverflowMode,
+            GlowRadius = density == ChartDensity.Minimal ? 0 : GlowRadius,
             Formatting = new ChartValueFormatting(ValueFormatter, ValueConverter, valueFormat, culture),
             LegendVisible = (density != ChartDensity.Minimal) && (LegendVisible ?? (density == ChartDensity.Full)),
             LegendPosition = LegendPosition,

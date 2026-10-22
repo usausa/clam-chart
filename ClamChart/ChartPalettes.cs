@@ -225,4 +225,30 @@ public static class ChartPalettes
         Color.FromArgb("#FFC1FF"),
         Color.FromArgb("#602992")
     ]);
+
+    public static IReadOnlyList<Color> OrangesLight { get; } = Array.AsReadOnly<Color>(
+    [
+        Color.FromArgb("#FFF5EB"),
+        Color.FromArgb("#FEE6CE"),
+        Color.FromArgb("#FDD0A2"),
+        Color.FromArgb("#FDAE6B"),
+        Color.FromArgb("#FD8D3C"),
+        Color.FromArgb("#F16913"),
+        Color.FromArgb("#D94801"),
+        Color.FromArgb("#A63603"),
+        Color.FromArgb("#7F2704")
+    ]);
+
+    public static IReadOnlyList<Color> OrangesDark { get; } = Array.AsReadOnly<Color>(
+    [
+        Color.FromArgb("#7F2704"),
+        Color.FromArgb("#A63603"),
+        Color.FromArgb("#D94801"),
+        Color.FromArgb("#F16913"),
+        Color.FromArgb("#FD8D3C"),
+        Color.FromArgb("#FDAE6B"),
+        Color.FromArgb("#FDD0A2"),
+        Color.FromArgb("#FEE6CE"),
+        Color.FromArgb("#FFF5EB")
+    ]);
 }

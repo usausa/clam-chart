@@ -14,6 +14,8 @@ internal sealed class PieRenderer : IDisposable
 
     private const float GapOverlap = 1;
 
+    private const float OutsideLineWidth = 1;
+
     private const int BufferSize = 64;
 
     private readonly PaintCache paints = new();
@@ -43,6 +45,7 @@ internal sealed class PieRenderer : IDisposable
         var selection = new PieSelection(previous, current, progress, style.DimmedOpacity, interaction.ExplodeOffset);
         DrawSlices(canvas, layout, display, palette, style, selection);
         DrawLabels(canvas, layout, display, palette, style, selection);
+        DrawOutsideLabels(canvas, layout, display, palette, style, selection);
         DrawCenter(canvas, layout, display, style, selection, centerCount, countedKey);
         DrawLegend(canvas, layout, palette, style);
     }
@@ -246,7 +249,7 @@ internal sealed class PieRenderer : IDisposable
     private void DrawLabels(SKCanvas canvas, PieLayout layout, PieInterpolator display, IReadOnlyList<Color> palette, ChartStyle style, PieSelection selection)
     {
         var overlay = display.OverlayAlpha;
-        if (!layout.ShowsLabels || (overlay <= 0) || (layout.OuterRadius <= 0))
+        if ((layout.LabelsMode != ChartPieLabelsMode.Inside) || (overlay <= 0) || (layout.OuterRadius <= 0))
         {
             return;
         }
@@ -257,7 +260,7 @@ internal sealed class PieRenderer : IDisposable
         for (var i = 0; i < display.Count; i++)
         {
             var target = display.GetTarget(i);
-            if ((target < 0) || (layout.Slices[target].InsideText is not { } label))
+            if ((target < 0) || (layout.Slices[target].LabelText is not { } label))
             {
                 continue;
             }
@@ -268,7 +271,7 @@ internal sealed class PieRenderer : IDisposable
                 continue;
             }
 
-            var width = layout.Slices[target].InsideWidth;
+            var width = layout.Slices[target].LabelWidth;
             var (x, y) = PieLayout.GetDirection(layout.GetAngle((start + end) / 2));
             var bounds = new ChartRect(layout.CenterX + (x * radius) - (width / 2), layout.CenterY + (y * radius) - (height / 2), width, height);
             if (!Fits(layout, start, end, bounds))
@@ -280,6 +283,49 @@ internal sealed class PieRenderer : IDisposable
             var (dx, dy) = GetOffset(layout, start, end, selection.Offset(key));
             var color = ChartColor.GetContrastColor(GetColor(display, i, palette, style));
             text.DrawText(canvas, label, bounds with { X = bounds.X + dx, Y = bounds.Y + dy }, style.DataLabelFontSize, Double.PositiveInfinity, ChartColor.Fade(color, overlay * selection.Alpha(key)), style);
+        }
+    }
+
+    private void DrawOutsideLabels(SKCanvas canvas, PieLayout layout, PieInterpolator display, IReadOnlyList<Color> palette, ChartStyle style, PieSelection selection)
+    {
+        var overlay = display.OverlayAlpha;
+        if ((layout.LabelsMode != ChartPieLabelsMode.Outside) || (overlay <= 0) || (layout.OuterRadius <= 0))
+        {
+            return;
+        }
+
+        var reveal = display.RevealLimit;
+        var ink = style.SecondaryTextColor.ToSKColor();
+        for (var i = 0; i < display.Count; i++)
+        {
+            var target = display.GetTarget(i);
+            if ((target < 0) || (layout.Slices[target].LabelText is not { } label) || !layout.OutsideLabels[target].IsVisible)
+            {
+                continue;
+            }
+
+            var (start, end) = display.GetSlice(i);
+            if ((end - start <= Tolerance) || (end > reveal + Tolerance))
+            {
+                continue;
+            }
+
+            var key = display.GetKey(i);
+            var alpha = overlay * selection.Alpha(key);
+            if (alpha <= 0)
+            {
+                continue;
+            }
+
+            var placed = layout.OutsideLabels[target];
+            var (x, y) = PieLayout.GetDirection(layout.GetAngle((start + end) / 2));
+            var (dx, dy) = GetOffset(layout, start, end, selection.Offset(key));
+            var paint = paints.Stroke(ChartColor.Fade(GetColor(display, i, palette, style), alpha), OutsideLineWidth, SKStrokeCap.Round);
+            var elbowX = (float)placed.ElbowX;
+            var elbowY = (float)placed.ElbowY;
+            canvas.DrawLine((float)(layout.CenterX + (x * layout.OuterRadius) + dx), (float)(layout.CenterY + (y * layout.OuterRadius) + dy), elbowX, elbowY, paint);
+            canvas.DrawLine(elbowX, elbowY, (float)placed.EndX, elbowY, paint);
+            text.DrawText(canvas, label, placed.Bounds, style.DataLabelFontSize, Double.PositiveInfinity, ChartColor.Fade(ink, alpha), style);
         }
     }
 

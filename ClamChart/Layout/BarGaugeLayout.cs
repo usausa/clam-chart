@@ -284,19 +284,19 @@ internal sealed class BarGaugeLayout
         DesiredHeight = Bounds.Height;
     }
 
-    private void PlaceCells(BarGaugeLayoutOptions options)
+    public static (int Count, double Size) GetCells(double length, double segmentWidth, double gap)
     {
-        var length = GetTrackLength();
-        if ((DisplayMode != ChartBarGaugeMode.Segmented) || !(length > 0) || !(options.SegmentWidth > 0))
+        if (!(length > 0) || !(segmentWidth > 0))
         {
-            CellCount = 0;
-            CellSize = 0;
-            return;
+            return (0, 0);
         }
 
-        CellCount = Math.Max(1, (int)Math.Floor(length / options.SegmentWidth));
-        CellSize = Math.Max(0, (length - (CellGap * (CellCount - 1))) / CellCount);
+        var count = Math.Max(1, (int)Math.Floor(length / segmentWidth));
+        return (count, Math.Max(0, (length - (gap * (count - 1))) / count));
     }
+
+    private void PlaceCells(BarGaugeLayoutOptions options) =>
+        (CellCount, CellSize) = DisplayMode == ChartBarGaugeMode.Segmented ? GetCells(GetTrackLength(), options.SegmentWidth, CellGap) : (0, 0);
 
     private readonly struct LargerFirst : IComparer<GaugeEntry>
     {

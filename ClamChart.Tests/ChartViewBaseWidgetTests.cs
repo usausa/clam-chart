@@ -213,6 +213,20 @@ public sealed class ChartViewBaseWidgetTests
     }
 
     [Fact]
+    public void SummaryOfARangeUsesItsLowEnd()
+    {
+        // Arrange
+        using var view = new TestClamChartView { Culture = CultureInfo.InvariantCulture };
+        view.Series.Add(new RangeBarSeries { Title = "Temp", ItemsSource = new List<ChartEntry> { new("C0", 25, Target: 12), new("C1", 18, Target: 8) }, LowSelector = static x => ((ChartEntry)x).Target });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        Assert.Equal("Temp: 2 points, max 25 (C0), min 8 (C1)", SemanticProperties.GetDescription(view));
+    }
+
+    [Fact]
     public void SummaryIsJapaneseForAJapaneseCulture()
     {
         // Arrange

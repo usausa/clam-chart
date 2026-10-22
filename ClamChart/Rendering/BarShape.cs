@@ -2,4 +2,4 @@ namespace ClamChart.Rendering;
 
 using SkiaSharp;
 
-internal readonly record struct BarShape(SKRect Rect, BarEdge Edge, bool Rounded);
+internal readonly record struct BarShape(SKRect Rect, BarEdge Edge, bool Rounded, bool RoundedBase = false);

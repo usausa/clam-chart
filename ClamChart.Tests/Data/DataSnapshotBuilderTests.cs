@@ -188,6 +188,62 @@ public sealed class DataSnapshotBuilderTests
     }
 
     [Fact]
+    public void LowValuesComeFromKeysOrSelectors()
+    {
+        // Arrange
+        var items = new[] { new TestSalesItem { Month = "Jan", Sales = 30, Count = 10 }, new TestSalesItem { Month = "Feb", Sales = 40, Count = 20 } };
+        var options = new ChartValueOptions { Accessors = TestSalesItem.Accessors, XKey = "month", YKey = "sales", LowKey = "count" };
+
+        // Act
+        using var keys = Build(items, options);
+        using var selectors = Build(items, options with { LowKey = null, LowSelector = static x => ((TestSalesItem)x).Sales - 5 });
+        using var plain = Build(items, options with { LowKey = null });
+
+        // Assert
+        Assert.Equal([10d, 20], keys.Low.ToArray());
+        Assert.Equal([25d, 35], selectors.Low.ToArray());
+        Assert.True(plain.Low.IsEmpty);
+        Assert.Throws<InvalidOperationException>(() => new ChartValueReader(options with { LowKey = "month" }));
+    }
+
+    [Fact]
+    public void MissingLowValuesFollowTheEmptyPointMode()
+    {
+        // Arrange
+        var points = new[] { new ChartPoint(0, 10), new ChartPoint(1, 20), new ChartPoint(2, 30) };
+        var options = new ChartValueOptions { LowSelector = static x => ((ChartPoint)x).X.Equals(1d) ? null : ((ChartPoint)x).Y - 10 };
+
+        // Act
+        using var gap = Build(points, options);
+        using var zero = Build(points, options, ChartEmptyPointMode.Zero);
+        using var interpolated = Build(points, options, ChartEmptyPointMode.Interpolate);
+
+        // Assert
+        Assert.True(Double.IsNaN(gap.Low[1]));
+        Assert.Equal([0d, 0, 20], zero.Low.ToArray());
+        Assert.Equal([0d, 10, 20], interpolated.Low.ToArray());
+    }
+
+    [Fact]
+    public void SizesComeFromKeysOrSelectorsAndStayMissing()
+    {
+        // Arrange
+        var items = new[] { new TestSalesItem { Month = "Jan", Sales = 30, Count = 10 }, new TestSalesItem { Month = "Feb", Sales = 40, Count = 20 } };
+        var options = new ChartValueOptions { Accessors = TestSalesItem.Accessors, XKey = "month", YKey = "sales", SizeKey = "count" };
+        var points = new[] { new ChartPoint(0, 1), new ChartPoint(1, 2) };
+
+        // Act
+        using var keys = Build(items, options);
+        using var selectors = Build(points, new ChartValueOptions { SizeSelector = static x => ((ChartPoint)x).X.Equals(1d) ? null : 5 }, ChartEmptyPointMode.Zero);
+
+        // Assert
+        Assert.Equal([10d, 20], keys.Size.ToArray());
+        Assert.Equal(5, selectors.Size[0]);
+        Assert.True(Double.IsNaN(selectors.Size[1]));
+        Assert.True(keys.Low.IsEmpty);
+    }
+
+    [Fact]
     public void UnsupportedOrMismatchedItemsAreReportedWhenBuilding()
     {
         // Arrange

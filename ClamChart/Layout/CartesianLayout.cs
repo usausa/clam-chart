@@ -18,6 +18,8 @@ internal sealed class CartesianLayout : IDisposable
 
     public const double LegendTableHeightRatio = 0.35;
 
+    public const double BubbleOutline = 1;
+
     public const string NameHeader = "Name";
 
     public const string LastHeader = "Last *";
@@ -67,6 +69,8 @@ internal sealed class CartesianLayout : IDisposable
     public IReadOnlyList<string?> Categories => XAxis.Options.Kind == ChartAxisKind.Category ? categories.Categories : NoCategories;
 
     public int BarSlotCount => stacks.BarSlotCount;
+
+    public double BubbleExtent { get; private set; }
 
     public double BarColumnWidth { get; private set; } = 1;
 
@@ -119,6 +123,7 @@ internal sealed class CartesianLayout : IDisposable
         PrepareAnnotations(options);
         PrepareThresholds(options.Thresholds);
         PrepareSeries(series, options.StackMode);
+        SizeBubbles(series);
         PrepareVisibleRange(series);
         YAxis.IsPercent = IsPercentAxis(series, ChartAxisTarget.Primary, options.StackMode);
         SecondaryYAxis.IsPercent = HasSecondaryAxis && IsPercentAxis(series, ChartAxisTarget.Secondary, options.StackMode);
@@ -208,7 +213,25 @@ internal sealed class CartesianLayout : IDisposable
         PrepareDataLabels(series, options, style, culture, measurer);
     }
 
+    public static double GetBubbleSize(double value, double largest, double minimum, double maximum)
+    {
+        var ratio = (largest > 0) && (value > 0) ? Math.Min(value / largest, 1) : 0;
+        return Math.Sqrt((minimum * minimum) + (((maximum * maximum) - (minimum * minimum)) * ratio));
+    }
+
     private static bool IsVertical(AxisSide side) => side is AxisSide.Left or AxisSide.Right;
+
+    private static (double Minimum, double Maximum) Pad((double Minimum, double Maximum) range, double padding, double length)
+    {
+        var (minimum, maximum) = range;
+        if ((padding <= 0) || !(length > padding * 2) || !Double.IsFinite(minimum) || !Double.IsFinite(maximum))
+        {
+            return range;
+        }
+
+        var extra = (maximum - minimum) / (1 - (padding * 2 / length)) * padding / length;
+        return (minimum - extra, maximum + extra);
+    }
 
     private AxisSide GetEndSide() =>
         XAxis.IsVertical
@@ -232,7 +255,7 @@ internal sealed class CartesianLayout : IDisposable
         for (var s = 0; s < series.Count; s++)
         {
             var item = series[s];
-            if ((item.Kind == ChartSeriesKind.Bar) && item.IsVisible)
+            if ((item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar) && item.IsVisible)
             {
                 return item.BarWidthRatio;
             }
@@ -499,19 +522,88 @@ internal sealed class CartesianLayout : IDisposable
     {
         if (IsVertical(XAxis.Side) == vertical)
         {
-            XAxis.Resolve(positionRange.Minimum, positionRange.Maximum, length, Categories, null, measurer, fontSize, maxLabelWidth);
+            var (minimum, maximum) = Pad(positionRange, BubbleExtent, length);
+            XAxis.Resolve(minimum, maximum, length, Categories, null, measurer, fontSize, maxLabelWidth);
         }
 
         if (IsVertical(YAxis.Side) == vertical)
         {
-            var (minimum, maximum) = GetValueRange(series, ChartAxisTarget.Primary);
+            var (minimum, maximum) = Pad(GetValueRange(series, ChartAxisTarget.Primary), GetBubbleExtent(series, ChartAxisTarget.Primary), length);
             YAxis.Resolve(minimum, maximum, length, NoCategories, null, measurer, fontSize, maxLabelWidth);
             if (HasSecondaryAxis)
             {
-                (minimum, maximum) = GetValueRange(series, ChartAxisTarget.Secondary);
+                (minimum, maximum) = Pad(GetValueRange(series, ChartAxisTarget.Secondary), GetBubbleExtent(series, ChartAxisTarget.Secondary), length);
                 SecondaryYAxis.Resolve(minimum, maximum, length, NoCategories, YAxis, measurer, fontSize, maxLabelWidth);
             }
         }
+    }
+
+    private void SizeBubbles(IReadOnlyList<CartesianSeries> series)
+    {
+        var largest = 0d;
+        foreach (var item in series)
+        {
+            if (!item.IsBubble)
+            {
+                continue;
+            }
+
+            foreach (var value in item.Data.Size)
+            {
+                if (Double.IsFinite(value))
+                {
+                    largest = Math.Max(largest, value);
+                }
+            }
+        }
+
+        BubbleExtent = 0;
+        for (var s = 0; s < series.Count; s++)
+        {
+            var item = series[s];
+            var sizes = geometries[s].Size;
+            if (!item.IsBubble)
+            {
+                sizes.Fill(Double.NaN);
+                continue;
+            }
+
+            var data = item.Data.Size;
+            var minimum = item.MinBubbleSize;
+            var maximum = Math.Max(item.MaxBubbleSize, minimum);
+            for (var i = 0; i < sizes.Length; i++)
+            {
+                var value = i < data.Length ? data[i] : Double.NaN;
+                sizes[i] = Double.IsNaN(value) ? Double.NaN : GetBubbleSize(value, largest, minimum, maximum);
+                if (item.IsVisible && Double.IsFinite(sizes[i]))
+                {
+                    BubbleExtent = Math.Max(BubbleExtent, (sizes[i] / 2) + BubbleOutline);
+                }
+            }
+        }
+    }
+
+    private double GetBubbleExtent(IReadOnlyList<CartesianSeries> series, ChartAxisTarget target)
+    {
+        var extent = 0d;
+        for (var s = 0; s < series.Count; s++)
+        {
+            var item = series[s];
+            if (!item.IsBubble || !item.IsVisible || (GetValueAxis(item.Axis) != GetValueAxis(target)))
+            {
+                continue;
+            }
+
+            foreach (var size in geometries[s].Size)
+            {
+                if (Double.IsFinite(size))
+                {
+                    extent = Math.Max(extent, (size / 2) + BubbleOutline);
+                }
+            }
+        }
+
+        return extent;
     }
 
     private (double Minimum, double Maximum) GetPositionRange(IReadOnlyList<CartesianSeries> series)
@@ -526,7 +618,7 @@ internal sealed class CartesianLayout : IDisposable
                 continue;
             }
 
-            bars |= series[s].Kind == ChartSeriesKind.Bar;
+            bars |= series[s].Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar;
             foreach (var x in geometries[s].X)
             {
                 if (Double.IsFinite(x))
@@ -563,9 +655,9 @@ internal sealed class CartesianLayout : IDisposable
             }
 
             var geometry = geometries[s];
-            var interpolation = item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.Scatter ? (ChartLineInterpolation?)null : item.Interpolation;
+            var interpolation = item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar or ChartSeriesKind.Scatter ? (ChartLineInterpolation?)null : item.Interpolation;
             Include(geometry.X, geometry.End, interpolation, low, high, ref minimum, ref maximum);
-            if (geometry.IsStacked)
+            if (geometry.IsStacked || geometry.IsRange)
             {
                 Include(geometry.X, geometry.Start, interpolation, low, high, ref minimum, ref maximum);
             }
@@ -721,7 +813,7 @@ internal sealed class CartesianLayout : IDisposable
         for (var s = 0; s < series.Count; s++)
         {
             var geometry = geometries[s];
-            if ((series[s].Kind != ChartSeriesKind.Bar) || !series[s].IsVisible || !geometry.IsSorted)
+            if ((series[s].Kind is not (ChartSeriesKind.Bar or ChartSeriesKind.RangeBar)) || !series[s].IsVisible || !geometry.IsSorted)
             {
                 continue;
             }
@@ -883,8 +975,14 @@ internal sealed class CartesianLayout : IDisposable
         var item = series[seriesIndex];
         var geometry = geometries[seriesIndex];
         var percent = geometry.IsStacked && (mode == ChartStackMode.Percent);
-        var text = FormatValue(geometry.Value[index], item, GetValueAxis(item.Axis).Options, percent, culture);
+        var axis = GetValueAxis(item.Axis).Options;
+        var text = FormatValue(geometry.Value[index], item, axis, percent, culture);
         dataLabels.Add(new DataLabel(seriesIndex, index, text, measurer.Measure(text, style.DataLabelFontSize, Double.PositiveInfinity)));
+        if (geometry.IsRange)
+        {
+            var low = FormatValue(geometry.Start[index], item, axis, false, culture);
+            dataLabels.Add(new DataLabel(seriesIndex, index, low, measurer.Measure(low, style.DataLabelFontSize, Double.PositiveInfinity), true));
+        }
     }
 
     private void PlaceTitles(IReadOnlyList<CartesianSeries> series, IChartTextMeasurer measurer, ChartStyle style, double titleRowTop, double titleLineHeight, double lineHeight, double labelOffset)

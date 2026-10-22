@@ -465,8 +465,8 @@ public sealed class ChartViewBaseTests
         view.ChangeDataInput();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Task.Run(view.ChangeDataInput, TestContext.Current.CancellationToken)).ConfigureAwait(true);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Task.Run(view.Invalidate, TestContext.Current.CancellationToken)).ConfigureAwait(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => RunOnThread(view.ChangeDataInput)).ConfigureAwait(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => RunOnThread(view.Invalidate)).ConfigureAwait(true);
     }
 
     [Fact]
@@ -536,4 +536,7 @@ public sealed class ChartViewBaseTests
             Assert.Equal(1, view.RendererResets);
         }).ConfigureAwait(true);
     }
+
+    private static Task RunOnThread(Action action) =>
+        Task.Factory.StartNew(action, TestContext.Current.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 }

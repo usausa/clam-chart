@@ -1,5 +1,7 @@
 namespace ClamChart.Rendering;
 
+using System.Runtime.InteropServices;
+
 using ClamChart.Animation;
 using ClamChart.Layout;
 
@@ -8,23 +10,21 @@ using SkiaSharp.Views.Maui;
 
 internal sealed class BarGaugeRenderer : IDisposable
 {
-    private const double BasicFillOpacity = 0.35;
+    public const double BasicFillOpacity = 0.35;
 
-    private const float BasicEdgeWidth = 2;
+    public const float BasicEdgeWidth = 2;
 
-    private const double UnlitOpacity = 0.18;
+    public const double UnlitOpacity = 0.18;
+
+    public const float TargetWidth = 2;
+
+    public const double Tolerance = 1e-9;
 
     private const double LitCenterOpacity = 0.95;
 
     private const double LitEdgeOpacity = 0.55;
 
     private const float LitCenterStop = 0.1f;
-
-    private const byte TrackAlpha = 18;
-
-    private const float TargetWidth = 2;
-
-    private const double Tolerance = 1e-9;
 
     private static readonly float CornerScale = MathF.Sqrt(2);
 
@@ -33,8 +33,7 @@ internal sealed class BarGaugeRenderer : IDisposable
     private readonly SKPaint shaderPaint = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
     private readonly Dictionary<(SKColor Color, double Percent), SKShader> gradients = [];
     private readonly Dictionary<(SKColor Color, float Width, float Height), SKShader> cells = [];
-    private readonly List<SKColor> stopColors = [];
-    private readonly List<float> stopPositions = [];
+    private readonly List<ChartDrawingThreshold> steps = [];
     private int version = -1;
     private SKColor shaderBase;
 
@@ -65,7 +64,7 @@ internal sealed class BarGaugeRenderer : IDisposable
             shaderBase = baseKey;
         }
 
-        var track = style.TrackColor?.ToSKColor() ?? (style.IsDark ? new SKColor(255, 255, 255, TrackAlpha) : new SKColor(0, 0, 0, TrackAlpha));
+        var track = ChartColor.GetTrack(style);
         var entrance = display.EntranceAlpha;
         var overlay = display.OverlayAlpha;
         for (var i = 0; i < display.Count; i++)
@@ -201,17 +200,25 @@ internal sealed class BarGaugeRenderer : IDisposable
 
     private SKShader GetGradient(BarGaugeLayout layout, BarGaugeRow row, Color baseColor, BarGaugeRenderState state, ChartStyle style, float length)
     {
-        var key = (baseColor.ToSKColor(), row.Percent);
+        var color = baseColor.ToSKColor();
+        var key = (color, row.Percent);
         if (gradients.TryGetValue(key, out var shader))
         {
             return shader;
         }
 
-        BarGaugeGradient.GetStops(state.Thresholds, row.Percent, row.Ratio, baseColor, style, stopColors, stopPositions);
+        ThresholdSteps.Resolve(state.Thresholds, color, style, steps);
+        var (colors, positions) = BarGaugeGradient.GetStops(CollectionsMarshal.AsSpan(steps), row.Percent, row.Ratio, color);
         var end = layout.IsHorizontal ? new SKPoint(length, 0) : new SKPoint(0, -length);
-        shader = SKShader.CreateLinearGradient(SKPoint.Empty, end, [.. stopColors], [.. stopPositions], SKShaderTileMode.Clamp);
+        shader = SKShader.CreateLinearGradient(SKPoint.Empty, end, colors, positions, SKShaderTileMode.Clamp);
         gradients[key] = shader;
         return shader;
+    }
+
+    public static SKShader CreateLitCell(SKColor color, float width, float height)
+    {
+        var matrix = SKMatrix.CreateScale(width / 2 * CornerScale, height / 2 * CornerScale);
+        return SKShader.CreateRadialGradient(SKPoint.Empty, 1, [ChartColor.Fade(color, LitCenterOpacity), ChartColor.Fade(color, LitEdgeOpacity)], [LitCenterStop, 1], SKShaderTileMode.Clamp, matrix);
     }
 
     private void DrawCells(SKCanvas canvas, BarGaugeLayout layout, ChartRect bounds, double ratio, Color baseColor, BarGaugeRenderState state, ChartStyle style, double alpha)
@@ -249,8 +256,7 @@ internal sealed class BarGaugeRenderer : IDisposable
         var key = (color, width, height);
         if (!cells.TryGetValue(key, out var shader))
         {
-            var matrix = SKMatrix.CreateScale(width / 2 * CornerScale, height / 2 * CornerScale);
-            shader = SKShader.CreateRadialGradient(SKPoint.Empty, 1, [ChartColor.Fade(color, LitCenterOpacity), ChartColor.Fade(color, LitEdgeOpacity)], [LitCenterStop, 1], SKShaderTileMode.Clamp, matrix);
+            shader = CreateLitCell(color, width, height);
             cells[key] = shader;
         }
 

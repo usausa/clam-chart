@@ -21,19 +21,7 @@ internal sealed partial class CartesianRenderer : IDisposable
 
     private const float DataLabelSpacing = 2;
 
-    private const float TooltipPadding = 8;
-
-    private const float TooltipRowGap = 2;
-
-    private const float TooltipMarkerGap = 6;
-
-    private const float TooltipClearance = 48;
-
     private const int MaxGlowPoints = 500;
-
-    private const float GlowWidthRatio = 1.8f;
-
-    private const double GlowOpacity = 0.55;
 
     private readonly PaintCache paints = new();
     private readonly SKPaint glowPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
@@ -42,15 +30,20 @@ internal sealed partial class CartesianRenderer : IDisposable
     private readonly Dictionary<LineSeries, DashEntry> dashes = [];
     private readonly Dictionary<AreaSeries, GradientEntry> gradients = [];
     private readonly Dictionary<LineSeries, GlowEntry> glows = [];
+    private readonly Dictionary<BarSeries, BarGradientEntry> barGradients = [];
+    private readonly HashSet<(int Slot, double X)> drawnTracks = [];
     private readonly List<LineSeries> staleDashes = [];
     private readonly List<AreaSeries> staleGradients = [];
     private readonly List<LineSeries> staleGlows = [];
+    private readonly List<BarSeries> staleBarGradients = [];
     private readonly List<SKRect> placedLabels = [];
     private float[] along = [];
     private float[] across = [];
     private float[] baseAcross = [];
     private float[] tangents = [];
     private float[] baseTangents = [];
+    private float[] orderKeys = [];
+    private int[] drawOrder = [];
     private int frame;
 
     public IChartTextMeasurer Measurer => text;
@@ -81,15 +74,23 @@ internal sealed partial class CartesianRenderer : IDisposable
             entry.Filter?.Dispose();
         }
 
+        foreach (var entry in barGradients.Values)
+        {
+            entry.Dispose();
+        }
+
         dashes.Clear();
         gradients.Clear();
         glows.Clear();
+        barGradients.Clear();
         DisposeOverlays();
         Return(ref along);
         Return(ref across);
         Return(ref baseAcross);
         Return(ref tangents);
         Return(ref baseTangents);
+        Return(ref orderKeys);
+        Return(ref drawOrder);
     }
 
     public void Render(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state, float width, float height)
@@ -157,16 +158,56 @@ internal sealed partial class CartesianRenderer : IDisposable
     private static double GetGrowth(SnapshotInterpolator display, ChartEntranceAnimation entrance, int index, int count) =>
         entrance == ChartEntranceAnimation.Grow ? display.Ease(ChartProgress.ForElement(display.Progress, index, count)) : 1;
 
-    private static void Ensure(ref float[] buffer, int count)
+    private static double? GetCornerRadius(ChartSeries item) => item switch
+    {
+        BarSeries bar => bar.CornerRadius,
+        RangeBarSeries range => range.CornerRadius,
+        _ => null
+    };
+
+    private static bool IsTrackVisible(ChartSeries item) => item is BarSeries { TrackVisible: true } or RangeBarSeries { TrackVisible: true };
+
+    private static BarEdge GetOpposite(BarEdge edge) => edge switch
+    {
+        BarEdge.Top => BarEdge.Bottom,
+        BarEdge.Bottom => BarEdge.Top,
+        BarEdge.Left => BarEdge.Right,
+        _ => BarEdge.Left
+    };
+
+    private static void SetEdgeRadii(Span<SKPoint> radii, BarEdge edge, SKPoint point)
+    {
+        switch (edge)
+        {
+            case BarEdge.Top:
+                radii[0] = point;
+                radii[1] = point;
+                break;
+            case BarEdge.Bottom:
+                radii[2] = point;
+                radii[3] = point;
+                break;
+            case BarEdge.Left:
+                radii[0] = point;
+                radii[3] = point;
+                break;
+            default:
+                radii[1] = point;
+                radii[2] = point;
+                break;
+        }
+    }
+
+    private static void Ensure<T>(ref T[] buffer, int count)
     {
         if (buffer.Length < count)
         {
             Return(ref buffer);
-            buffer = DataSnapshot.Rent<float>(count);
+            buffer = DataSnapshot.Rent<T>(count);
         }
     }
 
-    private static void Return(ref float[] buffer)
+    private static void Return<T>(ref T[] buffer)
     {
         DataSnapshot.Return(buffer);
         buffer = [];
@@ -293,7 +334,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             {
                 inflate = Math.Max(inflate, (float)(line.Thickness ?? style.LineThickness) / 2);
             }
-            else if (series[s] is ScatterSeries scatter)
+            else if (series[s] is ScatterSeries scatter and not BubbleSeries)
             {
                 inflate = Math.Max(inflate, ((float)(scatter.MarkerSize ?? style.MarkerSize) / 2) + ScatterStrokeWidth);
             }
@@ -301,6 +342,7 @@ internal sealed partial class CartesianRenderer : IDisposable
 
         canvas.Save();
         canvas.ClipRect(SKRect.Create((float)plot.X - inflate, (float)plot.Y - inflate, (float)plot.Width + (inflate * 2), (float)plot.Height + (inflate * 2)));
+        DrawBarTracks(canvas, layout, display, series, style);
         for (var s = 0; s < series.Count; s++)
         {
             var opacity = display.GetOpacity(s, series[s].IsVisible);
@@ -322,9 +364,9 @@ internal sealed partial class CartesianRenderer : IDisposable
                 canvas.ClipRect(GetRevealClip(layout, display.Ease(display.Progress), inflate));
             }
 
-            if (series[s] is BarSeries bar)
+            if (series[s].Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar)
             {
-                DrawBars(canvas, layout, display, bar, s, colors[s], style, selection, opacity, entrance, state);
+                DrawBars(canvas, layout, display, series[s], s, colors[s], style, selection, opacity, entrance, state);
             }
             else if (series[s] is LineSeries line)
             {
@@ -442,9 +484,9 @@ internal sealed partial class CartesianRenderer : IDisposable
         var dash = GetDash(line, thickness);
         if (glow is not null)
         {
-            var glowAlpha = alpha * GlowOpacity;
+            var glowAlpha = alpha * ChartGlow.Opacity;
             glowPaint.Color = ChartColor.Fade(color, glowAlpha);
-            glowPaint.StrokeWidth = thickness * GlowWidthRatio;
+            glowPaint.StrokeWidth = thickness * ChartGlow.WidthRatio;
             glowPaint.PathEffect = dash;
             glowPaint.MaskFilter = glow;
             if (coloring is null)
@@ -546,6 +588,7 @@ internal sealed partial class CartesianRenderer : IDisposable
 
         if (area.FillMode == ChartFillMode.Gradient)
         {
+            paint.Color = SKColors.Black;
             paint.Shader = GetGradient(area, fill, extreme, baseline, horizontal);
         }
 
@@ -554,7 +597,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         bool IsFilled(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]) && Single.IsFinite(baseAcross[index]);
     }
 
-    private void DrawBars(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, BarSeries bar, int seriesIndex, SKColor color, ChartStyle style, SelectionBlend selection, double opacity, ChartEntranceAnimation entrance, CartesianRenderState state)
+    private void DrawBars(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, ChartSeries item, int seriesIndex, SKColor color, ChartStyle style, SelectionBlend selection, double opacity, ChartEntranceAnimation entrance, CartesianRenderState state)
     {
         var geometry = display.GetGeometry(layout, seriesIndex);
         if (geometry.BarSlot < 0)
@@ -562,13 +605,15 @@ internal sealed partial class CartesianRenderer : IDisposable
             return;
         }
 
+        var bar = item as BarSeries;
         var target = layout.Geometries[seriesIndex];
-        var axis = layout.GetValueAxis(bar.YAxis);
-        var negative = bar.NegativeColor is { } negativeColor ? negativeColor.ToSKColor() : color;
-        var radius = (float)(bar.CornerRadius ?? style.BarCornerRadius);
+        var axis = layout.GetValueAxis(item.YAxis);
+        var negative = bar?.NegativeColor is { } negativeColor ? negativeColor.ToSKColor() : color;
+        var radius = (float)(GetCornerRadius(item) ?? style.BarCornerRadius);
         var gap = (float)style.SegmentGap;
         var values = geometry.Value;
-        var coloring = IsColoring(layout, state, bar.YAxis);
+        var coloring = IsColoring(layout, state, item.YAxis);
+        var gradient = (bar is { FillMode: ChartFillMode.Gradient }) && !coloring ? GetBarGradient(bar, layout, geometry, axis, color, negative) : null;
         for (var i = 0; i < geometry.Count; i++)
         {
             if (!TryGetBar(layout, geometry, axis, i, gap, GetGrowth(display, entrance, i, geometry.Count), out var shape))
@@ -578,8 +623,56 @@ internal sealed partial class CartesianRenderer : IDisposable
 
             var index = display.ToTargetIndex(seriesIndex, i);
             var alpha = opacity * selection.PointAlpha(seriesIndex, index, index >= 0 ? target.X[index] : Double.NaN);
+            if (gradient?.GetShader(values[i] < 0) is { } shader)
+            {
+                var paint = paints.Fill(ChartColor.Fade(SKColors.Black, alpha));
+                paint.Shader = shader;
+                DrawBar(canvas, shape, radius, paint);
+                continue;
+            }
+
             var barColor = coloring ? GetThresholdColor(layout, style, values[i], color) : values[i] < 0 ? negative : color;
             DrawBar(canvas, shape, radius, paints.Fill(ChartColor.Fade(barColor, alpha)));
+        }
+    }
+
+    private void DrawBarTracks(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, ChartStyle style)
+    {
+        drawnTracks.Clear();
+        var plot = layout.PlotBounds;
+        var vertical = layout.Orientation == ChartOrientation.Vertical;
+        var color = ChartColor.GetTrack(style);
+        for (var s = 0; s < series.Count; s++)
+        {
+            var opacity = display.GetOpacity(s, series[s].IsVisible);
+            if (!IsTrackVisible(series[s]) || (opacity <= 0))
+            {
+                continue;
+            }
+
+            var geometry = display.GetGeometry(layout, s);
+            if (geometry.BarSlot < 0)
+            {
+                continue;
+            }
+
+            var paint = paints.Fill(ChartColor.Fade(color, opacity));
+            for (var i = 0; i < geometry.Count; i++)
+            {
+                var x = geometry.X[i];
+                if (!Double.IsFinite(x) || !drawnTracks.Add((geometry.BarSlot, x)))
+                {
+                    continue;
+                }
+
+                var (from, to) = geometry.GetBarRange(x);
+                var along1 = (float)layout.XAxis.ToDisplayPixel(from);
+                var along2 = (float)layout.XAxis.ToDisplayPixel(to);
+                var rect = vertical
+                    ? new SKRect(Math.Min(along1, along2), (float)plot.Y, Math.Max(along1, along2), (float)plot.Bottom)
+                    : new SKRect((float)plot.X, Math.Min(along1, along2), (float)plot.Right, Math.Max(along1, along2));
+                canvas.DrawRect(rect, paint);
+            }
         }
     }
 
@@ -598,11 +691,12 @@ internal sealed partial class CartesianRenderer : IDisposable
         var vertical = layout.Orientation == ChartOrientation.Vertical;
         var low = (float)(vertical ? plot.Y : plot.X);
         var high = (float)(vertical ? plot.Bottom : plot.Right);
-        var origin = GetBase(axis);
+        var origin = geometry.IsRange ? (start + end) / 2 : GetBase(axis);
         var (from, to) = geometry.GetBarRange(x);
         var along1 = (float)layout.XAxis.ToDisplayPixel(from);
         var along2 = (float)layout.XAxis.ToDisplayPixel(to);
-        var basePixel = Math.Clamp((float)axis.ToDisplayPixel(Grow(start, origin, growth)), low, high);
+        var basePoint = (float)axis.ToDisplayPixel(Grow(start, origin, growth));
+        var basePixel = Math.Clamp(basePoint, low, high);
         var dataPixel = (float)axis.ToDisplayPixel(Grow(end, origin, growth));
         var endPixel = Math.Clamp(dataPixel, low, high);
         var direction = MathF.Sign(endPixel - basePixel);
@@ -636,7 +730,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             ? new SKRect(Math.Min(along1, along2), acrossStart, Math.Max(along1, along2), acrossEnd)
             : new SKRect(acrossStart, Math.Min(along1, along2), acrossEnd, Math.Max(along1, along2));
         var edge = vertical ? (direction < 0 ? BarEdge.Top : BarEdge.Bottom) : (direction < 0 ? BarEdge.Left : BarEdge.Right);
-        shape = new BarShape(rect, edge, outer && endPixel.Equals(dataPixel));
+        shape = new BarShape(rect, edge, outer && endPixel.Equals(dataPixel), geometry.IsRange && basePixel.Equals(basePoint));
         return true;
     }
 
@@ -646,7 +740,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         var vertical = shape.Edge is BarEdge.Top or BarEdge.Bottom;
         var thickness = vertical ? rect.Width : rect.Height;
         var length = vertical ? rect.Height : rect.Width;
-        var corner = shape.Rounded ? Math.Min(radius, Math.Min(thickness / 2, length)) : 0;
+        var corner = shape.Rounded || shape.RoundedBase ? Math.Min(radius, Math.Min(thickness / 2, shape.Rounded && shape.RoundedBase ? length / 2 : length)) : 0;
         if (corner <= 0)
         {
             canvas.DrawRect(rect, paint);
@@ -655,24 +749,14 @@ internal sealed partial class CartesianRenderer : IDisposable
 
         Span<SKPoint> radii = stackalloc SKPoint[4];
         var point = new SKPoint(corner, corner);
-        switch (shape.Edge)
+        if (shape.Rounded)
         {
-            case BarEdge.Top:
-                radii[0] = point;
-                radii[1] = point;
-                break;
-            case BarEdge.Bottom:
-                radii[2] = point;
-                radii[3] = point;
-                break;
-            case BarEdge.Left:
-                radii[0] = point;
-                radii[3] = point;
-                break;
-            default:
-                radii[1] = point;
-                radii[2] = point;
-                break;
+            SetEdgeRadii(radii, shape.Edge, point);
+        }
+
+        if (shape.RoundedBase)
+        {
+            SetEdgeRadii(radii, GetOpposite(shape.Edge), point);
         }
 
         roundRect.SetRectRadii(rect, radii);
@@ -726,7 +810,7 @@ internal sealed partial class CartesianRenderer : IDisposable
                 }
 
                 var color = ChartColor.Fade(GetPointColor(layout, state, style, line.YAxis, values[i], colors[s]), alpha);
-                DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[i], across[i], horizontal), radius, knockout, color, width, height);
+                DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[i], across[i], horizontal), radius, knockout, line.MarkerShape, color, width, height);
                 if ((line.MarkerMode == ChartMarkerMode.Auto) || layout.LastMarkerOnly)
                 {
                     break;
@@ -738,7 +822,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             {
                 var scale = 0.6f + (0.4f * (float)selection.Progress);
                 var color = ChartColor.Fade(GetPointColor(layout, state, style, line.YAxis, values[selected], colors[s]), opacity);
-                DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[selected], across[selected], horizontal), radius * scale, knockout * scale, color, width, height);
+                DrawMarkerInPlot(canvas, plot, LinePathBuilder.ToPoint(along[selected], across[selected], horizontal), radius * scale, knockout * scale, line.MarkerShape, color, width, height);
             }
         }
     }
@@ -765,11 +849,33 @@ internal sealed partial class CartesianRenderer : IDisposable
     private static SKPoint ClampMarker(SKPoint point, float outer, float width, float height) =>
         new(width > outer * 2 ? Math.Clamp(point.X, outer, width - outer) : point.X, height > outer * 2 ? Math.Clamp(point.Y, outer, height - outer) : point.Y);
 
-    private void DrawMarkerInPlot(SKCanvas canvas, ChartRect plot, SKPoint point, float radius, float knockout, SKColor color, float width, float height)
+    private static float GetMarkerExtent(ChartMarkerShape shape, float radius) =>
+        shape == ChartMarkerShape.Diamond ? radius * MathF.Sqrt(2) : radius;
+
+    private static void DrawMarkerShape(SKCanvas canvas, SKPoint center, float radius, ChartMarkerShape shape, SKPaint paint)
+    {
+        switch (shape)
+        {
+            case ChartMarkerShape.Square:
+                canvas.DrawRect(center.X - radius, center.Y - radius, radius * 2, radius * 2, paint);
+                break;
+            case ChartMarkerShape.Diamond:
+                canvas.Save();
+                canvas.RotateDegrees(45, center.X, center.Y);
+                canvas.DrawRect(center.X - radius, center.Y - radius, radius * 2, radius * 2, paint);
+                canvas.Restore();
+                break;
+            default:
+                canvas.DrawCircle(center, radius, paint);
+                break;
+        }
+    }
+
+    private void DrawMarkerInPlot(SKCanvas canvas, ChartRect plot, SKPoint point, float radius, float knockout, ChartMarkerShape shape, SKColor color, float width, float height)
     {
         if (IsInPlot(plot, point))
         {
-            DrawMarker(canvas, point, radius, knockout, color, width, height);
+            DrawMarker(canvas, point, radius, knockout, shape, color, width, height);
         }
     }
 
@@ -793,10 +899,10 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         var color = ChartColor.Fade(GetPointColor(layout, state, style, line.YAxis, values[last], seriesColor), alpha);
-        LiveIndicator.DrawRings(canvas, paints, ClampMarker(point, radius + knockout, width, height), radius, color, state.LivePhase);
+        LiveIndicator.DrawRings(canvas, paints, ClampMarker(point, GetMarkerExtent(line.MarkerShape, radius + knockout), width, height), radius, color, state.LivePhase);
         if (line.MarkerMode == ChartMarkerMode.None)
         {
-            DrawMarker(canvas, point, radius, knockout, color, width, height);
+            DrawMarker(canvas, point, radius, knockout, line.MarkerShape, color, width, height);
         }
     }
 
@@ -834,7 +940,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             if (radius > 0)
             {
                 var point = LinePathBuilder.ToPoint((float)layout.XAxis.ToDisplayPixel(geometry.X[index]), (float)layout.GetValueAxis(line.YAxis).ToDisplayPixel(geometry.End[index]), horizontal);
-                DrawMarkerInPlot(canvas, plot, point, radius, knockout, GetPointColor(layout, state, style, line.YAxis, geometry.Value[index], colors[s]), width, height);
+                DrawMarkerInPlot(canvas, plot, point, radius, knockout, line.MarkerShape, GetPointColor(layout, state, style, line.YAxis, geometry.Value[index], colors[s]), width, height);
             }
         }
     }
@@ -846,67 +952,19 @@ internal sealed partial class CartesianRenderer : IDisposable
             return;
         }
 
-        var size = style.TooltipFontSize;
-        var lineHeight = (float)text.GetLineHeight(size);
-        var marker = (float)style.LegendMarkerSize;
-        var texts = interaction.TrackedTexts;
-        var rows = 1;
-        var content = (float)text.Measure(header, size, Double.PositiveInfinity);
-        for (var s = 0; (s < texts.Count) && (s < colors.Count); s++)
-        {
-            if (texts[s] is { } row)
-            {
-                rows++;
-                content = Math.Max(content, marker + TooltipMarkerGap + (float)text.Measure(row, size, Double.PositiveInfinity));
-            }
-        }
-
-        var boxWidth = content + (TooltipPadding * 2);
-        var boxHeight = (rows * lineHeight) + ((rows - 1) * TooltipRowGap) + (TooltipPadding * 2);
-        var finger = interaction.TrackPoint;
-        var left = boxWidth < width ? Math.Clamp((float)finger.X - (boxWidth / 2), 0, width - boxWidth) : 0;
-        var top = (float)finger.Y - TooltipClearance - boxHeight;
-        if (top < 0)
-        {
-            top = (float)finger.Y + TooltipClearance;
-        }
-
-        if (top + boxHeight > height)
-        {
-            top = Math.Max(0, height - boxHeight);
-        }
-
-        var box = SKRect.Create(left, top, boxWidth, boxHeight);
-        var corner = (float)style.TooltipCornerRadius;
-        canvas.DrawRoundRect(box, corner, corner, paints.Fill(style.TooltipBackground.ToSKColor()));
-        canvas.DrawRoundRect(box, corner, corner, paints.Stroke(style.TooltipBorderColor.ToSKColor(), 0, SKStrokeCap.Butt));
-        var color = style.TooltipTextColor.ToSKColor();
-        var x = left + TooltipPadding;
-        var y = top + TooltipPadding;
-        DrawText(canvas, header, new ChartRect(x, y, content, lineHeight), size, Double.PositiveInfinity, color, style, false);
-        for (var s = 0; (s < texts.Count) && (s < colors.Count); s++)
-        {
-            if (texts[s] is not { } row)
-            {
-                continue;
-            }
-
-            y += lineHeight + TooltipRowGap;
-            canvas.DrawCircle(x + (marker / 2), y + (lineHeight / 2), marker / 2, paints.Fill(colors[s]));
-            DrawText(canvas, row, new ChartRect(x + marker + TooltipMarkerGap, y, content - marker - TooltipMarkerGap, lineHeight), size, Double.PositiveInfinity, color, style, false);
-        }
+        ChartTooltipPainter.Draw(canvas, text, paints, header, interaction.TrackedTexts, colors, interaction.TrackPoint, style, width, height);
     }
 
-    private void DrawMarker(SKCanvas canvas, SKPoint point, float radius, float knockout, SKColor color, float width, float height)
+    private void DrawMarker(SKCanvas canvas, SKPoint point, float radius, float knockout, ChartMarkerShape shape, SKColor color, float width, float height)
     {
         var outer = radius + knockout;
-        var center = ClampMarker(point, outer, width, height);
+        var center = ClampMarker(point, GetMarkerExtent(shape, outer), width, height);
         if (knockout > 0)
         {
-            canvas.DrawCircle(center, outer, paints.Clear);
+            DrawMarkerShape(canvas, center, outer, shape, paints.Clear);
         }
 
-        canvas.DrawCircle(center, radius, paints.Fill(color));
+        DrawMarkerShape(canvas, center, radius, shape, paints.Fill(color));
     }
 
     private void DrawDataLabels(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, SelectionBlend selection)
@@ -940,14 +998,14 @@ internal sealed partial class CartesianRenderer : IDisposable
             var size = new SKSize((float)label.Width, height);
             SKRect bounds;
             SKColor color;
-            if (item is BarSeries bar)
+            if (item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar)
             {
-                if (!TryGetBar(layout, geometry, axis, index, gap, growth, out var shape) || !TryPlaceBarLabel(layout.PlotBounds, geometry.IsStacked, shape, size, out bounds, out var inside))
+                if (!TryGetBar(layout, geometry, axis, index, gap, growth, out var shape) || !TryPlaceBarLabel(layout.PlotBounds, geometry.IsStacked, shape, label.Low ? GetOpposite(shape.Edge) : shape.Edge, size, out bounds, out var inside))
                 {
                     continue;
                 }
 
-                var fill = (geometry.Value[index] < 0) && (bar.NegativeColor is { } negative) ? negative.ToSKColor() : colors[label.SeriesIndex];
+                var fill = (geometry.Value[index] < 0) && (item is BarSeries { NegativeColor: { } negative }) ? negative.ToSKColor() : colors[label.SeriesIndex];
                 color = inside ? ChartColor.GetContrastColor(fill) : outside;
                 if (inside)
                 {
@@ -968,7 +1026,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
     }
 
-    private bool TryPlaceBarLabel(ChartRect plot, bool stacked, in BarShape shape, SKSize size, out SKRect bounds, out bool inside)
+    private bool TryPlaceBarLabel(ChartRect plot, bool stacked, in BarShape shape, BarEdge edge, SKSize size, out SKRect bounds, out bool inside)
     {
         var bar = shape.Rect;
         inside = true;
@@ -980,7 +1038,7 @@ internal sealed partial class CartesianRenderer : IDisposable
 
         var left = Shift(bar.MidX - (size.Width / 2), size.Width, plot.X, plot.Right);
         var top = Shift(bar.MidY - (size.Height / 2), size.Height, plot.Y, plot.Bottom);
-        bounds = shape.Edge switch
+        bounds = edge switch
         {
             BarEdge.Top => SKRect.Create(left, bar.Top - DataLabelOffset - size.Height, size.Width, size.Height),
             BarEdge.Bottom => SKRect.Create(left, bar.Bottom + DataLabelOffset, size.Width, size.Height),
@@ -993,7 +1051,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             return true;
         }
 
-        bounds = shape.Edge switch
+        bounds = edge switch
         {
             BarEdge.Top => SKRect.Create(bar.MidX - (size.Width / 2), bar.Top + DataLabelOffset, size.Width, size.Height),
             BarEdge.Bottom => SKRect.Create(bar.MidX - (size.Width / 2), bar.Bottom - DataLabelOffset - size.Height, size.Width, size.Height),
@@ -1224,7 +1282,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         entry.Frame = frame;
-        var sigma = (float)(line.GlowRadius / 2);
+        var sigma = ChartGlow.GetSigma(line.GlowRadius);
         if ((entry.Filter is null) || !entry.Sigma.Equals(sigma))
         {
             entry.Filter?.Dispose();
@@ -1244,21 +1302,46 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         entry.Frame = frame;
-        if ((entry.Shader is null) || (entry.Color != color) || !entry.From.Equals(from) || !entry.To.Equals(to) || (entry.Horizontal != horizontal))
+        return entry.Update(color, from, to, horizontal);
+    }
+
+    private BarGradientEntry GetBarGradient(BarSeries bar, CartesianLayout layout, SeriesGeometry geometry, AxisLayout axis, SKColor color, SKColor negative)
+    {
+        if (!barGradients.TryGetValue(bar, out var entry))
         {
-            entry.Shader?.Dispose();
-            entry.Color = color;
-            entry.From = from;
-            entry.To = to;
-            entry.Horizontal = horizontal;
-            entry.Shader = SKShader.CreateLinearGradient(
-                LinePathBuilder.ToPoint(0, from, horizontal),
-                LinePathBuilder.ToPoint(0, to, horizontal),
-                [color, color.WithAlpha(0)],
-                SKShaderTileMode.Clamp);
+            entry = new BarGradientEntry();
+            barGradients.Add(bar, entry);
         }
 
-        return entry.Shader;
+        entry.Frame = frame;
+        var origin = GetBase(axis);
+        var high = origin;
+        var low = origin;
+        var end = geometry.End;
+        for (var i = 0; i < geometry.Count; i++)
+        {
+            if (Double.IsFinite(end[i]))
+            {
+                high = Math.Max(high, end[i]);
+                low = Math.Min(low, end[i]);
+            }
+        }
+
+        var horizontal = layout.Orientation == ChartOrientation.Horizontal;
+        var basePixel = (float)axis.ToDisplayPixel(origin);
+        entry.HasPositive = high > origin;
+        entry.HasNegative = low < origin;
+        if (entry.HasPositive)
+        {
+            entry.Positive.Update(color, (float)axis.ToDisplayPixel(high), basePixel, horizontal);
+        }
+
+        if (entry.HasNegative)
+        {
+            entry.Negative.Update(negative, (float)axis.ToDisplayPixel(low), basePixel, horizontal);
+        }
+
+        return entry;
     }
 
     private void RemoveStaleEntries()
@@ -1308,6 +1391,21 @@ internal sealed partial class CartesianRenderer : IDisposable
         {
             glows.Remove(line);
         }
+
+        staleBarGradients.Clear();
+        foreach (var (bar, entry) in barGradients)
+        {
+            if (entry.Frame != frame)
+            {
+                entry.Dispose();
+                staleBarGradients.Add(bar);
+            }
+        }
+
+        foreach (var bar in staleBarGradients)
+        {
+            barGradients.Remove(bar);
+        }
     }
 
     private sealed class DashEntry
@@ -1341,5 +1439,46 @@ internal sealed partial class CartesianRenderer : IDisposable
         public bool Horizontal { get; set; }
 
         public int Frame { get; set; }
+
+        public SKShader Update(SKColor color, float from, float to, bool horizontal)
+        {
+            if ((Shader is null) || (Color != color) || !From.Equals(from) || !To.Equals(to) || (Horizontal != horizontal))
+            {
+                Shader?.Dispose();
+                Color = color;
+                From = from;
+                To = to;
+                Horizontal = horizontal;
+                Shader = SKShader.CreateLinearGradient(
+                    LinePathBuilder.ToPoint(0, from, horizontal),
+                    LinePathBuilder.ToPoint(0, to, horizontal),
+                    [color, color.WithAlpha(0)],
+                    SKShaderTileMode.Clamp);
+            }
+
+            return Shader;
+        }
+    }
+
+    private sealed class BarGradientEntry : IDisposable
+    {
+        public GradientEntry Positive { get; } = new();
+
+        public GradientEntry Negative { get; } = new();
+
+        public bool HasPositive { get; set; }
+
+        public bool HasNegative { get; set; }
+
+        public int Frame { get; set; }
+
+        public SKShader? GetShader(bool negative) =>
+            negative ? HasNegative ? Negative.Shader : null : HasPositive ? Positive.Shader : null;
+
+        public void Dispose()
+        {
+            Positive.Shader?.Dispose();
+            Negative.Shader?.Dispose();
+        }
     }
 }

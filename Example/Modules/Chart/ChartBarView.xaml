@@ -45,7 +45,7 @@
                             ValueAccessors="{x:Static models:ProductRank.Accessors}"
                             XKey="name">
             <clam:BarSeries ItemsSource="{Binding Ranking}"
-                            Title="Units" YKey="units" />
+                            Title="Units" TrackVisible="True" YKey="units" />
         </clam:ClamChartView>
     </Grid>
 

@@ -26,6 +26,8 @@ internal sealed record RadialBarLayoutOptions
 
     public ChartOverflowMode OverflowMode { get; init; }
 
+    public double GlowRadius { get; init; }
+
     public ChartValueFormatting Formatting { get; init; } = ChartValueFormatting.Default;
 
     public bool LegendVisible { get; init; }

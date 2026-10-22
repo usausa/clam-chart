@@ -9,6 +9,8 @@ public sealed class BarSeries : ChartSeries
     public static readonly BindableProperty BarWidthRatioProperty = BindableProperty.Create(nameof(BarWidthRatio), typeof(double), typeof(BarSeries), CartesianSeries.DefaultBarWidthRatio, validateValue: static (_, value) => ValidateRatio(value, nameof(BarWidthRatio)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty StackGroupProperty = BindableProperty.Create(nameof(StackGroup), typeof(string), typeof(BarSeries), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty NegativeColorProperty = BindableProperty.Create(nameof(NegativeColor), typeof(Color), typeof(BarSeries), propertyChanged: OnRenderChanged);
+    public static readonly BindableProperty TrackVisibleProperty = BindableProperty.Create(nameof(TrackVisible), typeof(bool), typeof(BarSeries), false, propertyChanged: OnRenderChanged);
+    public static readonly BindableProperty FillModeProperty = BindableProperty.Create(nameof(FillMode), typeof(ChartFillMode), typeof(BarSeries), ChartFillMode.Solid, propertyChanged: OnRenderChanged);
 
     public double? CornerRadius
     {
@@ -40,6 +42,18 @@ public sealed class BarSeries : ChartSeries
         set => SetValue(NegativeColorProperty, value);
     }
 
+    public bool TrackVisible
+    {
+        get => (bool)GetValue(TrackVisibleProperty);
+        set => SetValue(TrackVisibleProperty, value);
+    }
+
+    public ChartFillMode FillMode
+    {
+        get => (ChartFillMode)GetValue(FillModeProperty);
+        set => SetValue(FillModeProperty, value);
+    }
+
     internal override ChartSeriesKind Kind => ChartSeriesKind.Bar;
 
     internal override CartesianSeries CreateLayoutSeries() =>
@@ -49,7 +63,4 @@ public sealed class BarSeries : ChartSeries
             BarWidthRatio = BarWidthRatio,
             MaxBarWidth = MaxBarWidth
         };
-
-    private static bool ValidateRatio(object? value, string name) =>
-        (value is double ratio) && (ratio > 0) && (ratio <= 1) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be greater than 0 and not more than 1.");
 }

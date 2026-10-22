@@ -8,11 +8,14 @@ internal sealed class SeriesGeometry : IDisposable
     private double[] start = [];
     private double[] end = [];
     private double[] value = [];
+    private double[] size = [];
     private bool[] outer = [];
 
     public int Count { get; private set; }
 
     public bool IsStacked { get; set; }
+
+    public bool IsRange { get; set; }
 
     public int BarSlot { get; set; } = -1;
 
@@ -34,6 +37,8 @@ internal sealed class SeriesGeometry : IDisposable
 
     public Span<double> Value => value.AsSpan(0, Count);
 
+    public Span<double> Size => size.AsSpan(0, Count);
+
     public Span<bool> Outer => outer.AsSpan(0, Count);
 
     public void Dispose()
@@ -51,11 +56,13 @@ internal sealed class SeriesGeometry : IDisposable
             start = DataSnapshot.Rent<double>(count);
             end = DataSnapshot.Rent<double>(count);
             value = DataSnapshot.Rent<double>(count);
+            size = DataSnapshot.Rent<double>(count);
             outer = DataSnapshot.Rent<bool>(count);
         }
 
         Count = count;
         IsStacked = false;
+        IsRange = false;
         BarSlot = -1;
         PlaceBar(0, 0, 0, 0);
         IsSorted = false;
@@ -64,6 +71,7 @@ internal sealed class SeriesGeometry : IDisposable
     public void CopyShape(SeriesGeometry source)
     {
         IsStacked = source.IsStacked;
+        IsRange = source.IsRange;
         BarSlot = source.BarSlot;
         PlaceBar(source.BarOffset, source.BarWidth, source.BarHitStart, source.BarHitEnd);
         IsSorted = source.IsSorted;
@@ -104,11 +112,13 @@ internal sealed class SeriesGeometry : IDisposable
         DataSnapshot.Return(start);
         DataSnapshot.Return(end);
         DataSnapshot.Return(value);
+        DataSnapshot.Return(size);
         DataSnapshot.Return(outer);
         x = [];
         start = [];
         end = [];
         value = [];
+        size = [];
         outer = [];
     }
 }

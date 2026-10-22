@@ -55,7 +55,7 @@ internal static class CartesianHitMap
     {
         var horizontal = layout.Orientation == ChartOrientation.Horizontal;
         var result = (-1, -1);
-        var nearest = radius * radius;
+        var nearest = Double.PositiveInfinity;
         for (var s = series.Count - 1; s >= 0; s--)
         {
             var item = series[s];
@@ -68,7 +68,8 @@ internal static class CartesianHitMap
             var axis = layout.GetValueAxis(item.Axis);
             for (var i = 0; i < geometry.Count; i++)
             {
-                if (!Double.IsFinite(geometry.X[i]) || !Double.IsFinite(geometry.End[i]))
+                var size = geometry.Size[i];
+                if (!Double.IsFinite(geometry.X[i]) || !Double.IsFinite(geometry.End[i]) || (item.IsBubble && Double.IsNaN(size)))
                 {
                     continue;
                 }
@@ -78,7 +79,8 @@ internal static class CartesianHitMap
                 var dx = (horizontal ? across : along) - x;
                 var dy = (horizontal ? along : across) - y;
                 var distance = (dx * dx) + (dy * dy);
-                if (distance <= nearest)
+                var reach = item.IsBubble ? Math.Max(radius, size / 2) : radius;
+                if ((distance <= reach * reach) && (distance <= nearest))
                 {
                     nearest = distance;
                     result = (s, i);
@@ -141,7 +143,7 @@ internal static class CartesianHitMap
         for (var s = series.Count - 1; s >= 0; s--)
         {
             var item = series[s];
-            if (!item.IsVisible || (item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.Scatter))
+            if (!item.IsVisible || (item.Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar or ChartSeriesKind.Scatter))
             {
                 continue;
             }
@@ -183,7 +185,7 @@ internal static class CartesianHitMap
         {
             var item = series[s];
             var geometry = layout.Geometries[s];
-            if ((item.Kind != ChartSeriesKind.Bar) || !item.IsVisible || (geometry.BarSlot < 0))
+            if ((item.Kind is not (ChartSeriesKind.Bar or ChartSeriesKind.RangeBar)) || !item.IsVisible || (geometry.BarSlot < 0))
             {
                 continue;
             }

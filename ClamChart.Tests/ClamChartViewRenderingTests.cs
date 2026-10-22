@@ -224,6 +224,228 @@ public sealed class ClamChartViewRenderingTests
     }
 
     [Fact]
+    public void BarTrackFillsThePlotBehindEachBar()
+    {
+        // Arrange
+        using var view = Bars(new BarSeries { ItemsSource = Entries(5, 10), TrackVisible = true });
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
+        using var horizontal = Bars(new BarSeries { ItemsSource = Entries(5, 10), TrackVisible = true });
+        horizontal.YAxis = new NumericAxis { GridLinesVisible = false };
+        horizontal.Orientation = ChartOrientation.Horizontal;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+        using var horizontalBitmap = horizontal.Paint(360, 240);
+
+        // Assert
+        var track = new SKColor(0, 0, 0, 18);
+        var bar = GetBarBounds(view, 0, 0);
+        var plot = view.ChartLayout.PlotBounds;
+        Assert.Equal(track, GetPixel(bitmap, bar.MidX, plot.Y + 2));
+        Assert.Equal(255, GetPixelAlpha(bitmap, bar.MidX, bar.MidY));
+        Assert.Equal(0, GetPixelAlpha(bitmap, bar.Left - 2, plot.Y + 2));
+        bar = GetBarBounds(horizontal, 0, 0);
+        plot = horizontal.ChartLayout.PlotBounds;
+        Assert.Equal(track, GetPixel(horizontalBitmap, plot.Right - 2, bar.MidY));
+        Assert.Equal(0, GetPixelAlpha(horizontalBitmap, plot.Right - 2, bar.Top - 2));
+    }
+
+    [Fact]
+    public void BarTrackIsSharedByAStackAndTakesTheStyleColor()
+    {
+        // Arrange
+        using var stacked = Bars(
+            new BarSeries { ItemsSource = Entries(3), StackGroup = "total", TrackVisible = true },
+            new BarSeries { ItemsSource = Entries(4), StackGroup = "total", TrackVisible = true });
+        stacked.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
+        using var dark = Bars(new BarSeries { ItemsSource = Entries(3), TrackVisible = true });
+        dark.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
+        dark.ChartStyle = ChartStyles.Dark;
+        using var custom = Bars(new BarSeries { ItemsSource = Entries(3), TrackVisible = true });
+        custom.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
+        custom.ChartStyle = ChartStyles.Light with { TrackColor = Colors.Lime };
+
+        // Act
+        using var stackedBitmap = stacked.Paint(360, 240);
+        using var darkBitmap = dark.Paint(360, 240);
+        using var customBitmap = custom.Paint(360, 240);
+
+        // Assert
+        var x = GetBarBounds(stacked, 0, 0).MidX;
+        Assert.Equal(new SKColor(0, 0, 0, 18), GetPixel(stackedBitmap, x, stacked.ChartLayout.YAxis.ToPixel(9)));
+        Assert.Equal(new SKColor(255, 255, 255, 18), GetPixel(darkBitmap, x, dark.ChartLayout.YAxis.ToPixel(9)));
+        Assert.Equal(Lime, GetPixel(customBitmap, x, custom.ChartLayout.YAxis.ToPixel(9)));
+    }
+
+    [Fact]
+    public void BarTrackAndGradientAddNoAllocationToAFrame()
+    {
+        // Arrange
+        var bar = new BarSeries { ItemsSource = Entries(3, -2, 5), StackGroup = "total" };
+        using var view = Bars(bar, new BarSeries { ItemsSource = Entries(1, 1, 1), StackGroup = "total" });
+        using var solid = view.Paint(360, 240);
+        using var surface = SKSurface.Create(new SKImageInfo(720, 480));
+        var idle = MeasureFrame(view, surface.Canvas);
+        bar.TrackVisible = true;
+        bar.FillMode = ChartFillMode.Gradient;
+        using var styled = view.Paint(360, 240);
+
+        // Act
+        var allocated = MeasureFrame(view, surface.Canvas);
+
+        // Assert
+        Assert.Equal(idle, allocated);
+    }
+
+    [Fact]
+    public void GradientBarsFadeFromTheFarthestValueToTheBaseline()
+    {
+        // Arrange
+        using var view = Bars(new BarSeries { ItemsSource = Entries(10, 5, -10), Color = Colors.Blue, NegativeColor = Colors.Lime, FillMode = ChartFillMode.Gradient });
+        view.YAxis = new NumericAxis { Minimum = -10, Maximum = 10, GridLinesVisible = false };
+        using var horizontal = Bars(new BarSeries { ItemsSource = Entries(10), Color = Colors.Blue, FillMode = ChartFillMode.Gradient });
+        horizontal.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
+        horizontal.Orientation = ChartOrientation.Horizontal;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+        using var horizontalBitmap = horizontal.Paint(360, 240);
+
+        // Assert
+        var axis = view.ChartLayout.YAxis;
+        var high = GetBarBounds(view, 0, 0);
+        var half = GetBarBounds(view, 0, 1);
+        var low = GetBarBounds(view, 0, 2);
+        Assert.InRange(GetPixelAlpha(bitmap, high.MidX, axis.ToPixel(9.5)), 230, 255);
+        Assert.InRange(GetPixelAlpha(bitmap, high.MidX, axis.ToPixel(0.5)), 1, 25);
+        Assert.InRange(GetPixelAlpha(bitmap, half.MidX, axis.ToPixel(4.5)), 100, 130);
+        var negative = GetPixel(bitmap, low.MidX, axis.ToPixel(-9.5));
+        Assert.InRange(negative.Alpha, 230, 255);
+        Assert.True((negative.Green > 240) && (negative.Blue < 10));
+        Assert.InRange(GetPixelAlpha(bitmap, low.MidX, axis.ToPixel(-0.5)), 1, 25);
+        var bar = GetBarBounds(horizontal, 0, 0);
+        axis = horizontal.ChartLayout.YAxis;
+        Assert.InRange(GetPixelAlpha(horizontalBitmap, axis.ToPixel(9.5), bar.MidY), 230, 255);
+        Assert.InRange(GetPixelAlpha(horizontalBitmap, axis.ToPixel(0.5), bar.MidY), 1, 25);
+    }
+
+    [Fact]
+    public void ColorSeriesKeepsGradientBarsSolid()
+    {
+        // Arrange
+        using var view = Bars(new BarSeries { ItemsSource = Entries(20, 80), FillMode = ChartFillMode.Gradient });
+        view.Thresholds = Steps(50);
+        view.ThresholdsMode = ChartThresholdsMode.ColorSeries;
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var high = GetBarBounds(view, 0, 1);
+        Assert.Equal(Red, GetPixel(bitmap, high.MidX, high.Bottom - 2));
+    }
+
+    [Fact]
+    public void GradientAreaStartsAtTheFillOpacity()
+    {
+        // Arrange
+        using var view = new TestClamChartView { YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false } };
+        view.Series.Add(new AreaSeries { ItemsSource = new List<double> { 10, 10, 10 }, Color = Colors.Blue, FillOpacity = 0.5, FillMode = ChartFillMode.Gradient });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(layout.Geometries[0].X[1]);
+        Assert.InRange(GetPixelAlpha(bitmap, x, layout.YAxis.ToPixel(9)), 105, 125);
+        Assert.InRange(GetPixelAlpha(bitmap, x, layout.YAxis.ToPixel(1)), 5, 20);
+    }
+
+    [Fact]
+    public void RangeBarSpansItsRangeAndTheAxisLeavesOutZero()
+    {
+        // Arrange
+        using var view = new TestClamChartView { YAxis = new NumericAxis { GridLinesVisible = false } };
+        view.Series.Add(RangeBars((12, 25), (8, 18)));
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var axis = layout.YAxis;
+        var bar = GetBarBounds(view, 0, 0);
+        Assert.True(axis.Scale.Minimum > 0);
+        Assert.Equal(12, layout.Geometries[0].Start[0]);
+        Assert.Equal(25, layout.Geometries[0].End[0]);
+        Assert.Equal(255, GetPixelAlpha(bitmap, bar.MidX, axis.ToPixel(18)));
+        Assert.Equal(0, GetPixelAlpha(bitmap, bar.MidX, axis.ToPixel(11)));
+    }
+
+    [Fact]
+    public void RangeBarLabelsSitAtBothEnds()
+    {
+        // Arrange
+        using var view = new TestClamChartView { DataLabelsMode = ChartDataLabelsMode.All, YAxis = new NumericAxis { Minimum = 0, Maximum = 30, GridLinesVisible = false } };
+        view.Series.Add(RangeBars((12, 25), (8, 18)));
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var labels = view.ChartLayout.DataLabels;
+        var bar = GetBarBounds(view, 0, 0);
+        Assert.Equal(4, labels.Count);
+        Assert.Equal(["12", "8"], labels.Where(static x => x.Low).Select(static x => x.Text).Order());
+        Assert.True(CountPixels(bitmap, SKRect.Create(bar.Left - 6, bar.Top - 18, bar.Width + 12, 16), IsInk) > 3);
+        Assert.True(CountPixels(bitmap, SKRect.Create(bar.Left - 6, bar.Bottom + 2, bar.Width + 12, 16), IsInk) > 3);
+    }
+
+    [Fact]
+    public void RangeBarRoundsBothEndsAndShowsTheTrack()
+    {
+        // Arrange
+        var series = RangeBars((10, 20));
+        series.CornerRadius = 8;
+        series.TrackVisible = true;
+        using var view = new TestClamChartView { YAxis = new NumericAxis { Minimum = 0, Maximum = 30, GridLinesVisible = false } };
+        view.Series.Add(series);
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var bar = GetBarBounds(view, 0, 0);
+        var plot = view.ChartLayout.PlotBounds;
+        Assert.Equal(18, GetPixelAlpha(bitmap, bar.Left + 1, bar.Top + 1));
+        Assert.Equal(18, GetPixelAlpha(bitmap, bar.Left + 1, bar.Bottom - 1));
+        Assert.Equal(255, GetPixelAlpha(bitmap, bar.MidX, bar.MidY));
+        Assert.Equal(new SKColor(0, 0, 0, 18), GetPixel(bitmap, bar.MidX, plot.Y + 2));
+    }
+
+    [Fact]
+    public void RangeBarsAddNoAllocationToAFrame()
+    {
+        // Arrange
+        var series = RangeBars((12, 25), (8, 18));
+        using var view = new TestClamChartView();
+        view.Series.Add(series);
+        using var plain = view.Paint(360, 240);
+        using var surface = SKSurface.Create(new SKImageInfo(720, 480));
+        var idle = MeasureFrame(view, surface.Canvas);
+        series.TrackVisible = true;
+        series.CornerRadius = 4;
+        using var styled = view.Paint(360, 240);
+
+        // Act
+        var allocated = MeasureFrame(view, surface.Canvas);
+
+        // Assert
+        Assert.Equal(idle, allocated);
+    }
+
+    [Fact]
     public void BarLabelGoesInsideTheEndWhenItDoesNotFitOutside()
     {
         // Arrange
@@ -627,6 +849,111 @@ public sealed class ClamChartViewRenderingTests
     }
 
     [Fact]
+    public void ScatterDiamondIsTheSquareTurnedBy45Degrees()
+    {
+        // Arrange
+        using var view = Scatter(ChartMarkerShape.Diamond);
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(5);
+        var y = layout.YAxis.ToPixel(4.3);
+        Assert.Equal(new SKColor(0, 0, 255, 128), GetPixel(bitmap, x, y - 12));
+        Assert.Equal(0, GetPixelAlpha(bitmap, x + 8, y + 8));
+    }
+
+    [Theory]
+    [InlineData(ChartMarkerShape.Circle, false, false)]
+    [InlineData(ChartMarkerShape.Square, true, false)]
+    [InlineData(ChartMarkerShape.Diamond, false, true)]
+    public void LineMarkersTakeTheShape(ChartMarkerShape shape, bool corner, bool tip)
+    {
+        // Arrange
+        using var view = new TestClamChartView { Density = ChartDensity.Full, YAxis = new NumericAxis { GridLinesVisible = false } };
+        view.Series.Add(new LineSeries { ItemsSource = new List<double> { 5, 5, 5 }, Color = Colors.Lime, MarkerMode = ChartMarkerMode.All, MarkerShape = shape });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(layout.Geometries[0].X[1]);
+        var y = layout.YAxis.ToPixel(5);
+        Assert.Equal(255, GetPixelAlpha(bitmap, x, y - 2));
+        Assert.Equal(corner, GetPixelAlpha(bitmap, x + 3.4, y - 3.4) > 200);
+        Assert.Equal(tip, GetPixelAlpha(bitmap, x, y - 4.6) > 200);
+    }
+
+    [Theory]
+    [InlineData(ChartMarkerShape.Circle, 255)]
+    [InlineData(ChartMarkerShape.Square, 0)]
+    public void MarkerKnockoutFollowsTheShape(ChartMarkerShape shape, int alpha)
+    {
+        // Arrange
+        using var view = new TestClamChartView { Density = ChartDensity.Full };
+        view.Series.Add(new AreaSeries { ItemsSource = new List<double> { 5, 5, 5 }, FillOpacity = 1, MarkerMode = ChartMarkerMode.All, MarkerShape = shape });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var x = layout.XAxis.ToPixel(layout.Geometries[0].X[1]);
+        var y = layout.YAxis.ToPixel(5);
+        Assert.Equal(alpha, GetPixelAlpha(bitmap, x + 5, y + 5));
+    }
+
+    [Fact]
+    public void BubblesTakeTheirSizeAndFitInTheAutomaticRange()
+    {
+        // Arrange
+        using var view = new TestClamChartView { XAxis = new NumericAxis { GridLinesVisible = false }, YAxis = new NumericAxis { GridLinesVisible = false } };
+        view.Series.Add(new BubbleSeries { ItemsSource = BubblePoints(), SizeSelector = static x => ((ChartPoint)x).X * 10, Color = Colors.Blue });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var sizes = layout.Geometries[0].Size;
+        var plot = layout.PlotBounds;
+        var largeX = layout.XAxis.ToPixel(10);
+        var largeY = layout.YAxis.ToPixel(20);
+        var smallX = layout.XAxis.ToPixel(1);
+        var smallY = layout.YAxis.ToPixel(11);
+        Assert.Equal(Math.Sqrt(217.6), sizes[0], 9);
+        Assert.Equal(Math.Sqrt(832), sizes[1], 9);
+        Assert.Equal(40, sizes[2], 9);
+        Assert.True(largeX + 20 <= plot.Right + 1e-6);
+        Assert.True(largeY - 20 >= plot.Y - 1e-6);
+        Assert.True(GetPixelAlpha(bitmap, largeX + 17, largeY) > 0);
+        Assert.Equal(0, GetPixelAlpha(bitmap, smallX + 10, smallY));
+    }
+
+    [Fact]
+    public void BubblesAddNoAllocationToAFrame()
+    {
+        // Arrange
+        using var scatter = new TestClamChartView { XAxis = new NumericAxis { Minimum = 0, Maximum = 12 }, YAxis = new NumericAxis { Minimum = 0, Maximum = 24 } };
+        scatter.Series.Add(new ScatterSeries { ItemsSource = BubblePoints() });
+        using var bubbles = new TestClamChartView { XAxis = new NumericAxis { Minimum = 0, Maximum = 12 }, YAxis = new NumericAxis { Minimum = 0, Maximum = 24 } };
+        bubbles.Series.Add(new BubbleSeries { ItemsSource = BubblePoints(), SizeSelector = static x => ((ChartPoint)x).X });
+        using var first = scatter.Paint(360, 240);
+        using var second = bubbles.Paint(360, 240);
+        using var surface = SKSurface.Create(new SKImageInfo(720, 480));
+        var idle = MeasureFrame(scatter, surface.Canvas);
+
+        // Act
+        var allocated = MeasureFrame(bubbles, surface.Canvas);
+
+        // Assert
+        Assert.Equal(idle, allocated);
+    }
+
+    [Fact]
     public void ColorSeriesPaintsEachScatterPointByItsValue()
     {
         // Arrange
@@ -663,6 +990,13 @@ public sealed class ClamChartViewRenderingTests
     private static List<ChartEntry> Entries(params double[] values) =>
         [.. values.Select(static (value, index) => new ChartEntry($"C{index}", value))];
 
+    private static RangeBarSeries RangeBars(params (double Low, double High)[] values) =>
+        new()
+        {
+            ItemsSource = values.Select(static (value, index) => new ChartEntry($"C{index}", value.High, Target: value.Low)).ToList(),
+            LowSelector = static x => ((ChartEntry)x).Target
+        };
+
     private static List<ChartThreshold> Steps(double value) =>
         [new ChartThreshold { Color = Colors.Lime }, new ChartThreshold { Value = value, Color = Colors.Red }];
 
@@ -681,6 +1015,8 @@ public sealed class ClamChartViewRenderingTests
         view.Series.Add(new ScatterSeries { ItemsSource = new List<ChartPoint> { new(0, 0), new(10, 10), new(5, 4.3) }, MarkerSize = 20, MarkerShape = shape, Color = Colors.Blue });
         return view;
     }
+
+    private static List<ChartPoint> BubblePoints() => [new(1, 11), new(5, 15), new(10, 20)];
 
     private static TestClamChartView Bars(params BarSeries[] series)
     {

@@ -105,9 +105,9 @@
                         <clam:ClamRadialBarView Grid.Row="1"
                                                 ItemsSource="{Binding StepProgress}"
                                                 Maximum="10000"
-                                                CenterLabel="歩"
+                                                CapStyle="Round" CenterLabel="歩"
                                                 CenterText="{Binding StepText}"
-                                                ContentPadding="0" DisplayMode="Gradient" />
+                                                ContentPadding="0" DisplayMode="Gradient" GlowRadius="8" />
                     </Grid>
                 </Border>
                 <Border Grid.Row="0" Grid.Column="1"
@@ -201,7 +201,7 @@
                                 <clam:NumericAxis GridLinesVisible="False" LabelsVisible="False" />
                             </clam:ClamChartView.YAxis>
                             <clam:BarSeries ItemsSource="{Binding Weeks}"
-                                            Title="支出" ValueFormat="{}{0:N0} 円" />
+                                            FillMode="Gradient" Title="支出" TrackVisible="True" ValueFormat="{}{0:N0} 円" />
                         </clam:ClamChartView>
                     </Grid>
                 </Border>

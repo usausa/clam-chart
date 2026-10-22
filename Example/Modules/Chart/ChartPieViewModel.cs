@@ -48,7 +48,12 @@ public sealed partial class ChartPieViewModel : ChartViewModelBase
 
     protected override Task OnNotifyFunction3()
     {
-        LabelsMode = LabelsMode == ChartPieLabelsMode.None ? ChartPieLabelsMode.Inside : ChartPieLabelsMode.None;
+        LabelsMode = LabelsMode switch
+        {
+            ChartPieLabelsMode.None => ChartPieLabelsMode.Inside,
+            ChartPieLabelsMode.Inside => ChartPieLabelsMode.Outside,
+            _ => ChartPieLabelsMode.None
+        };
         return Task.CompletedTask;
     }
 

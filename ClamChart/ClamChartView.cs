@@ -157,13 +157,7 @@ public partial class ClamChartView : ChartViewBase
         for (var s = 0; s < attached.Count; s++)
         {
             var series = attached[s];
-            var reader = new ChartValueReader(new ChartValueOptions
-            {
-                Accessors = series.ValueAccessors ?? ValueAccessors,
-                XKey = series.XKey ?? XKey,
-                YKey = series.YKey,
-                ValueSelector = series.ValueSelector
-            });
+            var reader = new ChartValueReader(series.CreateValueOptions(ValueAccessors, XKey));
             var snapshot = DataSnapshotBuilder.Build(series.ItemsSource, reader, series.EmptyPointMode);
             RecordChange(s, series, series.Snapshot.Count, snapshot.Count);
             series.ReplaceSnapshot(snapshot);
@@ -226,18 +220,19 @@ public partial class ClamChartView : ChartViewBase
 
             var x = layout.Geometries[s].X;
             var y = item.Data.Y;
+            var lows = item.Kind == ChartSeriesKind.RangeBar ? layout.Geometries[s].Start : y;
             var count = 0;
             var minimum = -1;
             var maximum = -1;
             for (var i = 0; i < y.Length; i++)
             {
-                if (!Double.IsFinite(x[i]) || !Double.IsFinite(y[i]))
+                if (!Double.IsFinite(x[i]) || !Double.IsFinite(y[i]) || !Double.IsFinite(lows[i]))
                 {
                     continue;
                 }
 
                 count++;
-                if ((minimum < 0) || (y[i] < y[minimum]))
+                if ((minimum < 0) || (lows[i] < lows[minimum]))
                 {
                     minimum = i;
                 }
@@ -257,7 +252,7 @@ public partial class ClamChartView : ChartViewBase
             text.BeginGroup(!String.IsNullOrEmpty(item.Title) ? item.Title : named ? text.SeriesName(s + 1) : null);
             text.AddCount(count, false);
             text.AddValue(ChartSummaryWord.Maximum, CartesianLayout.FormatValue(y[maximum], item, axis, false, text.Culture), layout.GetTrackingLabel(x[maximum], layoutSeries));
-            text.AddValue(ChartSummaryWord.Minimum, CartesianLayout.FormatValue(y[minimum], item, axis, false, text.Culture), layout.GetTrackingLabel(x[minimum], layoutSeries));
+            text.AddValue(ChartSummaryWord.Minimum, CartesianLayout.FormatValue(lows[minimum], item, axis, false, text.Culture), layout.GetTrackingLabel(x[minimum], layoutSeries));
         }
 
         return text.Build();
@@ -286,7 +281,7 @@ public partial class ClamChartView : ChartViewBase
     {
         foreach (var series in attached)
         {
-            if (series.Kind == ChartSeriesKind.Bar)
+            if (series.Kind is ChartSeriesKind.Bar or ChartSeriesKind.RangeBar)
             {
                 return true;
             }

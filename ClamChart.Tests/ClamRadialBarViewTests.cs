@@ -50,6 +50,9 @@ public sealed class ClamRadialBarViewTests
         Assert.Throws<ArgumentOutOfRangeException>(() => view.InnerRadius = 0.96);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.RingThickness = 0);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.RingSpacing = -1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.GlowRadius = -1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => view.GlowRadius = Double.NaN);
+        Assert.Equal(0, view.GlowRadius);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.SegmentCount = 0);
         Assert.Throws<ArgumentNullException>(() => view.Thresholds = null!);
         view.RingThickness = 10;

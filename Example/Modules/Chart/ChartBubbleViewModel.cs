@@ -1,0 +1,81 @@
+namespace Example.Modules.Chart;
+
+using Example.Models;
+
+public sealed partial class ChartBubbleViewModel : ChartViewModelBase
+{
+    private const int CityCount = 12;
+
+    private const int SuburbCount = 10;
+
+    private const double LargeBubbleSize = 40;
+
+    private const double SmallBubbleSize = 24;
+
+    public ObservableCollection<StoreSample> City { get; } = [];
+
+    public ObservableCollection<StoreSample> Suburb { get; } = [];
+
+    [ObservableProperty]
+    public partial ChartMarkerShape MarkerShape { get; set; }
+
+    [ObservableProperty]
+    public partial double MaxBubbleSize { get; set; } = LargeBubbleSize;
+
+    public ChartBubbleViewModel()
+    {
+        for (var i = 0; i < CityCount; i++)
+        {
+            City.Add(CreateCity());
+        }
+
+        for (var i = 0; i < SuburbCount; i++)
+        {
+            Suburb.Add(CreateSuburb());
+        }
+    }
+
+    protected override Task OnNotifyFunction2()
+    {
+        MarkerShape = MarkerShape switch
+        {
+            ChartMarkerShape.Circle => ChartMarkerShape.Square,
+            ChartMarkerShape.Square => ChartMarkerShape.Diamond,
+            _ => ChartMarkerShape.Circle
+        };
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnNotifyFunction3()
+    {
+        MaxBubbleSize = MaxBubbleSize > SmallBubbleSize ? SmallBubbleSize : LargeBubbleSize;
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnNotifyFunction4()
+    {
+        for (var i = 0; i < City.Count; i++)
+        {
+            City[i] = CreateCity();
+        }
+
+        for (var i = 0; i < Suburb.Count; i++)
+        {
+            Suburb[i] = CreateSuburb();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static StoreSample CreateCity()
+    {
+        var sales = Math.Round(SampleData.Next(400, 1200));
+        return new StoreSample { Sales = sales, Margin = Math.Round(SampleData.Next(8, 22), 1), Visitors = Math.Round(sales * SampleData.Next(0.8, 1.6)) };
+    }
+
+    private static StoreSample CreateSuburb()
+    {
+        var sales = Math.Round(SampleData.Next(200, 800));
+        return new StoreSample { Sales = sales, Margin = Math.Round(SampleData.Next(12, 30), 1), Visitors = Math.Round(sales * SampleData.Next(0.4, 0.9)) };
+    }
+}

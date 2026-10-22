@@ -5,6 +5,7 @@ using System.Windows.Input;
 
 using ClamChart.Layout;
 using ClamChart.Platform;
+using ClamChart.Rendering;
 
 public partial class ClamChartView
 {
@@ -261,7 +262,7 @@ public partial class ClamChartView
         interaction.TooltipHeader = header;
     }
 
-    private string GetTrackingText(int seriesIndex, int index)
+    internal string GetTrackingText(int seriesIndex, int index)
     {
         var key = ((long)seriesIndex << 32) | (uint)index;
         if (!trackingTexts.TryGetValue(key, out var text))
@@ -281,7 +282,19 @@ public partial class ClamChartView
         }
 
         var item = layoutSeries[seriesIndex];
-        var value = CartesianLayout.FormatValue(item.Data.Y[index], item, ChartLayout.GetValueAxis(item.Axis).Options, false, Culture ?? CultureInfo.CurrentCulture);
+        var axis = ChartLayout.GetValueAxis(item.Axis).Options;
+        var culture = Culture ?? CultureInfo.CurrentCulture;
+        var value = CartesianLayout.FormatValue(item.Data.Y[index], item, axis, false, culture);
+        if (item.Kind == ChartSeriesKind.RangeBar)
+        {
+            var geometry = ChartLayout.Geometries[seriesIndex];
+            value = CartesianLayout.FormatValue(geometry.Start[index], item, axis, false, culture) + " – " + CartesianLayout.FormatValue(geometry.End[index], item, axis, false, culture);
+        }
+        else if (item.IsBubble && (index < item.Data.Size.Length) && Double.IsFinite(item.Data.Size[index]))
+        {
+            value += " (" + ChartTextFormat.FormatValue(item.Data.Size[index], null, null, ChartTextFormat.Default, culture) + ")";
+        }
+
         return String.IsNullOrEmpty(item.Title) ? value : item.Title + " " + value;
     }
 

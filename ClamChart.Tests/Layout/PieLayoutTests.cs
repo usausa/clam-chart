@@ -329,12 +329,78 @@ public sealed class PieLayoutTests
             Layout([40, 60], new PieLayoutOptions { LabelsMode = ChartPieLabelsMode.Inside, LabelContent = content });
 
         // Act & Assert
-        Assert.Equal("40%", Inside(ChartPieLabelContent.Percent).Slices[0].InsideText);
-        Assert.Equal("40", Inside(ChartPieLabelContent.Value).Slices[0].InsideText);
-        Assert.Equal("C0", Inside(ChartPieLabelContent.Label).Slices[0].InsideText);
-        Assert.Equal("C0 40%", Inside(ChartPieLabelContent.LabelAndPercent).Slices[0].InsideText);
-        Assert.Equal(16.5, Inside(ChartPieLabelContent.Percent).Slices[0].InsideWidth);
-        Assert.Null(Layout([40, 60]).Slices[0].InsideText);
+        Assert.Equal("40%", Inside(ChartPieLabelContent.Percent).Slices[0].LabelText);
+        Assert.Equal("40", Inside(ChartPieLabelContent.Value).Slices[0].LabelText);
+        Assert.Equal("C0", Inside(ChartPieLabelContent.Label).Slices[0].LabelText);
+        Assert.Equal("C0 40%", Inside(ChartPieLabelContent.LabelAndPercent).Slices[0].LabelText);
+        Assert.Equal(16.5, Inside(ChartPieLabelContent.Percent).Slices[0].LabelWidth);
+        Assert.Null(Layout([40, 60]).Slices[0].LabelText);
+        Assert.Empty(Inside(ChartPieLabelContent.Percent).OutsideLabels);
+    }
+
+    [Fact]
+    public void OutsideLabelsLineUpInColumnsBesideASmallerPie()
+    {
+        // Act
+        var plain = Layout([25, 25, 25, 25], width: 300, height: 200);
+        var layout = Layout([25, 25, 25, 25], new PieLayoutOptions { LabelsMode = ChartPieLabelsMode.Outside }, 300, 200);
+
+        // Assert
+        var labels = layout.OutsideLabels;
+        Assert.Equal(4, labels.Count);
+        Assert.All(labels, static x => Assert.True(x.IsVisible));
+        Assert.True(layout.OuterRadius < plain.OuterRadius);
+        Assert.Equal(150, layout.CenterX, Precision);
+        Assert.Equal(labels[0].Bounds.X, labels[1].Bounds.X);
+        Assert.Equal(labels[2].Bounds.Right, labels[3].Bounds.Right);
+        Assert.Equal(layout.CenterX + layout.OuterRadius + PieLayout.OutsideLineLength + PieLayout.OutsideLineRun, labels[0].EndX, Precision);
+        Assert.Equal(labels[0].EndX + PieLayout.OutsideTextGap, labels[0].Bounds.X, Precision);
+        Assert.Equal(labels[3].EndX - PieLayout.OutsideTextGap, labels[3].Bounds.Right, Precision);
+        Assert.True(labels[0].Bounds.Y < layout.CenterY);
+        Assert.True(labels[1].Bounds.Y > layout.CenterY);
+        Assert.True(labels[2].Bounds.Y > layout.CenterY);
+        Assert.True(labels[3].Bounds.Y < layout.CenterY);
+        Assert.All(labels, x => Assert.Equal(layout.OuterRadius + PieLayout.OutsideLineLength, Math.Sqrt(Square(x.ElbowX - layout.CenterX) + Square(x.ElbowY - layout.CenterY)), Precision));
+        Assert.Equal(300 - labels[0].Bounds.Right, labels[2].Bounds.X, Precision);
+        Assert.True(labels[2].Bounds.X >= 0);
+    }
+
+    [Fact]
+    public void CrowdedOutsideLabelsAreSpreadAndTheSmallestAreDropped()
+    {
+        // Act
+        var layout = Layout([60, 9, 8, 7, 6, 5, 4, 1], new PieLayoutOptions { LabelsMode = ChartPieLabelsMode.Outside }, 300, 80);
+
+        // Assert
+        var left = layout.OutsideLabels.Where(static x => x.IsVisible && (x.EndX < 150)).OrderBy(static x => x.Bounds.Y).ToList();
+        Assert.False(layout.OutsideLabels[7].IsVisible);
+        Assert.False(layout.OutsideLabels[6].IsVisible);
+        Assert.True(layout.OutsideLabels[0].IsVisible);
+        Assert.Equal(5, left.Count);
+        Assert.All(left.Zip(left.Skip(1)), static x => Assert.True(x.Second.Bounds.Y >= x.First.Bounds.Bottom + PieLayout.OutsideLabelGap - 1e-9));
+        Assert.All(left, static x => Assert.InRange(x.Bounds.Y, 0, 80 - x.Bounds.Height));
+        Assert.All(left, x => Assert.Equal(layout.OuterRadius + PieLayout.OutsideLineLength, Math.Sqrt(Square(x.ElbowX - layout.CenterX) + Square(x.ElbowY - layout.CenterY)), Precision));
+    }
+
+    [Fact]
+    public void TooWideOutsideLabelsAreDroppedToKeepHalfThePie()
+    {
+        // Arrange
+        string[] names = ["Groceries and daily goods", "Rent"];
+        var entries = names.Select(static (name, index) => new ChartEntry(name, (index + 1) * 10)).ToList();
+        using var data = DataSnapshotBuilder.Build(entries, Reader, ChartEmptyPointMode.Gap);
+
+        // Act
+        var plain = Layout(data, width: 160, height: 160);
+        var layout = Layout(data, new PieLayoutOptions { LabelsMode = ChartPieLabelsMode.Outside, LabelContent = ChartPieLabelContent.Label }, 160, 160);
+
+        // Assert
+        Assert.True(layout.OuterRadius >= plain.OuterRadius * PieLayout.MinOutsideRadiusRatio);
+        Assert.False(layout.OutsideLabels[0].IsVisible);
+        Assert.True(layout.OutsideLabels[1].IsVisible);
+        Assert.True(layout.OutsideLabels[1].Bounds.X >= 0);
+        Assert.InRange(layout.CenterX - layout.OuterRadius, 0, 160);
+        Assert.InRange(layout.CenterX + layout.OuterRadius, 0, 160);
     }
 
     [Fact]
@@ -420,6 +486,8 @@ public sealed class PieLayoutTests
         var (x, y) = PieLayout.GetDirection(angle);
         return (layout.CenterX + (x * radius), layout.CenterY + (y * radius));
     }
+
+    private static double Square(double value) => value * value;
 
     private static PieLayout Layout(double[] values, PieLayoutOptions? options = null, double width = 200, double height = 200)
     {

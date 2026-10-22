@@ -69,6 +69,7 @@ internal sealed class SeriesInterpolation : IDisposable
         }
 
         target.Value.CopyTo(Display.Value);
+        target.Size.CopyTo(Display.Size);
         target.Outer.CopyTo(Display.Outer);
         fromOpacity = opacity;
         toOpacity = opacity;
@@ -76,7 +77,7 @@ internal sealed class SeriesInterpolation : IDisposable
         Apply(1);
     }
 
-    public void BuildMorph(SeriesInterpolation previous, ReadOnlySpan<int> map, bool identity, SeriesGeometry target, bool collapse)
+    public void BuildMorph(SeriesInterpolation previous, ReadOnlySpan<int> map, bool identity, SeriesGeometry target, SeriesCollapse collapse)
     {
         var count = target.Count;
         var previousCount = previous.Display.Count;
@@ -124,6 +125,7 @@ internal sealed class SeriesInterpolation : IDisposable
                 kinds[position] = Departing;
                 SetFrom(position, display.X[u], display.Start[u], display.End[u]);
                 Display.Value[position] = display.Value[u];
+                Display.Size[position] = display.Size[u];
                 Display.Outer[position] = display.Outer[u];
                 position++;
             }
@@ -145,7 +147,7 @@ internal sealed class SeriesInterpolation : IDisposable
         Finish();
     }
 
-    public void BuildHide(SeriesInterpolation previous, bool collapse)
+    public void BuildHide(SeriesInterpolation previous, SeriesCollapse collapse)
     {
         var display = previous.Display;
         var count = display.Count;
@@ -156,30 +158,30 @@ internal sealed class SeriesInterpolation : IDisposable
             kinds[u] = Departing;
             SetFrom(u, display.X[u], display.Start[u], display.End[u]);
             toX[u] = display.X[u];
-            toStart[u] = display.Start[u];
-            toEnd[u] = collapse ? display.Start[u] : display.End[u];
+            (toStart[u], toEnd[u]) = Collapse(collapse, display.Start[u], display.End[u]);
         }
 
         display.Value.CopyTo(Display.Value);
+        display.Size.CopyTo(Display.Size);
         display.Outer.CopyTo(Display.Outer);
         fromOpacity = previous.Opacity;
-        toOpacity = collapse ? 1 : 0;
+        toOpacity = collapse == SeriesCollapse.None ? 0 : 1;
         Finish();
     }
 
-    public void BuildShow(SeriesGeometry target, bool collapse)
+    public void BuildShow(SeriesGeometry target, SeriesCollapse collapse)
     {
         SetIdentity(target, 1);
-        if (collapse)
+        if (collapse == SeriesCollapse.None)
         {
-            for (var i = 0; i < target.Count; i++)
-            {
-                fromEnd[i] = fromStart[i];
-            }
+            fromOpacity = 0;
         }
         else
         {
-            fromOpacity = 0;
+            for (var i = 0; i < target.Count; i++)
+            {
+                (fromStart[i], fromEnd[i]) = Collapse(collapse, fromStart[i], fromEnd[i]);
+            }
         }
 
         Finish();
@@ -216,6 +218,13 @@ internal sealed class SeriesInterpolation : IDisposable
     }
 
     private static bool Differs(double from, double to) => !from.Equals(to);
+
+    private static (double Start, double End) Collapse(SeriesCollapse collapse, double start, double end) => collapse switch
+    {
+        SeriesCollapse.Base => (start, start),
+        SeriesCollapse.Middle => ((start + end) / 2, (start + end) / 2),
+        _ => (start, end)
+    };
 
     private static void Ensure<T>(ref T[] buffer, int count)
     {
@@ -273,6 +282,7 @@ internal sealed class SeriesInterpolation : IDisposable
         toStart[position] = target.Start[index];
         toEnd[position] = target.End[index];
         Display.Value[position] = target.Value[index];
+        Display.Size[position] = target.Size[index];
         Display.Outer[position] = target.Outer[index];
     }
 
@@ -283,7 +293,7 @@ internal sealed class SeriesInterpolation : IDisposable
         fromEnd[position] = end;
     }
 
-    private void PlaceInserted(bool collapse)
+    private void PlaceInserted(SeriesCollapse collapse)
     {
         var count = Display.Count;
         for (var k = 0; k < count; k++)
@@ -293,9 +303,10 @@ internal sealed class SeriesInterpolation : IDisposable
                 continue;
             }
 
-            if (collapse)
+            if (collapse != SeriesCollapse.None)
             {
-                SetFrom(k, toX[k], toStart[k], toStart[k]);
+                var (start, end) = Collapse(collapse, toStart[k], toEnd[k]);
+                SetFrom(k, toX[k], start, end);
                 continue;
             }
 
@@ -311,7 +322,7 @@ internal sealed class SeriesInterpolation : IDisposable
         }
     }
 
-    private void PlaceDeparting(bool collapse)
+    private void PlaceDeparting(SeriesCollapse collapse)
     {
         var count = Display.Count;
         var previousKept = -1;
@@ -330,11 +341,10 @@ internal sealed class SeriesInterpolation : IDisposable
             }
 
             var shift = neighbor >= 0 ? toX[neighbor] - fromX[neighbor] : 0;
-            if ((previousKept < 0) || collapse)
+            if ((previousKept < 0) || (collapse != SeriesCollapse.None))
             {
                 toX[k] = fromX[k] + shift;
-                toStart[k] = fromStart[k];
-                toEnd[k] = (previousKept < 0) ? fromEnd[k] : fromStart[k];
+                (toStart[k], toEnd[k]) = previousKept < 0 ? (fromStart[k], fromEnd[k]) : Collapse(collapse, fromStart[k], fromEnd[k]);
             }
             else
             {

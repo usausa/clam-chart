@@ -268,10 +268,11 @@ internal sealed class AxisLayout
             return default;
         }
 
+        var day = MeasureTime(TimeLabelPrecision.Day);
         return new TimeLabelWidths(
-            MeasureTime(TimeLabelPrecision.Second),
-            MeasureTime(TimeLabelPrecision.Minute),
-            MeasureTime(TimeLabelPrecision.Day),
+            Math.Max(MeasureTime(TimeLabelPrecision.Second), day),
+            Math.Max(MeasureTime(TimeLabelPrecision.Minute), day),
+            day,
             MeasureTime(TimeLabelPrecision.Month));
 
         double MeasureTime(TimeLabelPrecision precision) =>
@@ -314,7 +315,7 @@ internal sealed class AxisLayout
         {
             text = Options.Kind switch
             {
-                ChartAxisKind.DateTime => ChartTextFormat.FormatTime(value, Options.LabelFormatter, Options.LabelConverter, Options.LabelFormat, TimeInterval.DefaultFormat, formatCulture),
+                ChartAxisKind.DateTime => ChartTextFormat.FormatTime(value, Options.LabelFormatter, Options.LabelConverter, Options.LabelFormat, TimeInterval.GetTickFormat(value), formatCulture),
                 _ when IsPercent && HasDefaultFormat => FormatPercent(value, formatCulture),
                 _ => ChartTextFormat.FormatValue(value, Options.LabelFormatter, Options.LabelConverter, Options.LabelFormat, formatCulture)
             };

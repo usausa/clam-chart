@@ -31,6 +31,7 @@ public sealed class ChartStyleTests
         Assert.Equal(new Size(320, 200), style.CompactSize);
         Assert.Equal(new Size(160, 96), style.MinimalSize);
         Assert.Same(ChartPalettes.DefaultLight, style.Palette);
+        Assert.Same(ChartPalettes.OrangesLight, style.HeatmapColorScale);
     }
 
     [Fact]
@@ -52,6 +53,7 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#73BF69"), dark.PositiveTextColor);
         Assert.Equal(Color.FromArgb("#F2495C"), dark.NegativeTextColor);
         Assert.Same(ChartPalettes.DefaultDark, dark.Palette);
+        Assert.Same(ChartPalettes.OrangesDark, dark.HeatmapColorScale);
         Assert.Equal(0.5, dark.EmphasisDimmedOpacity);
         Assert.Equal(light.DimmedOpacity, dark.DimmedOpacity);
         Assert.Equal(light.MutedTextColor, dark.MutedTextColor);
@@ -158,6 +160,16 @@ public sealed class ChartStyleTests
     }
 
     [Fact]
+    public void OrangesAreTheSchemeOfGrafanaAndReversedForDark()
+    {
+        // Act & Assert
+        Assert.Equal(
+            ["#FFF5EB", "#FEE6CE", "#FDD0A2", "#FDAE6B", "#FD8D3C", "#F16913", "#D94801", "#A63603", "#7F2704"],
+            ChartPalettes.OrangesLight.Select(static x => x.ToRgbaHex()[..7]));
+        Assert.Equal(ChartPalettes.OrangesLight.Reverse(), ChartPalettes.OrangesDark);
+    }
+
+    [Fact]
     public void WithCreatesAnIndependentCopy()
     {
         // Act
@@ -194,7 +206,8 @@ public sealed class ChartStyleTests
             ChartStyles.Light with { EmphasisDimmedOpacity = -0.1 },
             ChartStyles.Light with { AreaFillOpacity = Double.NaN },
             ChartStyles.Light with { CompactSize = new Size(-1, 200) },
-            ChartStyles.Light with { MinimalSize = new Size(400, 96) }
+            ChartStyles.Light with { MinimalSize = new Size(400, 96) },
+            ChartStyles.Light with { HeatmapColorScale = [Colors.Red] }
         ];
 
         // Act & Assert

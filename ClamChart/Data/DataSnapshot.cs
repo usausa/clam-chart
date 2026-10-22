@@ -13,6 +13,8 @@ internal sealed class DataSnapshot : IDisposable
     private Color?[]? colors;
     private double[]? maximums;
     private double[]? targets;
+    private double[]? lows;
+    private double[]? sizes;
 
     public static DataSnapshot Empty { get; } = new(0, ChartXKind.Index, null, null, null, null, null, null);
 
@@ -24,13 +26,17 @@ internal sealed class DataSnapshot : IDisposable
 
     public ReadOnlySpan<double> Y => y.AsSpan(0, Count);
 
+    public ReadOnlySpan<double> Low => lows is null ? default : lows.AsSpan(0, Count);
+
+    public ReadOnlySpan<double> Size => sizes is null ? default : sizes.AsSpan(0, Count);
+
     public bool HasCategories => categories is not null;
 
     public bool HasLabels => labels is not null;
 
     public bool HasColors => colors is not null;
 
-    public DataSnapshot(int count, ChartXKind xKind, double[]? x, double[]? y, object?[]? items, string?[]? categories, string?[]? labels, Color?[]? colors, double[]? maximums = null, double[]? targets = null)
+    public DataSnapshot(int count, ChartXKind xKind, double[]? x, double[]? y, object?[]? items, string?[]? categories, string?[]? labels, Color?[]? colors, double[]? maximums = null, double[]? targets = null, double[]? lows = null, double[]? sizes = null)
     {
         Count = count;
         XKind = xKind;
@@ -42,6 +48,8 @@ internal sealed class DataSnapshot : IDisposable
         this.colors = colors;
         this.maximums = maximums;
         this.targets = targets;
+        this.lows = lows;
+        this.sizes = sizes;
     }
 
     public void Dispose()
@@ -55,6 +63,8 @@ internal sealed class DataSnapshot : IDisposable
         Return(ref colors);
         Return(ref maximums);
         Return(ref targets);
+        Return(ref lows);
+        Return(ref sizes);
     }
 
     public object? GetItem(int index) => items is null ? Y[index] : items[index];

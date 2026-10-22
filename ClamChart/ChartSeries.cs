@@ -141,6 +141,15 @@ public abstract class ChartSeries : Element
         Source = new ChartDataSource(OnSourceChanged);
     }
 
+    internal virtual ChartValueOptions CreateValueOptions(IChartAccessorProvider? accessors, string? xKey) =>
+        new()
+        {
+            Accessors = ValueAccessors ?? accessors,
+            XKey = XKey ?? xKey,
+            YKey = YKey,
+            ValueSelector = ValueSelector
+        };
+
     internal virtual CartesianSeries CreateLayoutSeries() =>
         new()
         {
@@ -171,11 +180,14 @@ public abstract class ChartSeries : Element
     internal static void OnRenderChanged(BindableObject bindable, object oldValue, object newValue) =>
         ((ChartSeries)bindable).Owner?.InvalidateRender();
 
+    internal static void OnDataChanged(BindableObject bindable, object oldValue, object newValue) =>
+        ((ChartSeries)bindable).Owner?.InvalidateData();
+
     internal static bool ValidateSize(object? value, string name) =>
         (value is not double size) || (Double.IsFinite(size) && (size >= 0)) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be a finite value of zero or more.");
 
-    private static void OnDataChanged(BindableObject bindable, object oldValue, object newValue) =>
-        ((ChartSeries)bindable).Owner?.InvalidateData();
+    internal static bool ValidateRatio(object? value, string name) =>
+        (value is double ratio) && (ratio > 0) && (ratio <= 1) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be greater than 0 and not more than 1.");
 
     private static void OnValueFormatChanged(BindableObject bindable, object oldValue, object newValue)
     {

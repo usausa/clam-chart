@@ -1,5 +1,7 @@
 namespace ClamChart.Tests.Rendering;
 
+using System.Runtime.InteropServices;
+
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
@@ -94,17 +96,16 @@ public sealed class BarGaugeGradientTests
         new() { Value = 80, Level = ChartThresholdLevel.Critical }
     ];
 
-    private static (List<SKColor> Colors, List<float> Positions) GetStops(IList<ChartThreshold> thresholds, double percent, double ratio)
+    private static (SKColor[] Colors, float[] Positions) GetStops(IList<ChartThreshold> thresholds, double percent, double ratio)
     {
-        var colors = new List<SKColor>();
-        var positions = new List<float>();
-        BarGaugeGradient.GetStops(thresholds, percent, ratio, Colors.Blue, Style, colors, positions);
-        return (colors, positions);
+        var steps = new List<ChartDrawingThreshold>();
+        ThresholdSteps.Resolve(thresholds, Base, Style, steps);
+        return BarGaugeGradient.GetStops(CollectionsMarshal.AsSpan(steps), percent, ratio, Base);
     }
 
-    private static void AssertPositions(float[] expected, List<float> actual)
+    private static void AssertPositions(float[] expected, float[] actual)
     {
-        Assert.Equal(expected.Length, actual.Count);
+        Assert.Equal(expected.Length, actual.Length);
         for (var i = 0; i < expected.Length; i++)
         {
             Assert.Equal(expected[i], actual[i], Precision);

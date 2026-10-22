@@ -58,6 +58,8 @@ public sealed record ChartStyle
 
     public IReadOnlyList<Color> Palette { get; set; } = ChartPalettes.DefaultLight;
 
+    public IReadOnlyList<Color> HeatmapColorScale { get; set; } = ChartPalettes.OrangesLight;
+
     public Color OtherColor { get; set; } = Color.FromArgb("#B5B3AA");
 
     public Color GoodColor { get; set; } = Color.FromArgb("#56A64B");
@@ -122,6 +124,11 @@ public sealed record ChartStyle
         if (!IsSize(CompactSize) || !IsSize(MinimalSize) || (MinimalSize.Width > CompactSize.Width) || (MinimalSize.Height > CompactSize.Height))
         {
             throw new ArgumentException("Density sizes must be finite sizes of zero or more and the minimal size must not exceed the compact size.");
+        }
+
+        if (HeatmapColorScale.Count < 2)
+        {
+            throw new ArgumentException("The heatmap color scale must have two or more colors.");
         }
     }
 

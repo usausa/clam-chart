@@ -14,6 +14,7 @@ public sealed class ChartSeriesTests
         Assert.Throws<ArgumentOutOfRangeException>(() => series.MarkerSize = Double.PositiveInfinity);
         series.Thickness = 0;
         Assert.Equal(0, series.Thickness);
+        Assert.Equal(ChartMarkerShape.Circle, series.MarkerShape);
     }
 
     [Fact]
@@ -38,6 +39,8 @@ public sealed class ChartSeriesTests
 
         // Act & Assert
         Assert.Equal(CartesianSeries.DefaultBarWidthRatio, series.BarWidthRatio);
+        Assert.False(series.TrackVisible);
+        Assert.Equal(ChartFillMode.Solid, series.FillMode);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = 0);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = 1.5);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = Double.NaN);
@@ -66,6 +69,51 @@ public sealed class ChartSeriesTests
         Assert.Equal(0, series.MarkerSize);
         Assert.Equal(0, series.FillOpacity);
         Assert.Equal(ChartSeriesKind.Scatter, series.CreateLayoutSeries().Kind);
+    }
+
+    [Fact]
+    public void RangeBarSeriesReadsBothEndsWithTheBarSettings()
+    {
+        // Arrange
+        var series = new RangeBarSeries { LowKey = "low", HighKey = "high", BarWidthRatio = 0.8, MaxBarWidth = 32 };
+
+        // Act
+        var input = series.CreateLayoutSeries();
+        var options = series.CreateValueOptions(null, "day");
+
+        // Assert
+        Assert.False(series.TrackVisible);
+        Assert.Null(series.CornerRadius);
+        Assert.Equal(ChartSeriesKind.RangeBar, input.Kind);
+        Assert.Equal(0.8, input.BarWidthRatio);
+        Assert.Equal(32, input.MaxBarWidth);
+        Assert.Equal("day", options.XKey);
+        Assert.Equal("high", options.YKey);
+        Assert.Equal("low", options.LowKey);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = 0);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.CornerRadius = -1);
+    }
+
+    [Fact]
+    public void BubbleSeriesHasSizeLimitsAndReadsTheSizeKey()
+    {
+        // Arrange
+        var series = new BubbleSeries { SizeKey = "population" };
+
+        // Act
+        var input = series.CreateLayoutSeries();
+        var options = series.CreateValueOptions(null, null);
+
+        // Assert
+        Assert.Equal(8, series.MinBubbleSize);
+        Assert.Equal(40, series.MaxBubbleSize);
+        Assert.Equal(ChartSeriesKind.Scatter, input.Kind);
+        Assert.True(input.IsBubble);
+        Assert.Equal(8, input.MinBubbleSize);
+        Assert.Equal(40, input.MaxBubbleSize);
+        Assert.Equal("population", options.SizeKey);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.MaxBubbleSize = -1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => series.MinBubbleSize = Double.NaN);
     }
 
     [Fact]

@@ -426,6 +426,28 @@ public sealed class ClamChartViewAnimationTests
         return view;
     }
 
+    [Fact]
+    public void RangeBarGrowsFromTheMiddleOfItsRange()
+    {
+        // Arrange
+        using var view = Chart(new RangeBarSeries { ItemsSource = new List<ChartEntry> { new("C0", 30, Target: 10) }, LowSelector = static x => ((ChartEntry)x).Target });
+        view.AnimationEasing = Easing.Linear;
+        view.YAxis = new NumericAxis { Minimum = 0, Maximum = 40, GridLinesVisible = false };
+        var driver = Driver(view);
+        using var first = view.Paint(360, 240);
+
+        // Act
+        driver.Frame(Data, 0.5);
+        using var middle = view.Paint(360, 240);
+
+        // Assert
+        var axis = view.ChartLayout.YAxis;
+        var x = GetBarBounds(view, 0, 0).MidX;
+        Assert.Equal(255, GetPixel(middle, x, axis.ToPixel(20)).Alpha);
+        Assert.Equal(0, GetPixel(middle, x, axis.ToPixel(28)).Alpha);
+        Assert.Equal(0, GetPixel(middle, x, axis.ToPixel(12)).Alpha);
+    }
+
     private static TestClamChartView Chart(params ChartSeries[] series)
     {
         var view = new TestClamChartView { AnimationDriver = new TestAnimationDriver() };

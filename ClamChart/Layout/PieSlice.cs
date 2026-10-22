@@ -10,8 +10,8 @@ internal readonly record struct PieSlice(
     string? Label,
     string PercentText,
     string ValueText,
-    string? InsideText,
-    double InsideWidth)
+    string? LabelText,
+    double LabelWidth)
 {
     public bool IsOthers => DataIndex < 0;
 

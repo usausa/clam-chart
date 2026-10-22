@@ -1,9 +1,6 @@
 namespace ClamChart.Rendering;
 
-using ClamChart.Layout;
-
 using SkiaSharp;
-using SkiaSharp.Views.Maui;
 
 internal static class RadialBarGradient
 {
@@ -19,15 +16,18 @@ internal static class RadialBarGradient
 
     private const float Lighten = 10;
 
-    public static void GetThresholdStops(IList<ChartThreshold> thresholds, SKColor baseColor, ChartStyle style, List<SKColor> colors, List<float> positions)
+    private const int StackLimit = 32;
+
+    public static (SKColor[] Colors, float[] Positions) GetThresholdStops(ReadOnlySpan<ChartDrawingThreshold> sorted, SKColor baseColor)
     {
-        colors.Clear();
-        positions.Clear();
-        var sorted = Sort(thresholds);
+        var capacity = sorted.Length + 2;
+        var colors = capacity <= StackLimit ? stackalloc SKColor[capacity] : new SKColor[capacity];
+        var positions = capacity <= StackLimit ? stackalloc float[capacity] : new float[capacity];
+        var count = 0;
         if ((sorted.Length == 0) || !Double.IsNegativeInfinity(sorted[0].Value))
         {
-            colors.Add(baseColor);
-            positions.Add(0);
+            colors[count] = baseColor;
+            positions[count++] = 0;
         }
 
         foreach (var threshold in sorted)
@@ -37,32 +37,27 @@ internal static class RadialBarGradient
                 break;
             }
 
-            colors.Add(ThresholdResolver.GetColor(threshold, style)?.ToSKColor() ?? baseColor);
-            positions.Add(Double.IsNegativeInfinity(threshold.Value) ? 0 : (float)Math.Clamp(threshold.Value / 100, 0, 1));
+            colors[count] = threshold.Color;
+            positions[count++] = Double.IsNegativeInfinity(threshold.Value) ? 0 : (float)Math.Clamp(threshold.Value / 100, 0, 1);
         }
 
-        if (positions[^1] < 1)
+        if (positions[count - 1] < 1)
         {
-            colors.Add(colors[^1]);
-            positions.Add(1);
+            colors[count] = colors[count - 1];
+            positions[count++] = 1;
         }
+
+        return (colors[..count].ToArray(), positions[..count].ToArray());
     }
 
-    public static void GetColorStops(SKColor color, double ratio, bool dark, List<SKColor> colors, List<float> positions)
+    public static (SKColor[] Colors, float[] Positions) GetColorStops(SKColor color, double ratio, bool dark)
     {
-        colors.Clear();
-        positions.Clear();
         var darker = Shift(color, -Spin, 0, dark ? -DarkDarken : -LightDarken);
         var lighter = Shift(AddBrightness(Shift(color, Spin, Saturate, 0), Brighten), 0, 0, Lighten);
         var value = (float)Math.Clamp(ratio, 0, 1);
         var start = dark ? ChartColor.Lerp(darker, lighter, 1 - value) : lighter;
         var end = dark ? lighter : ChartColor.Lerp(lighter, darker, value);
-        colors.Add(start);
-        positions.Add(0);
-        colors.Add(end);
-        positions.Add(value);
-        colors.Add(end);
-        positions.Add(1);
+        return ([start, end, end], [0, value, 1]);
     }
 
     public static SKColor GetColorAt(ReadOnlySpan<SKColor> colors, ReadOnlySpan<float> positions, double position)
@@ -94,25 +89,5 @@ internal static class RadialBarGradient
     {
         var delta = (int)Math.Round(255 * amount / 100d);
         return new SKColor((byte)Math.Min(255, color.Red + delta), (byte)Math.Min(255, color.Green + delta), (byte)Math.Min(255, color.Blue + delta), color.Alpha);
-    }
-
-    private static ChartThreshold[] Sort(IList<ChartThreshold> thresholds)
-    {
-        var sorted = new ChartThreshold[thresholds.Count];
-        thresholds.CopyTo(sorted, 0);
-        for (var i = 1; i < sorted.Length; i++)
-        {
-            var item = sorted[i];
-            var j = i - 1;
-            while ((j >= 0) && (sorted[j].Value > item.Value))
-            {
-                sorted[j + 1] = sorted[j];
-                j--;
-            }
-
-            sorted[j + 1] = item;
-        }
-
-        return sorted;
     }
 }

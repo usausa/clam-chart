@@ -1,5 +1,7 @@
 namespace ClamChart.Rendering;
 
+using System.Runtime.InteropServices;
+
 using ClamChart.Animation;
 using ClamChart.Layout;
 
@@ -8,17 +10,13 @@ using SkiaSharp.Views.Maui;
 
 internal sealed class RadialBarRenderer : IDisposable
 {
-    private const double Tolerance = 1e-6;
-
-    private const byte TrackAlpha = 18;
+    public const double Tolerance = 1e-6;
 
     private const byte LightSegmentAlpha = 77;
 
     private const byte DarkSegmentAlpha = 51;
 
     private const float WrapLightness = -15;
-
-    private const double MinSegmentLength = 3;
 
     private const int BufferSize = 64;
 
@@ -30,11 +28,13 @@ internal sealed class RadialBarRenderer : IDisposable
     private readonly ChartTextPainter text;
     private readonly ChartSpanText spans = new();
     private readonly SKPaint shaderPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke };
+    private readonly SKPaint glowPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke };
     private readonly Dictionary<(SKColor Color, double Ratio), SKShader> gradients = [];
     private readonly Dictionary<(SKColor Color, double Ratio), GradientStops> gradientStops = [];
-    private readonly List<SKColor> stopColors = [];
-    private readonly List<float> stopPositions = [];
+    private readonly List<ChartDrawingThreshold> steps = [];
     private IReadOnlyList<Color>? palette;
+    private SKMaskFilter? glowFilter;
+    private float glowSigma;
     private int version = -1;
 
     public IChartTextMeasurer Measurer => text;
@@ -50,6 +50,8 @@ internal sealed class RadialBarRenderer : IDisposable
         paints.Dispose();
         text.Dispose();
         shaderPaint.Dispose();
+        glowPaint.Dispose();
+        glowFilter?.Dispose();
     }
 
     public void DrawEmptyText(SKCanvas canvas, string value, ChartRect bounds, ChartStyle style) => text.DrawEmptyText(canvas, value, bounds, style);
@@ -85,11 +87,13 @@ internal sealed class RadialBarRenderer : IDisposable
         return ThresholdResolver.GetColor(ThresholdResolver.Resolve(state.Thresholds, percent), style)?.ToSKColor() ?? baseColor;
     }
 
-    private static SKColor Darken(SKColor color)
+    public static SKColor Darken(SKColor color)
     {
         color.ToHsl(out var h, out var s, out var l);
         return SKColor.FromHsl(h, s, Math.Clamp(l + WrapLightness, 0, 100), color.Alpha);
     }
+
+    public static SKColor GetUnlitColor(SKColor? trackColor, bool dark) => trackColor ?? (dark ? DarkSegmentColor : LightSegmentColor);
 
     private static SKRect GetOval(float radius) => new(-radius, -radius, radius, radius);
 
@@ -107,12 +111,17 @@ internal sealed class RadialBarRenderer : IDisposable
             return;
         }
 
-        var track = style.TrackColor?.ToSKColor() ?? (style.IsDark ? new SKColor(255, 255, 255, TrackAlpha) : new SKColor(0, 0, 0, TrackAlpha));
+        var track = ChartColor.GetTrack(style);
         var entrance = display.EntranceAlpha;
         canvas.Save();
         try
         {
             canvas.Translate((float)layout.CenterX, (float)layout.CenterY);
+            if (layout.GlowRadius > 0)
+            {
+                DrawGlows(canvas, layout, display, selection, state, style, entrance);
+            }
+
             for (var i = 0; i < display.Count; i++)
             {
                 var row = display.GetRow(i);
@@ -127,7 +136,7 @@ internal sealed class RadialBarRenderer : IDisposable
                 var baseColor = GetBaseColor(row, state, style);
                 if (layout.DisplayMode == ChartRadialBarMode.Segmented)
                 {
-                    DrawSegments(canvas, layout, radius, ratio, baseColor, state, style, alpha);
+                    DrawSegments(canvas, layout, radius, ratio, baseColor, state, style, alpha, false);
                     continue;
                 }
 
@@ -155,6 +164,59 @@ internal sealed class RadialBarRenderer : IDisposable
         {
             canvas.Restore();
         }
+    }
+
+    private void DrawGlows(SKCanvas canvas, RadialBarLayout layout, GaugeInterpolator<RadialBarRow> display, PieSelection selection, RadialBarRenderState state, ChartStyle style, double entrance)
+    {
+        var segmented = layout.DisplayMode == ChartRadialBarMode.Segmented;
+        glowPaint.MaskFilter = GetGlowFilter(layout.GlowRadius);
+        glowPaint.StrokeWidth = (float)layout.Thickness * ChartGlow.WidthRatio;
+        glowPaint.StrokeCap = (layout.DisplayMode == ChartRadialBarMode.Basic) && (layout.CapStyle == ChartCapStyle.Round) ? SKStrokeCap.Round : SKStrokeCap.Butt;
+        for (var i = 0; i < display.Count; i++)
+        {
+            var row = display.GetRow(i);
+            var alpha = display.GetAlpha(i) * entrance * selection.Alpha(display.GetKey(i)) * ChartGlow.Opacity;
+            var radius = (float)layout.GetRingRadius(display.GetSlot(i));
+            var ratio = Double.IsNaN(row.Percent) ? 0 : display.GetRatio(i);
+            if ((alpha <= 0) || (radius <= 0) || (ratio <= Tolerance))
+            {
+                continue;
+            }
+
+            var baseColor = GetBaseColor(row, state, style);
+            if (segmented)
+            {
+                glowPaint.Shader = null;
+                DrawSegments(canvas, layout, radius, ratio, baseColor, state, style, alpha, true);
+            }
+            else if (layout.DisplayMode == ChartRadialBarMode.Gradient)
+            {
+                glowPaint.Shader = GetGradient(layout, row, baseColor, state, style, out _);
+                glowPaint.Color = SKColors.Black.WithAlpha((byte)Math.Round(255 * alpha));
+                DrawSweep(canvas, layout, radius, 0, Math.Min(ratio, 1), glowPaint);
+            }
+            else
+            {
+                glowPaint.Shader = null;
+                glowPaint.Color = ChartColor.Fade(GetColor(state, row.Percent, baseColor, style), alpha);
+                DrawSweep(canvas, layout, radius, 0, Math.Min(ratio, 1), glowPaint);
+            }
+        }
+
+        glowPaint.Shader = null;
+    }
+
+    private SKMaskFilter GetGlowFilter(double radius)
+    {
+        var sigma = ChartGlow.GetSigma(radius);
+        if ((glowFilter is null) || !glowSigma.Equals(sigma))
+        {
+            glowFilter?.Dispose();
+            glowFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma);
+            glowSigma = sigma;
+        }
+
+        return glowFilter;
     }
 
     private void DrawBasicBar(SKCanvas canvas, RadialBarLayout layout, float radius, double ratio, SKColor color, double alpha)
@@ -208,41 +270,37 @@ internal sealed class RadialBarRenderer : IDisposable
 
         if (thresholds)
         {
-            RadialBarGradient.GetThresholdStops(state.Thresholds, baseColor, style, stopColors, stopPositions);
-        }
-        else
-        {
-            RadialBarGradient.GetColorStops(baseColor, row.Ratio, style.IsDark, stopColors, stopPositions);
+            ThresholdSteps.Resolve(state.Thresholds, baseColor, style, steps);
         }
 
-        var colors = stopColors.ToArray();
-        var positions = stopPositions.ToArray();
-        var sweep = (float)Math.Min(layout.SweepAngle, 360);
+        var (colors, positions) = thresholds
+            ? RadialBarGradient.GetThresholdStops(CollectionsMarshal.AsSpan(steps), baseColor)
+            : RadialBarGradient.GetColorStops(baseColor, row.Ratio, style.IsDark);
         stops = new GradientStops(colors, positions);
         gradientStops[key] = stops;
-        shader = SKShader.CreateSweepGradient(SKPoint.Empty, colors, positions, SKShaderTileMode.Clamp, 0, sweep, SKMatrix.CreateRotationDegrees((float)(layout.StartAngle - 90)));
+        shader = CreateGradient(colors, positions, layout.StartAngle, layout.SweepAngle);
         gradients[key] = shader;
         return shader;
     }
 
-    private void DrawSegments(SKCanvas canvas, RadialBarLayout layout, float radius, double ratio, SKColor baseColor, RadialBarRenderState state, ChartStyle style, double alpha)
+    public static SKShader CreateGradient(SKColor[] colors, float[] positions, double startAngle, double sweepAngle) =>
+        SKShader.CreateSweepGradient(SKPoint.Empty, colors, positions, SKShaderTileMode.Clamp, 0, (float)Math.Min(sweepAngle, 360), SKMatrix.CreateRotationDegrees((float)(startAngle - 90)));
+
+    private void DrawSegments(SKCanvas canvas, RadialBarLayout layout, float radius, double ratio, SKColor baseColor, RadialBarRenderState state, ChartStyle style, double alpha, bool glow)
     {
         var thickness = layout.Thickness;
         var gapAngle = layout.SegmentGap / radius * 180 / Math.PI;
-        var inner = Math.Max(0, radius - (thickness / 2));
-        var length = Math.PI * 2 * inner * Math.Min(layout.SweepAngle, 360) / 360;
-        var limit = (int)Math.Floor(length / (layout.SegmentGap + MinSegmentLength));
-        var count = Math.Max(1, Math.Min(layout.SegmentCount, limit));
+        var count = RadialBarLayout.GetSegmentCount(radius, thickness, layout.SweepAngle, layout.SegmentCount, layout.SegmentGap);
         var sweep = Math.Min(layout.SweepAngle, 360);
         var step = sweep / count;
-        var unlit = style.TrackColor?.ToSKColor() ?? (style.IsDark ? DarkSegmentColor : LightSegmentColor);
-        var paint = paints.Stroke(SKColors.Black, (float)thickness, SKStrokeCap.Butt, SKStrokeJoin.Miter);
+        var unlit = GetUnlitColor(style.TrackColor?.ToSKColor(), style.IsDark);
+        var paint = glow ? glowPaint : paints.Stroke(SKColors.Black, (float)thickness, SKStrokeCap.Butt, SKStrokeJoin.Miter);
         var oval = GetOval(radius);
         for (var c = 0; c < count; c++)
         {
             var fraction = (double)c / count;
             var lit = fraction < ratio - Tolerance;
-            if (!lit && !state.TrackVisible)
+            if (!lit && (glow || !state.TrackVisible))
             {
                 continue;
             }

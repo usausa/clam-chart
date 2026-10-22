@@ -6,5 +6,6 @@ internal enum SkeletonShape
     Bars,
     Ring,
     Rows,
-    Tile
+    Tile,
+    Grid
 }

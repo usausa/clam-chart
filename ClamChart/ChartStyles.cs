@@ -19,6 +19,7 @@ public static class ChartStyles
         SkeletonColor = Color.FromArgb("#232321"),
         SkeletonHighlightColor = Color.FromArgb("#2C2C2A"),
         Palette = ChartPalettes.DefaultDark,
+        HeatmapColorScale = ChartPalettes.OrangesDark,
         OtherColor = Color.FromArgb("#5C5B56"),
         GoodColor = Color.FromArgb("#73BF69"),
         WarningColor = Color.FromArgb("#FADE2A"),

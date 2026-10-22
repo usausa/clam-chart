@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             x:Class="Example.Modules.Chart.ChartDrawingView"
+             x:DataType="{x:Type module:ChartDrawingViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartDrawingViewModel}"
+             shell:ShellProperty.Title="Drawing"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Mode"
+             shell:ShellProperty.Function3Text="Data"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True">
+
+    <Grid Style="{StaticResource StatGrid}"
+          RowDefinitions="3*,3*,2*,2*"
+          ColumnDefinitions="*,*">
+        <Border Grid.Row="0" Grid.Column="0"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="ストレージ" />
+                <Image Grid.Row="1"
+                       Source="{Binding StorageImage}"
+                       Aspect="AspectFit" />
+            </Grid>
+        </Border>
+        <Border Grid.Row="0" Grid.Column="1"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="今日の活動" />
+                <Image Grid.Row="1"
+                       Source="{Binding ActivityImage}"
+                       Aspect="AspectFit" />
+            </Grid>
+        </Border>
+        <Border Grid.Row="1" Grid.Column="0"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="CPU 使用率" />
+                <Image Grid.Row="1"
+                       Source="{Binding CpuImage}"
+                       Aspect="AspectFit" />
+            </Grid>
+        </Border>
+        <Border Grid.Row="1" Grid.Column="1"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="曜日ごとの負荷" />
+                <Image Grid.Row="1"
+                       Source="{Binding ColumnsImage}"
+                       Aspect="AspectFit" />
+            </Grid>
+        </Border>
+        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="目標の達成" />
+                <Image Grid.Row="1"
+                       Source="{Binding GoalsImage}"
+                       Aspect="AspectFit" />
+            </Grid>
+        </Border>
+        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="応答時間" />
+                <Image Grid.Row="1"
+                       Source="{Binding TrendImage}"
+                       Aspect="AspectFit" />
+            </Grid>
+        </Border>
+    </Grid>
+
+</ContentView>

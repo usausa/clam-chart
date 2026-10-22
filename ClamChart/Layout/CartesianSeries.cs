@@ -23,6 +23,12 @@ internal sealed record CartesianSeries
 
     public double? MaxBarWidth { get; init; }
 
+    public bool IsBubble { get; init; }
+
+    public double MinBubbleSize { get; init; }
+
+    public double MaxBubbleSize { get; init; }
+
     public bool IsVisible { get; init; } = true;
 
     public string? Title { get; init; }

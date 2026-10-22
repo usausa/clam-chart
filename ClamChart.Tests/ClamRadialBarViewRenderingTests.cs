@@ -138,6 +138,42 @@ public sealed class ClamRadialBarViewRenderingTests
         Assert.Equal(Track, GetPixel(bitmap, 300), ColorComparer.Loose);
     }
 
+    [Theory]
+    [InlineData(ChartRadialBarMode.Basic)]
+    [InlineData(ChartRadialBarMode.Gradient)]
+    [InlineData(ChartRadialBarMode.Segmented)]
+    public void GlowSpreadsOutsideTheValueOnly(ChartRadialBarMode mode)
+    {
+        // Arrange
+        using var view = Ring(50);
+        view.DisplayMode = mode;
+        view.GlowRadius = 8;
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        var outside = view.ChartLayout.OuterRadius + 3;
+        Assert.True(GetPixel(bitmap, 90, outside).Alpha > 20);
+        Assert.Equal(0, GetPixel(bitmap, 270, outside).Alpha);
+    }
+
+    [Fact]
+    public void GradientGlowDoesNotWrapPastTheStart()
+    {
+        // Arrange
+        using var view = Ring(50);
+        view.DisplayMode = ChartRadialBarMode.Gradient;
+        view.CapStyle = ChartCapStyle.Round;
+        view.GlowRadius = 8;
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        Assert.True(GetPixel(bitmap, 350, view.ChartLayout.GetRingRadius(0)).Alpha < 30);
+    }
+
     [Fact]
     public void TheCenterShowsThePercentage()
     {
@@ -189,11 +225,14 @@ public sealed class ClamRadialBarViewRenderingTests
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Flat)]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round)]
-    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round)]
-    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat)]
-    public void FramesDoNotAllocate(ChartRadialBarMode mode, ChartCapStyle cap)
+    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Flat, 0)]
+    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, 0)]
+    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, 0)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, 0)]
+    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, 8)]
+    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, 8)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, 8)]
+    public void FramesDoNotAllocate(ChartRadialBarMode mode, ChartCapStyle cap, double glow)
     {
         // Arrange
         using var view = new TestClamRadialBarView
@@ -203,6 +242,7 @@ public sealed class ClamRadialBarViewRenderingTests
             EntranceAnimation = ChartEntranceAnimation.None,
             DisplayMode = mode,
             CapStyle = cap,
+            GlowRadius = glow,
             OverflowMode = ChartOverflowMode.Wrap,
             LegendVisible = true,
             LegendValueMode = ChartLegendValueMode.Percent,

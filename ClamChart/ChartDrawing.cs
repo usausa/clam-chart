@@ -5,8 +5,9 @@ using System.Buffers;
 using ClamChart.Rendering;
 
 using SkiaSharp;
+using SkiaSharp.Views.Maui;
 
-public static class ChartDrawing
+public static partial class ChartDrawing
 {
     private const float MarkerRatio = 1.25f;
 
@@ -19,6 +20,10 @@ public static class ChartDrawing
     private const float WinLossGap = 1;
 
     private const double FlatRange = 1;
+
+    private static readonly SKColor[] LightPalette = ToColors(ChartPalettes.DefaultLight);
+
+    private static readonly SKColor[] DarkPalette = ToColors(ChartPalettes.DefaultDark);
 
     public static void DrawSparkline(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in SparklineDrawOptions options)
     {
@@ -248,6 +253,45 @@ public static class ChartDrawing
         if ((index >= 0) && (radius > 0))
         {
             canvas.DrawCircle(scale.ToX(index), scale.ToY(values[index]), radius, paint);
+        }
+    }
+
+    private static SKColor[] ToColors(IReadOnlyList<Color> palette)
+    {
+        var colors = new SKColor[palette.Count];
+        for (var i = 0; i < colors.Length; i++)
+        {
+            colors[i] = palette[i].ToSKColor();
+        }
+
+        return colors;
+    }
+
+    private static float GetLength(float value) => Single.IsFinite(value) && (value > 0) ? value : 0;
+
+    private static ChartDrawingThreshold[]? RentSteps(IReadOnlyList<ChartDrawingThreshold>? thresholds, out int count)
+    {
+        count = thresholds?.Count ?? 0;
+        if ((thresholds is null) || (count == 0))
+        {
+            return null;
+        }
+
+        var steps = ArrayPool<ChartDrawingThreshold>.Shared.Rent(count);
+        for (var i = 0; i < count; i++)
+        {
+            steps[i] = thresholds[i];
+        }
+
+        ThresholdSteps.Sort(steps.AsSpan(0, count));
+        return steps;
+    }
+
+    private static void ReturnSteps(ChartDrawingThreshold[]? steps)
+    {
+        if (steps is not null)
+        {
+            ArrayPool<ChartDrawingThreshold>.Shared.Return(steps);
         }
     }
 

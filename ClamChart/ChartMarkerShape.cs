@@ -3,5 +3,6 @@ namespace ClamChart;
 public enum ChartMarkerShape
 {
     Circle,
-    Square
+    Square,
+    Diamond
 }

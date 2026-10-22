@@ -82,6 +82,11 @@ public partial class ClamChartView
 
     private void Attach(ChartSeries series)
     {
+        if (series is RadarSeries)
+        {
+            throw new InvalidOperationException("The radar series can only be used by ClamRadarChartView.");
+        }
+
         if ((series.Owner is not null) && (series.Owner != this))
         {
             throw new InvalidOperationException("The series is already used by another chart.");

@@ -509,6 +509,48 @@ public sealed class ClamChartViewInputTests
     }
 
     [Fact]
+    public void RangeBarReportsItsHighValueAndShowsTheRangeInTheTooltip()
+    {
+        // Arrange
+        using var view = Chart(new RangeBarSeries { Title = "Temp", ItemsSource = new List<ChartEntry> { new("C0", 25, Target: 12), new("C1", 18, Target: 8) }, LowSelector = static x => ((ChartEntry)x).Target });
+        ChartItemEventArgs? args = null;
+        view.ItemTapped += (_, e) => args = e;
+        using var bitmap = view.Paint(360, 240);
+        var point = BarCenter(view, 0, 1);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, point, 0);
+        view.HandleTouch(1, SKTouchAction.Released, point, 10);
+
+        // Assert
+        Assert.NotNull(args);
+        Assert.Equal(1, args.Index);
+        Assert.Equal(18, args.Y);
+        Assert.Equal("Temp 12 – 25", view.GetTrackingText(0, 0));
+    }
+
+    [Fact]
+    public void LargeBubblesAreHitAnywhereInsideAndShowTheirSize()
+    {
+        // Arrange
+        using var view = Chart(new BubbleSeries { Title = "Pop", ItemsSource = new List<ChartPoint> { new(1, 11), new(5, 15), new(10, 20) }, SizeSelector = static x => ((ChartPoint)x).X * 10, MaxBubbleSize = 80 });
+        ChartItemEventArgs? args = null;
+        view.ItemTapped += (_, e) => args = e;
+        using var bitmap = view.Paint(360, 240);
+        var layout = view.ChartLayout;
+        var point = new Point(layout.XAxis.ToPixel(10) - 30, layout.YAxis.ToPixel(20) + 5);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, point, 0);
+        view.HandleTouch(1, SKTouchAction.Released, point, 10);
+
+        // Assert
+        Assert.NotNull(args);
+        Assert.Equal(2, args.Index);
+        Assert.Equal("Pop 15 (50)", view.GetTrackingText(0, 1));
+    }
+
+    [Fact]
     public void TooltipFormatterReceivesTheTrackedPoint()
     {
         // Arrange

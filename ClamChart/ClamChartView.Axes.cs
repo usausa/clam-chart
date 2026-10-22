@@ -163,7 +163,7 @@ public partial class ClamChartView
     {
         foreach (var series in attached)
         {
-            if ((series.Kind is not (ChartSeriesKind.Line or ChartSeriesKind.Scatter)) && ((series.YAxis == target) || !secondary))
+            if ((series.Kind is not (ChartSeriesKind.Line or ChartSeriesKind.Scatter or ChartSeriesKind.RangeBar)) && ((series.YAxis == target) || !secondary))
             {
                 return true;
             }

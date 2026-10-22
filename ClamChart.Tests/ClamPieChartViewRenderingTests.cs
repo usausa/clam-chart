@@ -146,6 +146,26 @@ public sealed class ClamPieChartViewRenderingTests
     }
 
     [Fact]
+    public void OutsideLabelsDrawALeaderLineInTheSliceColor()
+    {
+        // Arrange
+        using var view = Chart(1, 1);
+        view.LabelsMode = ChartPieLabelsMode.Outside;
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var right = layout.OutsideLabels[0];
+        var left = layout.OutsideLabels[1];
+        Assert.True(IsNear(GetPixel(bitmap, (right.ElbowX + right.EndX) / 2, right.ElbowY), Blue));
+        Assert.True(IsNear(GetPixel(bitmap, (left.ElbowX + left.EndX) / 2, left.ElbowY), Orange));
+        Assert.True(right.Bounds.X > layout.CenterX + layout.OuterRadius);
+        Assert.True(CountPixels(bitmap, SKRect.Create((float)right.Bounds.X, (float)right.Bounds.Y, (float)right.Bounds.Width, (float)right.Bounds.Height), static color => color.Alpha > 0) > 5);
+    }
+
+    [Fact]
     public void CenterTextIsDrawnInTheHole()
     {
         // Arrange
@@ -220,12 +240,14 @@ public sealed class ClamPieChartViewRenderingTests
         Assert.Equal(0, CountPixels(second, SKRect.Create(0, 0, 300, 300), static color => color.Alpha > 0));
     }
 
-    [Fact]
-    public void FramesDoNotAllocate()
+    [Theory]
+    [InlineData(ChartPieLabelsMode.Inside)]
+    [InlineData(ChartPieLabelsMode.Outside)]
+    public void FramesDoNotAllocate(ChartPieLabelsMode mode)
     {
         // Arrange
         using var view = Chart(10, 20, 30);
-        view.LabelsMode = ChartPieLabelsMode.Inside;
+        view.LabelsMode = mode;
         view.LegendVisible = true;
         view.CenterLabel = "Total";
         view.SelectionMode = ChartSelectionMode.Item;
@@ -247,6 +269,9 @@ public sealed class ClamPieChartViewRenderingTests
         new() { ItemsSource = values.Select(static (value, index) => new ChartEntry($"C{index}", value)).ToList(), CenterValueMode = ChartCenterValueMode.None };
 
     private static bool IsOpaqueInk(SKColor color) => (color.Alpha > 200) && (color.Red < 80) && (color.Green < 80) && (color.Blue < 80);
+
+    private static bool IsNear(SKColor color, SKColor expected) =>
+        (color.Alpha > 200) && (Math.Abs(color.Red - expected.Red) < 8) && (Math.Abs(color.Green - expected.Green) < 8) && (Math.Abs(color.Blue - expected.Blue) < 8);
 
     private static SKColor GetPixel(SKBitmap bitmap, double x, double y) => bitmap.GetPixel((int)(x * Scale), (int)(y * Scale));
 
