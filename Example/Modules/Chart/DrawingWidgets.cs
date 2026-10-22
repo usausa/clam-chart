@@ -31,7 +31,7 @@ internal static class DrawingWidgets
     public static byte[] Storage(double percent, ChartRadialBarMode mode, bool dark, float scale) =>
         Render(Square, Square, scale, canvas =>
         {
-            var options = new RadialBarDrawOptions { DisplayMode = mode, CapStyle = ChartCapStyle.Round, Thickness = 14, SegmentCount = 24, GlowRadius = 4, IsDark = dark };
+            var options = new RadialBarDrawOptions { DisplayMode = mode, CapStyle = ChartCapStyle.Round, Thickness = 14, SegmentCount = 24, BarGlow = true, IsDark = dark };
             var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), [percent], options);
             DrawCenter(canvas, hole, FormatPercent(percent), GetStyle(dark).PrimaryTextColor.ToSKColor());
         });

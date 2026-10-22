@@ -34,7 +34,7 @@ public readonly record struct RadialBarDrawOptions
 
     public SKColor? TrackColor { get; init; }
 
-    public float GlowRadius { get; init; }
+    public bool BarGlow { get; init; }
 
     public ChartOverflowMode OverflowMode { get; init; }
 

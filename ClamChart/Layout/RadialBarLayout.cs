@@ -30,6 +30,12 @@ internal sealed class RadialBarLayout
 
     private const double MinSegmentLength = 3;
 
+    private const double GlowMarginRatio = 0.02;
+
+    private const double GlowSigmaBase = 0.75;
+
+    private const double GlowSigmaRatio = 0.08;
+
     private const int FitAttempts = 3;
 
     private const string PercentPattern = "P0";
@@ -65,7 +71,7 @@ internal sealed class RadialBarLayout
 
     public ChartRadialBarMode DisplayMode { get; private set; }
 
-    public double GlowRadius { get; private set; }
+    public bool BarGlow { get; private set; }
 
     public ChartOverflowMode OverflowMode { get; private set; }
 
@@ -176,7 +182,7 @@ internal sealed class RadialBarLayout
         SweepAngle = options.SweepAngle;
         CapStyle = options.CapStyle;
         DisplayMode = options.DisplayMode;
-        GlowRadius = options.GlowRadius;
+        BarGlow = options.BarGlow;
         OverflowMode = options.OverflowMode;
         SegmentCount = options.SegmentCount;
         SegmentGap = style.SegmentGap;
@@ -260,19 +266,17 @@ internal sealed class RadialBarLayout
         RingBounds = new ChartRect(left ? area.X + width + LegendGap : area.X, area.Y, area.Width - width - LegendGap, area.Height);
     }
 
-    public static (double CenterX, double CenterY, double Radius, double Thickness) FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, double glowRadius, ChartCapStyle capStyle)
+    public static (double CenterX, double CenterY, double Radius, double Thickness) FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, bool barGlow, ChartCapStyle capStyle)
     {
+        if (barGlow)
+        {
+            var margin = Math.Min(area.Width, area.Height) * GlowMarginRatio;
+            area = new ChartRect(area.X + margin, area.Y + margin, Math.Max(0, area.Width - (margin * 2)), Math.Max(0, area.Height - (margin * 2)));
+        }
+
         var (left, top, right, bottom) = PieLayout.GetUnitBounds(startAngle, sweepAngle, innerRadius);
         var radius = GetRadius(area, left, top, right, bottom);
         var thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
-        if (glowRadius > 0)
-        {
-            var extent = ChartGlow.GetExtent(thickness, glowRadius);
-            area = new ChartRect(area.X + extent, area.Y + extent, Math.Max(0, area.Width - (extent * 2)), Math.Max(0, area.Height - (extent * 2)));
-            radius = GetRadius(area, left, top, right, bottom);
-            thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
-        }
-
         if ((capStyle == ChartCapStyle.Round) && (sweepAngle < 360))
         {
             radius = Math.Max(0, radius - (thickness / 2));
@@ -281,6 +285,8 @@ internal sealed class RadialBarLayout
 
         return (area.CenterX - (radius * (left + right) / 2), area.CenterY - (radius * (top + bottom) / 2), radius, thickness);
     }
+
+    public static double GetGlowSigma(double thickness) => GlowSigmaBase + (thickness * GlowSigmaRatio);
 
     public static int GetSegmentCount(double radius, double thickness, double sweepAngle, int segmentCount, double segmentGap)
     {
@@ -291,7 +297,7 @@ internal sealed class RadialBarLayout
     }
 
     private void PlaceRings(RadialBarLayoutOptions options) =>
-        (CenterX, CenterY, OuterRadius, Thickness) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, GlowRadius, CapStyle);
+        (CenterX, CenterY, OuterRadius, Thickness) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, BarGlow, CapStyle);
 
     private static double GetRadius(ChartRect area, double left, double top, double right, double bottom) =>
         Math.Max(0, Math.Min(area.Width / Math.Max(right - left, MinExtent), area.Height / Math.Max(bottom - top, MinExtent)));

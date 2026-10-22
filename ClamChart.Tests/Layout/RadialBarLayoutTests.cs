@@ -209,14 +209,14 @@ public sealed class RadialBarLayoutTests
     public void GlowLeavesRoomAroundTheRings()
     {
         // Act
-        var layout = Layout([Entry(0, "A", 50)], new RadialBarLayoutOptions { GlowRadius = 8 });
+        var layout = Layout([Entry(0, "A", 50)], new RadialBarLayoutOptions { BarGlow = true });
 
         // Assert
         Assert.Equal(150, layout.CenterX);
         Assert.Equal(150, layout.CenterY);
-        Assert.Equal(150 - ChartGlow.GetExtent(25, 8), layout.OuterRadius, Precision);
+        Assert.Equal(150 - (300 * 0.02), layout.OuterRadius, Precision);
         Assert.Equal(layout.OuterRadius / 6, layout.Thickness, Precision);
-        Assert.True(layout.OuterRadius + ChartGlow.GetExtent(layout.Thickness, 8) <= 150);
+        Assert.Equal(0.75 + (layout.Thickness * 0.08), RadialBarLayout.GetGlowSigma(layout.Thickness), Precision);
     }
 
     private static GaugeEntry Entry(int index, string? label, double value, double maximum = Double.NaN) =>

@@ -105,9 +105,9 @@
                         <clam:ClamRadialBarView Grid.Row="1"
                                                 ItemsSource="{Binding StepProgress}"
                                                 Maximum="10000"
-                                                CapStyle="Round" CenterLabel="歩"
+                                                BarGlow="True" CapStyle="Round" CenterLabel="歩"
                                                 CenterText="{Binding StepText}"
-                                                ContentPadding="0" DisplayMode="Gradient" GlowRadius="8" />
+                                                ContentPadding="0" DisplayMode="Gradient" />
                     </Grid>
                 </Border>
                 <Border Grid.Row="0" Grid.Column="1"

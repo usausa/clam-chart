@@ -15,6 +15,7 @@ public enum ViewId
     ChartBubble,
     ChartRadar,
     ChartHeatmap,
+    ChartStateTimeline,
     ChartTimeSeries,
     ChartDualAxis,
     ChartThreshold,

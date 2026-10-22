@@ -97,12 +97,12 @@ public sealed class ChartDrawingRadialBarTests
     {
         // Arrange
         using var view = Rings(70, 35);
-        view.GlowRadius = 6;
+        view.BarGlow = true;
         view.DisplayMode = mode;
         view.CapStyle = ChartCapStyle.Round;
 
         // Act & Assert
-        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { GlowRadius = 6, DisplayMode = mode, CapStyle = ChartCapStyle.Round });
+        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { BarGlow = true, DisplayMode = mode, CapStyle = ChartCapStyle.Round });
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public sealed class ChartDrawingRadialBarTests
     public async Task RingsCanBeDrawnOnOtherThreads()
     {
         // Arrange
-        var options = new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Gradient, GlowRadius = 4, Thresholds = Thresholds() };
+        var options = new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Gradient, BarGlow = true, Thresholds = Thresholds() };
         using var expected = Draw(120, 120, canvas => ChartDrawing.DrawRadialBar(canvas, new SKRect(0, 0, 120, 120), [80, 40], options));
 
         // Act

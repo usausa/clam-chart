@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:s="http://smart/maui"
+             xmlns:shell="clr-namespace:Example.Shell"
+             xmlns:models="clr-namespace:Example.Models"
+             xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             x:Class="Example.Modules.Chart.ChartStateTimelineView"
+             x:DataType="{x:Type module:ChartStateTimelineViewModel}"
+             s:BindingContextResolver.Type="{x:Type module:ChartStateTimelineViewModel}"
+             shell:ShellProperty.Title="State timeline"
+             shell:ShellProperty.Function1Text="Back"
+             shell:ShellProperty.Function2Text="Align"
+             shell:ShellProperty.Function3Text="Merge"
+             shell:ShellProperty.Function4Text="Data"
+             shell:ShellProperty.Function1Enabled="True"
+             shell:ShellProperty.Function2Enabled="True"
+             shell:ShellProperty.Function3Enabled="True"
+             shell:ShellProperty.Function4Enabled="True">
+
+    <Grid Style="{StaticResource StatGrid}"
+          RowDefinitions="*,*">
+        <Border Grid.Row="0"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="サーバーの状態" />
+                <clam:ClamStateTimelineView Grid.Row="1"
+                                            ItemsSource="{Binding States}"
+                                            Maximum="{Binding Now}"
+                                            AlignValue="{Binding AlignValue}"
+                                            ContentPadding="0"
+                                            MergeValues="{Binding MergeValues}"
+                                            RowKey="server" StartKey="start" StateKey="state" TrackballMode="Touch"
+                                            ValueAccessors="{x:Static models:ServerState.Accessors}">
+                    <clam:ClamStateTimelineView.ValueMappings>
+                        <clam:ChartValueMapping Value="Running"
+                                                Text="稼働"
+                                                Level="Good" />
+                        <clam:ChartValueMapping Value="Degraded"
+                                                Text="低下"
+                                                Level="Warning" />
+                        <clam:ChartValueMapping Value="Stopped"
+                                                Text="停止"
+                                                Level="Critical" />
+                    </clam:ClamStateTimelineView.ValueMappings>
+                </clam:ClamStateTimelineView>
+            </Grid>
+        </Border>
+        <Border Grid.Row="1"
+                Style="{StaticResource StatBorder}">
+            <Grid Style="{StaticResource PanelGrid}"
+                  RowDefinitions="Auto,*">
+                <Label Grid.Row="0"
+                       Style="{StaticResource PanelTitleLabel}"
+                       Text="CPU 使用率の段階" />
+                <clam:ClamStateTimelineView Grid.Row="1"
+                                            ItemsSource="{Binding Levels}"
+                                            Maximum="{Binding Now}"
+                                            AlignValue="{Binding AlignValue}"
+                                            ContentPadding="0"
+                                            MergeValues="{Binding MergeValues}"
+                                            RowKey="host" StartKey="time" StateKey="level" TrackballMode="Touch"
+                                            ValueAccessors="{x:Static models:CpuLevel.Accessors}">
+                    <clam:ClamStateTimelineView.Thresholds>
+                        <clam:ChartThreshold Level="Good" />
+                        <clam:ChartThreshold Value="60"
+                                             Level="Warning" />
+                        <clam:ChartThreshold Value="85"
+                                             Level="Critical" />
+                    </clam:ClamStateTimelineView.Thresholds>
+                </clam:ClamStateTimelineView>
+            </Grid>
+        </Border>
+    </Grid>
+
+</ContentView>

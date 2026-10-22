@@ -11,10 +11,12 @@ internal static class HeatmapPalette
         var last = destination.Length - 1;
         for (var i = 0; i <= last; i++)
         {
-            var t = last > 0 ? (double)i / last : 0;
-            destination[i] = new SKColor(Interpolate(stops, t, 0), Interpolate(stops, t, 1), Interpolate(stops, t, 2), Interpolate(stops, t, 3));
+            destination[i] = GetColor(stops, last > 0 ? (double)i / last : 0);
         }
     }
+
+    public static SKColor GetColor(IReadOnlyList<Color> stops, double t) =>
+        new(Interpolate(stops, t, 0), Interpolate(stops, t, 1), Interpolate(stops, t, 2), Interpolate(stops, t, 3));
 
     public static int GetIndex(double value, double minimum, double maximum, int count)
     {

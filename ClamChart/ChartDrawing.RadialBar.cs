@@ -24,9 +24,8 @@ public static partial class ChartDrawing
         var startAngle = Single.IsFinite(options.StartAngle) ? options.StartAngle : 0;
         var innerRadius = Single.IsNaN(options.InnerRadius) ? 0 : Math.Clamp(options.InnerRadius, 0, MaxInnerRadius);
         var spacing = GetLength(options.Spacing);
-        var glowRadius = GetLength(options.GlowRadius);
         var area = new ChartRect(bounds.Left, bounds.Top, bounds.Width, bounds.Height);
-        var (centerX, centerY, radius, thickness) = RadialBarLayout.FitRings(area, startAngle, sweepAngle, innerRadius, options.Thickness is { } width ? GetLength(width) : null, spacing, values.Length, glowRadius, options.CapStyle);
+        var (centerX, centerY, radius, thickness) = RadialBarLayout.FitRings(area, startAngle, sweepAngle, innerRadius, options.Thickness is { } width ? GetLength(width) : null, spacing, values.Length, options.BarGlow, options.CapStyle);
         if ((radius <= 0) || (thickness <= 0))
         {
             return SKRect.Empty;
@@ -41,9 +40,9 @@ public static partial class ChartDrawing
         try
         {
             canvas.Translate((float)centerX, (float)centerY);
-            if (glowRadius > 0)
+            if (options.BarGlow)
             {
-                DrawGlows(canvas, values, ring, steps.AsSpan(0, stepCount), glowRadius, options);
+                DrawGlows(canvas, values, ring, steps.AsSpan(0, stepCount), options);
             }
 
             using var paint = new SKPaint();
@@ -90,42 +89,66 @@ public static partial class ChartDrawing
         return new SKPoint((float)(x * radius), (float)(y * radius));
     }
 
-    private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, ReadOnlySpan<ChartDrawingThreshold> steps, double glowRadius, in RadialBarDrawOptions options)
+    private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options)
     {
-        using var filter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, ChartGlow.GetSigma(glowRadius));
+        var segmented = ring.DisplayMode == ChartRadialBarMode.Segmented;
+        var gradient = ring.DisplayMode == ChartRadialBarMode.Gradient;
+        var round = ring.CapStyle == ChartCapStyle.Round;
+        using var filter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)RadialBarLayout.GetGlowSigma(ring.Thickness));
         using var paint = new SKPaint();
         paint.IsAntialias = true;
         paint.Style = SKPaintStyle.Stroke;
         paint.MaskFilter = filter;
-        paint.StrokeWidth = (float)ring.Thickness * ChartGlow.WidthRatio;
-        paint.StrokeCap = (ring.DisplayMode == ChartRadialBarMode.Basic) && (ring.CapStyle == ChartCapStyle.Round) ? SKStrokeCap.Round : SKStrokeCap.Butt;
+        paint.StrokeWidth = (float)ring.Thickness;
+        paint.StrokeCap = round && !gradient && !segmented ? SKStrokeCap.Round : SKStrokeCap.Butt;
         for (var i = 0; i < values.Length; i++)
         {
             var radius = (float)ring.GetRadius(i);
-            var (ratio, percent) = ring.GetRatio(values[i]);
-            if ((radius <= 0) || (ratio <= RadialBarRenderer.Tolerance))
+            if (radius <= 0)
             {
                 continue;
             }
 
+            var (ratio, percent) = ring.GetRatio(values[i]);
             var baseColor = GetRingColor(i, options);
-            if (ring.DisplayMode == ChartRadialBarMode.Segmented)
+            if (segmented)
             {
-                DrawSegments(canvas, ring, radius, ratio, baseColor, steps, options, paint, ChartGlow.Opacity, true);
+                DrawSegments(canvas, ring, radius, ratio, baseColor, steps, options, paint, 1, true);
+                continue;
             }
-            else if (ring.DisplayMode == ChartRadialBarMode.Gradient)
+
+            if (ratio <= RadialBarRenderer.Tolerance)
+            {
+                continue;
+            }
+
+            var drawn = Math.Min(ratio, 1);
+            if (gradient)
             {
                 var (colors, positions) = GetRingStops(steps, ratio, baseColor, options.IsDark);
-                using var shader = RadialBarRenderer.CreateGradient(colors, positions, ring.StartAngle, ring.SweepAngle);
-                paint.Shader = shader;
-                paint.Color = SKColors.Black.WithAlpha((byte)Math.Round(255 * ChartGlow.Opacity));
-                DrawSweep(canvas, ring, radius, 0, Math.Min(ratio, 1), paint);
-                paint.Shader = null;
+                using (var shader = RadialBarRenderer.CreateGradient(colors, positions, ring.StartAngle, ring.SweepAngle))
+                {
+                    paint.Shader = shader;
+                    paint.Color = SKColors.Black;
+                    DrawSweep(canvas, ring, radius, 0, drawn, paint);
+                    paint.Shader = null;
+                }
+
+                if (round)
+                {
+                    var cap = (float)ring.Thickness / 2;
+                    paint.Style = SKPaintStyle.Fill;
+                    paint.Color = colors[0];
+                    canvas.DrawCircle(GetPoint(radius, ring.GetAngle(0)), cap, paint);
+                    paint.Color = RadialBarGradient.GetColorAt(colors, positions, drawn);
+                    canvas.DrawCircle(GetPoint(radius, ring.GetAngle(drawn)), cap, paint);
+                    paint.Style = SKPaintStyle.Stroke;
+                }
             }
             else
             {
-                paint.Color = ChartColor.Fade(ThresholdSteps.GetColor(steps, percent, baseColor), ChartGlow.Opacity);
-                DrawSweep(canvas, ring, radius, 0, Math.Min(ratio, 1), paint);
+                paint.Color = ThresholdSteps.GetColor(steps, percent, baseColor);
+                DrawSweep(canvas, ring, radius, 0, drawn, paint);
             }
         }
     }
@@ -227,7 +250,7 @@ public static partial class ChartDrawing
         {
             var fraction = (double)c / count;
             var lit = fraction < ratio - RadialBarRenderer.Tolerance;
-            if (!lit && (glow || !options.TrackVisible))
+            if (!lit && !options.TrackVisible)
             {
                 continue;
             }

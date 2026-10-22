@@ -5,7 +5,7 @@
 ## 🐚 What is this?
 
 Charts for .NET MAUI Android drawn with SkiaSharp, one canvas per chart, made for dashboards and widgets.  
-Lines, areas, bars, range bars, scatter and bubble plots, pies, radars, heatmaps, sparklines, KPI tiles, bar gauges and radial bars bind to view models, animate what changed and stay readable from a full screen down to a list cell.  
+Lines, areas, bars, range bars, scatter and bubble plots, pies, radars, heatmaps, state timelines, sparklines, KPI tiles, bar gauges and radial bars bind to view models, animate what changed and stay readable from a full screen down to a list cell.  
 
 | 📈 Lines and trackball | 📊 Stacked bars | 🌡️ Two value axes |
 |:-:|:-:|:-:|
@@ -100,8 +100,9 @@ FallbackFonts.Typefaces = [SKTypeface.FromStream(await FileSystem.OpenAppPackage
 | Pies | `InnerRadius`, `StartAngle` and `SweepAngle` for half donuts, `SliceGap`, `MaxSlices` with a merged slice, labels inside or outside with leader lines, and the center value |
 | Radars | `ClamRadarChartView` with `GridShape` (polygon or circle), `LevelCount`, `Minimum` and `Maximum`, and `RadarSeries` with `Thickness` and `FillOpacity` |
 | Heatmaps | `ClamHeatmapView` as a matrix or a calendar, the Grafana Oranges scale or a `ColorScale` of your own, `CellGap` and a color scale legend |
+| State timelines | `ClamStateTimelineView` with Grafana value mappings (`ValueMappings`) and `Thresholds`, and the panel options of Grafana: `MergeValues`, `ShowValue`, `AlignValue`, `RowHeight`, `FillOpacity` and `LineWidth` |
 | Thresholds | `Thresholds` with `ThresholdsMode` lines, bands or colored series, reference lines and bands as annotations |
-| Tiles and gauges | `ColorMode` of a KPI tile from a quiet value to a Grafana gradient background, basic, gradient and segmented gauges, `GlowRadius` for glowing rings, `AlertAnimationEnabled` for a critical value |
+| Tiles and gauges | `ColorMode` of a KPI tile from a quiet value to a Grafana gradient background, basic, gradient and segmented gauges, `BarGlow` for glowing rings, `AlertAnimationEnabled` for a critical value |
 | Labels | Legend as a list or a table with last, minimum, maximum and mean, data labels, tooltip and axis labels, with a format, a converter or a delegate |
 | Size | `Density` thins the axes, the legend and the labels as the chart gets smaller |
 
@@ -122,7 +123,7 @@ Every property except the delegates (`ValueSelector`, `LabelSelector`, `XxxForma
 An `ObservableCollection` animates its changes: `Add` and `RemoveAt(0)` in a row make the line flow, and an item that raises `PropertyChanged` moves its point.  
 `SelectedItem` and `SelectedIndex` are TwoWay, `TrackedItem` and `TrackedIndex` report the point under the trackball to the view model, and `ChartSeries.IsVisible` follows the legend.  
 Each event has a matching command: `ItemTappedCommand`, `ChartTappedCommand`, `SelectionChangedCommand`, `TrackingChangedCommand` and `LegendItemTappedCommand`.  
-`Example/Modules/Chart` contains screens for the chart types (lines, bars, a pie, sparklines, KPI tiles, bar gauges, radial bars, scatter plots, range bars, bubbles, a radar and heatmaps), the features (a time series, two value axes, thresholds, palettes, overlays and drawing without a view), combined pages (monitoring panels, a live stream and dashboards) and checks (the density and the drawing time); the menu colors them by group.  
+`Example/Modules/Chart` contains screens for the chart types (lines, bars, a pie, sparklines, KPI tiles, bar gauges, radial bars, scatter plots, range bars, bubbles, a radar, heatmaps and a state timeline), the features (a time series, two value axes, thresholds, palettes, overlays and drawing without a view), combined pages (monitoring panels, a live stream and dashboards) and checks (the density and the drawing time); the menu colors them by group.  
 
 ```csharp
 public sealed class TrafficViewModel : ObservableObject
@@ -178,7 +179,7 @@ Bind `Minimum` and `Maximum` of a `DateTimeAxis` to switch between a day, a week
 
 | Category | Detail |
 |---|---|
-| **Charts** | Line, area, bar, range bar, scatter and bubble series mixed in one chart, grouped, stacked and 100% stacked bars, horizontal bars, pie, donut and half donut, radar with polygon or circle grids, matrix and calendar heatmaps, line, area, bar and win-loss sparklines, KPI tiles, bar gauges and radial bars |
+| **Charts** | Line, area, bar, range bar, scatter and bubble series mixed in one chart, grouped, stacked and 100% stacked bars, horizontal bars, pie, donut and half donut, radar with polygon or circle grids, matrix and calendar heatmaps, state timelines, line, area, bar and win-loss sparklines, KPI tiles, bar gauges and radial bars |
 | **Axes** | Category, numeric and date and time axes, a second value axis with aligned or independent ticks, fixed and soft ranges, a sliding time window, label thinning, categories wide enough to scroll |
 | **Data** | Lists of numbers, chart models or items of any type through typed accessors, collection and item changes, missing values, dense lines thinned for drawing (LTTB) |
 | **Interaction** | Taps, selection that dims the other elements, a long-press or touch trackball with a tooltip, a crosshair shared by a group of charts, legend toggles, haptic feedback, touch pass-through for overlays |

@@ -141,21 +141,54 @@ public sealed class ClamRadialBarViewRenderingTests
     [Theory]
     [InlineData(ChartRadialBarMode.Basic)]
     [InlineData(ChartRadialBarMode.Gradient)]
-    [InlineData(ChartRadialBarMode.Segmented)]
     public void GlowSpreadsOutsideTheValueOnly(ChartRadialBarMode mode)
     {
         // Arrange
         using var view = Ring(50);
         view.DisplayMode = mode;
-        view.GlowRadius = 8;
+        view.BarGlow = true;
 
         // Act
         using var bitmap = view.Paint(300, 300);
 
         // Assert
-        var outside = view.ChartLayout.OuterRadius + 3;
+        var outside = view.ChartLayout.OuterRadius + 2;
         Assert.True(GetPixel(bitmap, 90, outside).Alpha > 20);
         Assert.Equal(0, GetPixel(bitmap, 270, outside).Alpha);
+    }
+
+    [Fact]
+    public void SegmentedGlowCoversEveryCell()
+    {
+        // Arrange
+        using var view = Ring(50);
+        view.DisplayMode = ChartRadialBarMode.Segmented;
+        view.BarGlow = true;
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        var outside = view.ChartLayout.OuterRadius + 2;
+        var lit = GetPixel(bitmap, 90, outside).Alpha;
+        var unlit = GetPixel(bitmap, 270, outside).Alpha;
+        Assert.True(lit > 20);
+        Assert.True(unlit > 0);
+        Assert.True(unlit < lit);
+    }
+
+    [Fact]
+    public void GlowLeavesTheMarginOfGrafana()
+    {
+        // Arrange
+        using var view = Ring(50);
+        view.BarGlow = true;
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        Assert.Equal(150 - (300 * 0.02), view.ChartLayout.OuterRadius, 0.001);
     }
 
     [Fact]
@@ -165,7 +198,7 @@ public sealed class ClamRadialBarViewRenderingTests
         using var view = Ring(50);
         view.DisplayMode = ChartRadialBarMode.Gradient;
         view.CapStyle = ChartCapStyle.Round;
-        view.GlowRadius = 8;
+        view.BarGlow = true;
 
         // Act
         using var bitmap = view.Paint(300, 300);
@@ -225,14 +258,14 @@ public sealed class ClamRadialBarViewRenderingTests
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Flat, 0)]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, 0)]
-    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, 0)]
-    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, 0)]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, 8)]
-    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, 8)]
-    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, 8)]
-    public void FramesDoNotAllocate(ChartRadialBarMode mode, ChartCapStyle cap, double glow)
+    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Flat, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, false)]
+    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, false)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, true)]
+    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, true)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, true)]
+    public void FramesDoNotAllocate(ChartRadialBarMode mode, ChartCapStyle cap, bool glow)
     {
         // Arrange
         using var view = new TestClamRadialBarView
@@ -242,7 +275,7 @@ public sealed class ClamRadialBarViewRenderingTests
             EntranceAnimation = ChartEntranceAnimation.None,
             DisplayMode = mode,
             CapStyle = cap,
-            GlowRadius = glow,
+            BarGlow = glow,
             OverflowMode = ChartOverflowMode.Wrap,
             LegendVisible = true,
             LegendValueMode = ChartLegendValueMode.Percent,

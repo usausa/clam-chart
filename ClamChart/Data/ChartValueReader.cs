@@ -213,7 +213,7 @@ internal sealed class ChartValueReader
         return size?.GetNumber(item) ?? Double.NaN;
     }
 
-    private static ChartAccessor? Resolve(IChartAccessorProvider? provider, string? key, string role, Func<ChartValueKind, bool> accepts)
+    public static ChartAccessor? Resolve(IChartAccessorProvider? provider, string? key, string role, Func<ChartValueKind, bool> accepts)
     {
         if (key is null)
         {

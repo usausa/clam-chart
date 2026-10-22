@@ -789,7 +789,7 @@ The first item is the outermost ring.
 | `DisplayMode` | `ChartRadialBarMode` | `Basic` | ✓ | Drawing of the rings |
 | `SegmentCount` | `int` | `20` | ✓ | Cells of a ring in `Segmented`, 1 or more; fewer on short rings |
 | `TrackVisible` | `bool` | `true` | ✓ | Draws the rest of each ring in `ChartStyle.TrackColor` |
-| `GlowRadius` | `double` | `0` | ✓ | Spread of a soft glow under the value of each ring, 0 or more; `0` draws none |
+| `BarGlow` | `bool` | `false` | ✓ | Makes the value of each ring glow, like the bar glow of the Grafana gauge |
 | `OverflowMode` | `ChartOverflowMode` | `Clamp` | ✓ | Values over the maximum |
 | `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Colors by the percentage of the maximum; `null` throws `ArgumentNullException` |
 
@@ -827,13 +827,13 @@ The first item is the outermost ring.
 
 | Item | Rule |
 |---|---|
-| Size | The rings take the largest radius whose arc fits outside the legend. The automatic thickness divides the area between `InnerRadius` and the edge among the rings, up to 1/6 of the radius. Round ends on a partial sweep leave room for the ends, and a glow leaves room around the rings |
+| Size | The rings take the largest radius whose arc fits outside the legend. The automatic thickness divides the area between `InnerRadius` and the edge among the rings, up to 1/6 of the radius. Round ends on a partial sweep leave room for the ends, and a glow leaves 2% of the shorter side around the rings, as in Grafana |
 | Ratio | (value − `Minimum`) / (maximum − `Minimum`), where the maximum is the item's, otherwise `Maximum`. `Clamp` keeps it from 0 to 1. `Wrap` draws the part over the maximum on top of the first lap in the ring color with 15 less lightness, showing only what is left of the last lap. An item without a value or with an empty range draws only the track |
 | Colors | The item color (`ColorKey`, `ChartEntry.Color`), then the palette in ring order, and the threshold color at the value when thresholds are set; rings beyond the palette use `OtherColor` with a warning |
 | Track | From the end of the value to the end of the sweep, with the same ends, in `TrackColor` or a neutral gray (black at 7% in light, white at 7% in dark) |
 | `Gradient` | As in the Grafana gauge. With thresholds, each threshold color sits at its position around the ring and the ring shows it up to the value. Without thresholds, a darker and a lighter shade of the ring color are turned so that the strongest contrast falls at the value. Round ends get the colors at both ends |
 | `Segmented` | Each cell takes the threshold color at its start and is lit when its start is before the value. Unlit cells use `TrackColor`, otherwise 30% black in light and 20% white in dark. Cells are separated by `ChartStyle.SegmentGap`, at least 3 DIP long, with flat ends; `Wrap` is not used |
-| Glow | 1.8 times the ring thickness in the ring color at 55%, blurred with a standard deviation of half of `GlowRadius`, drawn under all the rings. `Gradient` keeps its colors with flat ends, `Segmented` glows by lit cell, and the track and the wrapped lap do not glow. `Minimal` density draws no glow |
+| Glow | As the bar glow of Grafana: a copy of the value arc with the same width and colors, blurred with a standard deviation of 0.75 + 0.08 × the thickness, drawn under all the rings. `Basic` follows `CapStyle`, `Gradient` keeps its colors and blurs round ends too, and `Segmented` glows every cell, unlit ones included unless `TrackVisible` is `false`. The track of `Basic` and `Gradient` and the wrapped lap do not glow. `Minimal` density draws no glow |
 | Center | Fitted inside the innermost ring, up to 32 DIP. `Auto` shows the selected ring, otherwise the outermost one, as a percentage with its name; `Total` shows the sum of the values with `CenterLabel`. The number counts up from 0 during the entrance and from the shown number on updates |
 | Selection | The other rings fade to `DimmedOpacity` over 150 ms; a second tap on the selected ring clears it |
 | Taps | The band of each ring, up to half the spacing, raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; elsewhere `ChartTapped` is raised and the selection is cleared |
@@ -999,6 +999,90 @@ The colors follow the Grafana heatmap: the Oranges scheme in 64 steps, reversed 
 | Allocation | Cells are plain rectangles, so still, selected, tracked and animated frames allocate nothing |
 | Density | `Full` shows the legend, `Compact` hides it unless `LegendVisible` is `true`, and `Minimal` keeps only the cells, without names, legend or interaction, with whole-chart taps |
 
+## 🚥 ClamStateTimelineView
+
+Shows how states change over time, one row per entity, such as the status of servers or the history of alerts.  
+It follows the Grafana state timeline: value mappings and thresholds choose the text and the color of each state, equal states next to each other are merged, and the options of the Grafana panel are properties with the same defaults.  
+Each item is the start of a state, which lasts until the next start in its row.  
+
+### 🧩 Properties
+
+#### Data
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data; each item starts a state |
+| `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
+| `RowKey` | `string?` | `null` | ✓ | Key of the row name (text); without it everything is one row |
+| `StartKey`, `EndKey` | `string?` | `null` | ✓ | Keys of the start and the optional end of a state (dates) |
+| `StateKey` | `string?` | `null` | ✓ | Key of the state (text or a number) |
+| `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
+
+Without `StartKey` and `StateKey` nothing is drawn and a warning is written once.  
+
+#### Shape and colors
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `Minimum`, `Maximum` | `DateTime?` | `null` | ✓ | Time range, like the time range of a Grafana dashboard; `null` takes the first start and the last start or end of the data |
+| `ValueMappings` | `IList<ChartValueMapping>` | empty | ✓ | Text and color of state values; `null` throws `ArgumentNullException` |
+| `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Steps of numeric states; `null` throws `ArgumentNullException` |
+| `MergeValues` | `bool` | `true` | ✓ | Merges equal states next to each other, and numbers in the same threshold step |
+| `ShowValue` | `ChartVisibilityMode` | `Auto` | ✓ | Text of the state on each band; `Auto` writes it where its first two characters fit |
+| `AlignValue` | `ChartValueAlignment` | `Left` | ✓ | Alignment of that text |
+| `RowHeight` | `double` | `0.9` | ✓ | Share of the height taken by the bands, from 0 to 1 |
+| `FillOpacity` | `double` | `0.7` | ✓ | Opacity of the band fill, from 0 to 1 |
+| `LineWidth` | `double` | `0` | ✓ | Outline of the bands in their solid color, 0 or more |
+| `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of numeric states and of the threshold step names (see [Formats](#formats)); the default is the compact number |
+| `LegendVisible` | `bool?` | `null` | ✓ | Shows the states or the threshold steps; `null` shows them in `Full` density |
+| `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | Rows at the top or the bottom, or a column on the left or the right |
+
+#### Trackball
+
+| Name | Type | Default | Bindable | Description |
+|---|---|---|:-:|---|
+| `TrackballMode` | `ChartTrackballMode` | `None` | ✓ | How the trackball starts, as in `ClamChartView` |
+| `TooltipVisible` | `bool` | `true` | ✓ | Draws the tooltip |
+| `TrackedItem` | `object?` | `null` | ✓ | First item of the state under the finger, OneWayToSource; `null` when released |
+| `TrackedIndex` | `int` | `-1` | ✓ | Position of that item in the data, OneWayToSource |
+| `TrackingChangedCommand` | `ICommand?` | `null` | ✓ | Executed when tracking starts, moves to another state and ends |
+
+There is no selection, as in Grafana.  
+
+### ChartValueMapping
+
+A value mapping of Grafana for `ValueMappings`.  
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `Value` | `object?` | `null` | State value to match; text is compared as it is and numbers by their invariant text, so `Value="1"` in XAML matches the number 1 |
+| `Text` | `string?` | `null` | Text shown for the state; `null` keeps the value |
+| `Color` | `Color?` | `null` | Color of the state; `null` uses the color of `Level` |
+| `Level` | `ChartThresholdLevel` | `None` | Status color from the style, used when `Color` is `null` |
+
+### 📣 Events
+
+| Name | Arguments | Description |
+|---|---|---|
+| `TrackingStarted`, `TrackingChanged`, `TrackingEnded` | `ChartTrackingEventArgs` | The trackball started, moved to another state or ended; `X` is the time at the finger and `Points` is empty |
+
+### 📏 Rules
+
+| Item | Rule |
+|---|---|
+| States | Items are sorted by start within each row, and each state lasts until the next start, or until its own end when that comes first. An item without a state value ends the previous state. The last state lasts until the end of the range, so pass the current time or the like as `Maximum`, or give it an end; without them the range ends at the last start |
+| Merging | With `MergeValues`, states next to each other with the same value, or numbers in the same threshold step, become one band; a gap left by an end keeps them apart |
+| Rows | Rows follow the order in which their names appear. As in Grafana, the bands take `RowHeight` of the height split by the rows and the rest is spread between them; a single row sits at the top. Row names are on the left, up to a third of the width, and the time axis at the bottom works like the date and time axis of `ClamChartView` |
+| Colors | A mapped value takes its `Color`, otherwise the color of its `Level`. A number takes the color of its threshold step, or without thresholds a green to yellow to red scale between the smallest and the largest number of its row, the default of Grafana. Text without a mapping is green, or the color of the lowest step when thresholds are set. The status colors come from `GoodColor`, `WarningColor` and `CriticalColor` |
+| Bands | Filled at `FillOpacity` unless the color has an opacity of its own, outlined inside by `LineWidth` in the solid color, and aligned to pixels |
+| Text | The mapped `Text`, otherwise the value with `ValueFormat`; a merged number shows its step name (`ChartThreshold.Label`, otherwise `< 60` or `60+` as in Grafana). It is written in `DataLabelFontSize` in black or white by the band color, 2 DIP inside the band and its outline, cut with an ellipsis when it is longer than the band, and aligned within the visible part of a band that runs out of the range |
+| Legend | The threshold steps when thresholds are set and some states are numbers, otherwise the states with text in the order they first appear; numbers on the continuous scale have no legend, as in Grafana |
+| Trackball | The state under the finger, or in the nearest row between rows, gets a 20% white overlay as in Grafana, with a hairline at the finger in `TrackballLineColor` and a tooltip of the start and the end, the row name and the state with a dot in its color, and the duration written like Grafana (`2h 30m`) |
+| Taps | A band raises `ItemTapped` with `null` in `Series`, `-1` in `SeriesIndex`, the first item of the band, its start in `X` and the number of the state in `Y` (`NaN` for text); elsewhere `ChartTapped` is raised |
+| Animation | The entrance reveals the bands from the left (`Auto`); `Fade` fades them in and `Grow` grows them from the middle of their rows. A change of the range moves the shown range, while the bands switch at once |
+| Allocation | Still frames and the trackball within one state allocate nothing |
+| Density | `Full` shows the legend, `Compact` hides it unless `LegendVisible` is `true`, and `Minimal` keeps only the bands, without names, the axis or interaction, with whole-chart taps |
+
 ## 🎨 ChartStyle
 
 `ChartStyle` holds the look of everything except the data, together with the defaults of series widths, opacities and sizes.  
@@ -1019,7 +1103,7 @@ The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThick
 | `GridLineColor` | `Color` | `#E1E0D9` | `#2C2C2A` | Grid lines |
 | `GridLineThickness` | `double` | `0` | `0` | Width of the grid lines; `0` is one physical pixel |
 | `LegendFontSize`, `LegendMarkerSize` | `double` | `12`, `8` | `12`, `8` | Legend |
-| `DataLabelFontSize` | `double` | `11` | `11` | Data labels |
+| `DataLabelFontSize` | `double` | `11` | `11` | Data labels and the text on state timeline bands |
 | `TooltipBackground` | `Color` | `#F0FCFCFB` | `#F01F1F1D` | Tooltip fill |
 | `TooltipTextColor` | `Color` | `#0B0B0B` | `#F0EFEC` | Tooltip text |
 | `TooltipBorderColor` | `Color` | `#1A0B0B0B` | `#1AF0EFEC` | Tooltip hairline border |
@@ -1128,7 +1212,7 @@ Rings and bars look the same as the views in `Full` density, glow included. Valu
 | `DisplayMode` | `ChartRadialBarMode` | `Basic` | `Basic`, `Gradient` or `Segmented` |
 | `SegmentCount`, `SegmentGap` | `int`, `float` | `20`, `2` | Cells of a ring in `Segmented` and the gap between them; fewer cells on short rings |
 | `TrackVisible`, `TrackColor` | `bool`, `SKColor?` | `true`, `null` | Draws the rest of each ring; `null` uses the track color of the theme |
-| `GlowRadius` | `float` | `0` | Spread of a soft glow under the value of each ring; `0` draws none |
+| `BarGlow` | `bool` | `false` | Makes the value of each ring glow as `ClamRadialBarView.BarGlow` does |
 | `OverflowMode` | `ChartOverflowMode` | `Clamp` | Values over the maximum; `Wrap` draws the next lap darker |
 | `Colors` | `IReadOnlyList<SKColor>?` | `null` | Color of each ring from the outside; `null` uses the default palette, and rings past the list are gray |
 | `Thresholds` | `IReadOnlyList<ChartDrawingThreshold>?` | `null` | Colors by the percentage of the range |
@@ -1264,12 +1348,12 @@ Separators follow `Culture` and the suffixes stay in English.
 
 | Name | Type | Description |
 |---|---|---|
-| `Series` | `ChartSeries?` | Series of the element; `null` for a pie and a heatmap |
-| `SeriesIndex` | `int` | Position of the series; `-1` for a pie and a heatmap |
+| `Series` | `ChartSeries?` | Series of the element; `null` for a pie, a heatmap and a state timeline |
+| `SeriesIndex` | `int` | Position of the series; `-1` for a pie, a heatmap and a state timeline |
 | `Index` | `int` | Position of the item in the data; `-1` for the merged slice |
 | `Item` | `object?` | Item of the element; `null` for the merged slice |
 | `X` | `object?` | X of the point: `string?` for categories, `DateTime` for dates and `double` for numbers and positions; the name of a slice |
-| `Y` | `double` | Original value, or the merged total |
+| `Y` | `double` | Original value, or the merged total; `NaN` for a state given as text |
 | `Position` | `Point` | Tap position in the view |
 | `Handled` | `bool` | Skips the default action and the command |
 
@@ -1339,8 +1423,8 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartEntranceAnimation` | `Auto` | Chosen by the kind of chart |
 | | `None` | No entrance |
 | | `Fade` | Opacity rises; scatter points also grow from 60% of their size |
-| | `Grow` | Values grow from the baseline; a pie widens from `StartAngle`, a radar from the center and heatmap cells from their centers |
-| | `Reveal` | Drawn from the start of the X axis; a pie is revealed from `StartAngle`, a radar clockwise from 12 o'clock and a heatmap from the left |
+| | `Grow` | Values grow from the baseline; a pie widens from `StartAngle`, a radar from the center, heatmap cells from their centers and state timeline bands from the middle of their rows |
+| | `Reveal` | Drawn from the start of the X axis; a pie is revealed from `StartAngle`, a radar clockwise from 12 o'clock and a heatmap and a state timeline from the left |
 | `ChartOrientation` | `Vertical` | X along the bottom |
 | | `Horizontal` | X along the left, first at the top |
 | `ChartStackMode` | `Normal` | Stacks the values |
@@ -1437,3 +1521,6 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `Circle` | Rings as circles |
 | `ChartHeatmapLayoutMode` | `Matrix` | Rows and columns from the data |
 | | `Calendar` | One column per week and one row per day of the week |
+| `ChartVisibilityMode` | `Auto` | Shown where it fits |
+| | `Always`, `Never` | Always or never shown |
+| `ChartValueAlignment` | `Left`, `Center`, `Right` | Alignment of a text |
