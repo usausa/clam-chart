@@ -20,7 +20,7 @@ public partial class ClamChartView
             return ChartTouchMode.Interactive;
         }
 
-        return HasItemHandlers || HasLegendHandlers ? ChartTouchMode.HitOnly : ChartTouchMode.PassThrough;
+        return HasItemHandlers || HasLegendHandlers || LegendSortEnabled ? ChartTouchMode.HitOnly : ChartTouchMode.PassThrough;
     }
 
     internal override bool IsInputTarget(Point point)
@@ -34,6 +34,7 @@ public partial class ClamChartView
         return hit.Kind switch
         {
             ChartHitKind.Legend => HasLegendHandlers,
+            ChartHitKind.LegendHeader => LegendSortEnabled,
             ChartHitKind.Item => HasItemHandlers || (TrackballMode != ChartTrackballMode.None),
             ChartHitKind.Plot => (SelectionMode == ChartSelectionMode.Category) && (FindColumnPoint(point).Series >= 0),
             _ => false
@@ -57,6 +58,12 @@ public partial class ClamChartView
         if (hit.Kind == ChartHitKind.Legend)
         {
             TapLegend(hit.SeriesIndex);
+            return;
+        }
+
+        if (hit.Kind == ChartHitKind.LegendHeader)
+        {
+            TapLegendHeader(hit.Index);
             return;
         }
 

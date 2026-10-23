@@ -159,11 +159,83 @@ internal sealed class RadialBarRenderer : IDisposable
                     DrawBasicBar(canvas, layout, radius, ratio, GetColor(state, row.Percent, baseColor, style), alpha);
                 }
             }
+
+            DrawThresholdMarkers(canvas, layout, state, style, entrance, shaderPaint);
         }
         finally
         {
             canvas.Restore();
         }
+    }
+
+    public static void DrawMarkerBands(SKCanvas canvas, double startAngle, double sweepAngle, float radius, ReadOnlySpan<ChartDrawingThreshold> steps, SKColor baseColor, double alpha, SKPaint paint)
+    {
+        var color = baseColor;
+        var from = 0d;
+        foreach (var step in steps)
+        {
+            if (Double.IsNaN(step.Value))
+            {
+                continue;
+            }
+
+            if (Double.IsNegativeInfinity(step.Value))
+            {
+                color = step.Color;
+                continue;
+            }
+
+            var to = Math.Clamp(step.Value / 100, from, 1);
+            paint.Color = ChartColor.Fade(color, alpha);
+            DrawMarkerArc(canvas, startAngle, sweepAngle, radius, from, to, paint);
+            color = step.Color;
+            from = to;
+        }
+
+        paint.Color = ChartColor.Fade(color, alpha);
+        DrawMarkerArc(canvas, startAngle, sweepAngle, radius, from, 1, paint);
+    }
+
+    public static void DrawMarkerArc(SKCanvas canvas, double startAngle, double sweepAngle, float radius, double from, double to, SKPaint paint)
+    {
+        var sweep = Math.Min(sweepAngle, 360) * (to - from);
+        if (sweep <= Tolerance)
+        {
+            return;
+        }
+
+        if ((sweepAngle >= 360) && (from <= Tolerance) && (to >= 1 - Tolerance))
+        {
+            canvas.DrawCircle(0, 0, radius, paint);
+            return;
+        }
+
+        canvas.DrawArc(GetOval(radius), (float)(startAngle + (sweepAngle * from) - 90), (float)sweep, false, paint);
+    }
+
+    private void DrawThresholdMarkers(SKCanvas canvas, RadialBarLayout layout, RadialBarRenderState state, ChartStyle style, double alpha, SKPaint paint)
+    {
+        if ((layout.MarkerWidth <= 0) || (layout.Rows.Count == 0) || (alpha <= 0))
+        {
+            return;
+        }
+
+        var row = layout.Rows[0];
+        var baseColor = GetBaseColor(row, state, style);
+        var radius = (float)layout.MarkerRadius;
+        paint.StrokeWidth = (float)layout.MarkerWidth;
+        paint.StrokeCap = SKStrokeCap.Butt;
+        if (layout.DisplayMode == ChartRadialBarMode.Gradient)
+        {
+            paint.Shader = GetGradient(layout, row, baseColor, state, style, out _);
+            paint.Color = SKColors.Black.WithAlpha((byte)Math.Round(255 * alpha));
+            DrawMarkerArc(canvas, layout.StartAngle, layout.SweepAngle, radius, 0, 1, paint);
+            paint.Shader = null;
+            return;
+        }
+
+        ThresholdSteps.Resolve(state.Thresholds, baseColor, style, steps);
+        DrawMarkerBands(canvas, layout.StartAngle, layout.SweepAngle, radius, CollectionsMarshal.AsSpan(steps), baseColor, alpha, paint);
     }
 
     private void DrawGlows(SKCanvas canvas, RadialBarLayout layout, GaugeInterpolator<RadialBarRow> display, PieSelection selection, RadialBarRenderState state, ChartStyle style, double entrance)
@@ -216,6 +288,8 @@ internal sealed class RadialBarRenderer : IDisposable
                 DrawSweep(canvas, layout, radius, 0, drawn, glowPaint);
             }
         }
+
+        DrawThresholdMarkers(canvas, layout, state, style, entrance, glowPaint);
     }
 
     private void DrawGlowCap(SKCanvas canvas, SKPoint center, float radius, SKColor color)

@@ -321,6 +321,14 @@ internal sealed partial class CartesianRenderer
 
     private void DrawCrosshair(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state, float scale, float width, float height)
     {
+        var plot = layout.PlotBounds;
+        var paint = paints.Stroke(style.TrackballLineColor.ToSKColor(), 0, SKStrokeCap.Butt);
+        if (!interaction.Snaps)
+        {
+            DrawLine(canvas, layout.XAxis.IsVertical, GetPointerAlong(layout, interaction, scale), plot, paint);
+            DrawLine(canvas, !layout.XAxis.IsVertical, GetPointerAcross(layout, interaction, scale), plot, paint);
+        }
+
         var lead = interaction.LeadSeries;
         if ((lead < 0) || (lead >= series.Count) || (lead >= layout.Geometries.Count))
         {
@@ -334,12 +342,14 @@ internal sealed partial class CartesianRenderer
             return;
         }
 
-        var plot = layout.PlotBounds;
         var item = series[lead];
         var axis = layout.GetValueAxis(item.YAxis);
-        var paint = paints.Stroke(style.TrackballLineColor.ToSKColor(), 0, SKStrokeCap.Butt);
-        DrawLine(canvas, layout.XAxis.IsVertical, Snap(layout.XAxis.ToDisplayPixel(geometry.X[index]), scale), plot, paint);
-        DrawLine(canvas, axis.IsVertical, Snap(axis.ToDisplayPixel(geometry.End[index]), scale), plot, paint);
+        if (interaction.Snaps)
+        {
+            DrawLine(canvas, layout.XAxis.IsVertical, Snap(layout.XAxis.ToDisplayPixel(geometry.X[index]), scale), plot, paint);
+            DrawLine(canvas, axis.IsVertical, Snap(axis.ToDisplayPixel(geometry.End[index]), scale), plot, paint);
+        }
+
         var scatter = item as ScatterSeries;
         var size = scatter?.MarkerSize ?? style.MarkerSize;
         var shape = scatter?.MarkerShape ?? ChartMarkerShape.Circle;

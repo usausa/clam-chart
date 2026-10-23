@@ -12,6 +12,10 @@ internal sealed record AxisLayoutOptions
 
     public string? Title { get; init; }
 
+    public ChartOrientation TitleOrientation { get; init; } = ChartOrientation.Horizontal;
+
+    public int? LabelMaxLength { get; init; }
+
     public AxisRangeOptions Range { get; init; } = new();
 
     public ChartTickAlignment TickAlignment { get; init; }

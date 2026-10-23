@@ -159,6 +159,9 @@ Dates and numbers cannot share one X axis; a `CategoryAxis` takes any X in order
 | `LegendWidth` | `double` | `180` | ✓ | Width of a legend on the left or the right: the width of a `Table` and the largest width of a `List`; greater than 0 |
 | `Downsampling` | `ChartDownsampling` | `Auto` | ✓ | `Auto` draws lines and areas with sorted X through at most two points per DIP of their width, chosen by LTTB; the data, taps and the trackball keep every point |
 | `LegendToggleEnabled` | `bool` | `false` | ✓ | Tapping a legend item shows or hides its series; the last visible series cannot be hidden |
+| `LegendSortEnabled` | `bool` | `false` | ✓ | Tapping a header of a `Table` sorts the rows as in Grafana: descending, then ascending, then unsorted, and another column starts descending |
+| `LegendSortBy` | `ChartLegendSortKey` | `Name` | ✓ | Column the `Table` is sorted by; a value column not in `LegendValues` keeps the order; TwoWay |
+| `LegendSortMode` | `ChartSortMode` | `None` | ✓ | Direction of the sort; TwoWay |
 | `LegendItemTappedCommand` | `ICommand?` | `null` | ✓ | Executed after `LegendItemTapped` |
 | `DataLabelsMode` | `ChartDataLabelsMode` | `None` | ✓ | Points that get a value label |
 
@@ -166,11 +169,12 @@ The legend lists the series with a `Title`, hidden ones included, each with a do
 Rows wrap and more than two rows end with `+N`.  
 A column on the left or the right is as wide as the longest item up to `LegendWidth` and is hidden when the plot would be narrower than twice its width.  
 
-A `Table` has a header row (`Name` and the value columns in `SecondaryTextColor`) and a row per series with its marker, its name truncated with an ellipsis and its values right-aligned, with a hairline in `GridLineColor` under the header and each row.  
+A `Table` has a header row (`Name` and the value columns in `SecondaryTextColor`, with an arrow beside the sorted column) and a row per series with its marker, its name truncated with an ellipsis and its values right-aligned, with a hairline in `GridLineColor` under the header and each row.  
 Values are computed from the valid points in the displayed X range, formatted like the tooltip, and left empty when there is no point.  
 At the top or the bottom the table takes up to 35% of the height; on the left or the right it is `LegendWidth` wide and as high as the plot.  
 Rows that do not fit end with `+N`, and value columns that would leave the names less than 55 DIP are left out from the right.  
 Tapping a row works like tapping a `List` item; a hidden series keeps its values with a faded marker and a muted name.  
+Sorting orders only the rows of the table: names compare numbers by value and ignore case and accents, rows without a value count as the smallest, and equal values keep the series order.  
 
 Data labels are placed as follows and dropped when they do not fit or overlap a label placed before them (last point, maximum, minimum, then the others).  
 
@@ -214,12 +218,14 @@ Taps hit wider areas than the drawn shapes.
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
 | `TrackballMode` | `ChartTrackballMode` | `None` | ✓ | How the trackball starts |
+| `TrackballSnapEnabled` | `bool` | `true` | ✓ | `false` draws the line and a horizontal line at the finger, like the cursor of Grafana, while the markers, the tooltip and `TrackedItem` keep the nearest point |
 | `TooltipVisible` | `bool` | `true` | ✓ | Draws the tooltip; `false` keeps only the line and the markers, for showing the values elsewhere through `TrackedItem` |
 | `TooltipFormatter` | `Func<ChartTrackingInfo, string>?` | `null` | | Text of each series row after its colored dot; `null` is the title and the formatted value; called once per point until the layout changes |
 | `TrackedItem` | `object?` | `null` | ✓ | Item at the trackball (the first series wins at the same X), OneWayToSource; `null` when released |
 | `TrackedIndex` | `int` | `-1` | ✓ | Position of that item in the data of its series, OneWayToSource |
 | `TrackingChangedCommand` | `ICommand?` | `null` | ✓ | Executed when tracking starts, moves to another point and ends |
 | `TrackingGroup` | `string?` | `null` | ✓ | Charts in the same window with the same group show the trackball line and markers of the chart being tracked |
+| `TrackingGroupMode` | `ChartTrackingGroupMode` | `Crosshair` | ✓ | How this chart follows another chart of its group: `Crosshair` draws the line and the markers, `Tooltip` adds its tooltip, like the shared crosshair and the shared tooltip of a Grafana dashboard |
 
 | `TrackballMode` | Start | Suits |
 |---|---|---|
@@ -232,8 +238,11 @@ The first line of the tooltip is the X label.
 On a `DateTimeAxis` with the default format it uses the finer of the tick precision and the precision of the point times, with the date added when the range spans days (`10/9 14:00`).  
 The following rows show the title and the value of each series, formatted by the series or the value axis; 100% stacks show the original values.  
 When every visible series is a `ScatterSeries`, the trackball snaps to the nearest point in both directions instead, draws a crosshair through it and shows only that point in the tooltip.  
+With `TrackballSnapEnabled` set to `false` the lines stay at the finger, kept inside the plot, and a scatter crosshair does too.  
 A data or layout change during tracking snaps again at the finger.  
-The other charts of a `TrackingGroup` snap to their own point at the same X (the same category name on a category axis) and draw only the line and the markers, without a tooltip, `TrackedItem` or events; nothing is shown when that X is outside their range, and charts of only scatter series do not follow.  
+The other charts of a `TrackingGroup` snap to their own point at the same X (the same category name on a category axis) and draw the line and the markers without `TrackedItem` or events; nothing is shown when that X is outside their range, and charts of only scatter series do not follow.  
+A chart with `TrackingGroupMode` set to `Tooltip` also shows its tooltip, placed at the height of the finger on the tracked chart in proportion to its plot.  
+An unsnapped chart shares the X of the finger, and a following chart with `TrackballSnapEnabled` set to `false` draws its line there, without the horizontal line.  
 Tracking ends when the finger is released, a second finger touches, the finger leaves the view or `CancelInteraction()` is called, and is canceled when the view is resized, unloaded, disabled, hidden or loses focus, the handler changes, or `TouchMode` or `TrackballMode` changes.  
 
 #### Thresholds and annotations
@@ -392,8 +401,10 @@ Derives from `ScatterSeries`.
 | `SizeKey` | `string?` | `null` | ✓ | Key of the size value |
 | `SizeSelector` | `Func<object, double?>?` | `null` | | Size value from code, used before the key |
 | `MinBubbleSize`, `MaxBubbleSize` | `double` | `8`, `40` | ✓ | Smallest and largest diameter, 0 or more |
+| `SizeIncludesZero` | `bool` | `true` | ✓ | `false` sizes the bubbles from the smallest to the largest value among all the bubble series, as the XY chart of Grafana does, instead of from 0 |
 
 The area grows from 0 to the largest size value among all the bubble series of the chart: 0 and below get `MinBubbleSize` and the largest value gets `MaxBubbleSize`.  
+With `SizeIncludesZero` set to `false` the smallest value gets `MinBubbleSize` instead, and when all the values are equal every bubble gets `MinBubbleSize`.  
 A point without a size is skipped. The automatic axis ranges grow by the radius of the largest bubble, and fixed ranges clip the bubbles at the plot.  
 Larger bubbles are drawn first, a tap reaches the radius of a bubble or 22 DIP, whichever is larger, and the tooltip adds the size after the value.  
 
@@ -407,6 +418,7 @@ Base of all axes, an `Element` set to `XAxis`, `YAxis` or `SecondaryYAxis`.
 |---|---|---|:-:|---|
 | `IsVisible` | `bool?` | `null` | ✓ | `null` follows the density, which hides the axes in `Minimal` |
 | `Title` | `string?` | `null` | ✓ | Title shown in `Full` density, on a row above the plot for a vertical axis and outside the labels for a horizontal axis |
+| `TitleOrientation` | `ChartOrientation` | `Horizontal` | ✓ | `Vertical` turns the title of a vertical axis by 90° as in Grafana, reading upward on the left and downward on the right, outside the labels and centered on the plot; horizontal axes ignore it |
 | `LabelsVisible` | `bool` | `true` | ✓ | Draws the tick labels |
 | `LabelFormat` | `string?` | `null` | ✓ | Format of the labels: composite when it contains `{`, otherwise a format string |
 | `LabelConverter` | `IValueConverter?` | `null` | ✓ | Converts the tick value of the axis type to its text; used instead of `LabelFormat` |
@@ -417,7 +429,7 @@ Base of all axes, an `Element` set to `XAxis`, `YAxis` or `SecondaryYAxis`.
 
 Each axis adds a `LabelFormatter` of its own value type, used before `LabelConverter` and `LabelFormat`.  
 Overlapping labels are thinned to every k-th label, keeping both ends.  
-Labels of a vertical axis take up to a third of the width and longer ones end with `…`; labels of a horizontal axis are not shortened.  
+Labels of a vertical axis take up to a third of the width and longer ones end with `…`; labels of a horizontal axis are not shortened. A category axis can also cut its labels to `LabelMaxLength` characters.  
 
 ### NumericAxis
 
@@ -472,6 +484,7 @@ With `WindowSize`, short data is drawn at the right with the left side empty, ol
 |---|---|---|:-:|---|
 | `LabelPlacement` | `ChartLabelPlacement` | `BetweenTicks` | ✓ | Where the categories sit |
 | `CategoryWidth` | `double?` | `null` | ✓ | Length of each category; the chart then requests the width (the height in a horizontal chart) of all categories plus the axes, for a horizontal `ScrollView`; greater than 0; an explicit `WidthRequest` or `HeightRequest` wins |
+| `LabelMaxLength` | `int?` | `null` | ✓ | Cuts each label to this many characters and adds `…`, as `xTickLabelMaxLength` of the Grafana bar chart; 1 or more, and `null` keeps the whole label. Emoji and combined characters are not split, spaces at the cut are dropped, and the tooltip shows the whole name |
 | `LabelFormatter` | `Func<string, string>?` | `null` | | Label text from code |
 
 Categories merge the X values of all series in order of appearance, hidden series included, so the axis does not change when a series is toggled.  
@@ -553,6 +566,7 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | `LegendVisible` | `bool?` | `null` | ✓ | `null` shows the legend in `Full` density |
 | `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | Rows at the top or the bottom, or a column on the left or the right centered vertically |
 | `LegendValueMode` | `ChartLegendValueMode` | `None` | ✓ | Adds the value or the percentage, right-aligned in a column and after the name in rows |
+| `LegendToggleEnabled` | `bool` | `false` | ✓ | A legend tap hides or shows the slice, as in the pie chart of Grafana, instead of selecting it; the last visible slice stays |
 | `LegendItemTappedCommand` | `ICommand?` | `null` | ✓ | Executed after `LegendItemTapped` |
 
 #### Center and formats
@@ -583,7 +597,7 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 
 | Name | Arguments | Description |
 |---|---|---|
-| `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; then, unless handled, the slice is selected when `SelectionMode` is set, or cleared when it is already selected |
+| `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; then, unless handled, the slice is hidden or shown when `LegendToggleEnabled` is `true`, or else selected when `SelectionMode` is set, or cleared when it is already selected |
 | `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property |
 
 ### 📏 Rules
@@ -593,15 +607,16 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | Values | Finite values greater than 0 become slices; negative values are skipped and reported once through `Trace.TraceWarning` |
 | Merged slice | Items over `MaxSlices` (the smallest first) and below `OthersThreshold` become one last slice named `OthersLabel` in `ChartStyle.OtherColor`; a single item is never merged |
 | Order | `None` keeps the data order, and `Descending` and `Ascending` order by value, equal values in data order |
-| Colors | An explicit color (`ColorKey`, `ChartEntry.Color`) first, otherwise the palette in the order of the drawn slices; slices beyond the palette use `OtherColor` with a warning |
+| Colors | An explicit color (`ColorKey`, `ChartEntry.Color`) first, otherwise the palette in the data order of the slices drawn when nothing is hidden, followed by the items that hiding brings out of the merged slice; slices beyond the palette use `OtherColor` with a warning |
 | Placement | The swept sector, hole included, is scaled to the largest size that fits outside the legend; the upper half sits on the bottom edge |
 | Gaps | Parallel gaps of `SliceGap` between neighboring slices, none at the ends of a partial sweep or around a single full slice |
 | Labels | At the middle angle of the slice, centered in the ring of a donut or at 0.62 of the radius of a pie, drawn only when they fit with 2 DIP of margin, in white or `#0B0B0B` by WCAG contrast; percentages use `P0` |
 | Outside labels | Slices whose middle is on the right get a label in a column on the right, the others on the left. A line in the slice color leaves the edge, bends 8 DIP out and runs to the column 16 DIP out, and the text follows 4 DIP later in `SecondaryTextColor`. The labels of each side are stacked 2 DIP apart near their slices, and those of the smallest slices are left out when they do not fit. The pie shrinks to make room but not below half its size, leaving out the widest labels instead. The line follows a selected slice that moves out |
 | Center value | Drawn when `InnerRadius` is greater than 0, shrunk to fit the hole (not drawn under 6 DIP); a half donut puts it on the flat side; switching the selection crossfades it over 150 ms; the number counts up from 0 during the entrance and from the shown number on updates |
 | Taps | The sector of each slice, gaps included, from the hole to the edge, at its moved position when selected; a tap on the merged slice raises only `ItemTapped` with `Item = null`, `Index = -1` and the merged total; in `Interactive` mode a tap in the center or outside the slices clears the selection |
+| Hidden slices | Hidden by name, so they stay hidden through data changes; they keep their place in the legend with a faded marker, a muted name and `-` as the percentage; the percentages, the center total and the merged slice count only the shown slices; the merged slice cannot be hidden; hiding the selected slice clears the selection; turning `LegendToggleEnabled` off shows every slice; when no shown value is left, the hidden slices are shown |
 | Density | `Full` shows the legend, `Compact` hides it unless `LegendVisible` is `true`, `Minimal` keeps the donut and the center value |
-| Updates | Slices are matched by data position and the merged slice as one; added slices open from the border of the previous slice, removed and merged ones close at the new border, and colors that change with the order move between the two colors |
+| Updates | Slices are matched by data position and the merged slice as one; added slices open from the border of the previous slice, removed and merged ones close at the new border, and colors that change with the order move between the two colors; hiding and showing a slice moves the same way even when `UpdateAnimationEnabled` is `false` |
 
 ## ✨ ClamSparklineView
 
@@ -731,6 +746,7 @@ With `AutoHeight`, a horizontal gauge measures its height from the rows, so it g
 | `LabelPosition` | `ChartBarGaugeLabelPosition` | `Top` | ✓ | Place of the names |
 | `ValueVisible` | `bool` | `true` | ✓ | Shows the value at the end of each row or above each column |
 | `ValueMode` | `ChartBarGaugeValueMode` | `Percent` | ✓ | Text of the value |
+| `ValueColorMode` | `ChartBarGaugeValueColorMode` | `Bar` | ✓ | Color of the value: the bar color, or `PrimaryTextColor` as the text value mode of the Grafana bar gauge |
 | `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the numbers in `Value` and `ValueOfMaximum` (see [Formats](#formats)); the default is the compact number |
 | `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the numbers from code, used first |
 | `TrackVisible` | `bool` | `true` | ✓ | Draws the part that is not reached in `ChartStyle.TrackColor` |
@@ -752,7 +768,7 @@ With `AutoHeight`, a horizontal gauge measures its height from the rows, so it g
 | `Segmented` | Each cell takes the threshold color at its start. Cells up to the value are lit with a radial gradient from 95% to 55%, and the others are drawn at 18%. Cells are separated by `ChartStyle.SegmentGap` and fill the bar length |
 | Track | `Basic` and `Gradient` draw the track only beyond the bar; in `Segmented` the unlit cells take its place |
 | Target | A 2 DIP line in `PrimaryTextColor`, 3 DIP longer than the bar on each side |
-| Colors | The bar color is the item color (`ColorKey`, `ChartEntry.Color`), then `Color`, then the first palette color, and the threshold color at the value when thresholds are set. The value uses the same color and the name `SecondaryTextColor` |
+| Colors | The bar color is the item color (`ColorKey`, `ChartEntry.Color`), then `Color`, then the first palette color, and the threshold color at the value when thresholds are set. The value uses the same color, or `PrimaryTextColor` with `ValueColorMode` set to `Text`, and the name `SecondaryTextColor` |
 | Height | `AutoHeight` measures the rows that are shown plus the padding. The density then depends on the width only, so a gauge with one row keeps its item taps |
 | Taps | A row (name, bar and value) raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; the space between rows raises `ChartTapped` |
 | Animation | The entrance grows the bars from 0 with 40 ms between items (at most 30% of the duration in total) and fades in the values over its last 30%. Updates move the lengths, the positions after sorting and the opacity from the shown state; added rows grow from 0 and removed rows shrink and fade where they were. Frames allocate nothing |
@@ -790,6 +806,7 @@ The first item is the outermost ring.
 | `SegmentCount` | `int` | `20` | ✓ | Cells of a ring in `Segmented`, 1 or more; fewer on short rings |
 | `TrackVisible` | `bool` | `true` | ✓ | Draws the rest of each ring in `ChartStyle.TrackColor` |
 | `BarGlow` | `bool` | `false` | ✓ | Makes the value of each ring glow, like the bar glow of the Grafana gauge |
+| `ThresholdMarkersVisible` | `bool` | `false` | ✓ | Draws a thin ring of the threshold ranges outside the outermost ring, like the threshold markers of the Grafana gauge |
 | `OverflowMode` | `ChartOverflowMode` | `Clamp` | ✓ | Values over the maximum |
 | `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Colors by the percentage of the maximum; `null` throws `ArgumentNullException` |
 
@@ -834,6 +851,7 @@ The first item is the outermost ring.
 | `Gradient` | As in the Grafana gauge. With thresholds, each threshold color sits at its position around the ring and the ring shows it up to the value. Without thresholds, a darker and a lighter shade of the ring color are turned so that the strongest contrast falls at the value. Round ends get the colors at both ends |
 | `Segmented` | Each cell takes the threshold color at its start and is lit when its start is before the value. Unlit cells use `TrackColor`, otherwise 30% black in light and 20% white in dark. Cells are separated by `ChartStyle.SegmentGap`, at least 3 DIP long, with flat ends; `Wrap` is not used |
 | Glow | As the bar glow of Grafana: a copy of the value arc with the same width and colors, blurred with a standard deviation of 0.75 + 0.08 × the thickness, drawn under all the rings. `Basic` follows `CapStyle`, `Gradient` keeps its colors and blurs round ends too, and `Segmented` glows every cell, unlit ones included unless `TrackVisible` is `false`. The track of `Basic` and `Gradient` and the wrapped lap do not glow. `Minimal` density draws no glow |
+| Threshold markers | As in Grafana, one thin ring outside the outermost ring: 0.2 × thickness^0.92 wide, from 4 to 12 DIP, with half of that (from 2 to 12 DIP) of space, and the rings shrink to make room. Each threshold range takes its color, the range below the first threshold the color of the outermost ring; `Gradient` uses the gradient of the outermost ring and `Segmented` does not split it. The ends are flat and `BarGlow` makes it glow too. Nothing is drawn or reserved without thresholds or in `Minimal` density |
 | Center | Fitted inside the innermost ring, up to 32 DIP. `Auto` shows the selected ring, otherwise the outermost one, as a percentage with its name; `Total` shows the sum of the values with `CenterLabel`. The number counts up from 0 during the entrance and from the shown number on updates |
 | Selection | The other rings fade to `DimmedOpacity` over 150 ms; a second tap on the selected ring clears it |
 | Taps | The band of each ring, up to half the spacing, raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; elsewhere `ChartTapped` is raised and the selection is cleared |
@@ -1213,6 +1231,7 @@ Rings and bars look the same as the views in `Full` density, glow included. Valu
 | `SegmentCount`, `SegmentGap` | `int`, `float` | `20`, `2` | Cells of a ring in `Segmented` and the gap between them; fewer cells on short rings |
 | `TrackVisible`, `TrackColor` | `bool`, `SKColor?` | `true`, `null` | Draws the rest of each ring; `null` uses the track color of the theme |
 | `BarGlow` | `bool` | `false` | Makes the value of each ring glow as `ClamRadialBarView.BarGlow` does |
+| `ThresholdMarkersVisible` | `bool` | `false` | Draws the threshold ring as `ClamRadialBarView.ThresholdMarkersVisible` does when `Thresholds` has entries |
 | `OverflowMode` | `ChartOverflowMode` | `Clamp` | Values over the maximum; `Wrap` draws the next lap darker |
 | `Colors` | `IReadOnlyList<SKColor>?` | `null` | Color of each ring from the outside; `null` uses the default palette, and rings past the list are gray |
 | `Thresholds` | `IReadOnlyList<ChartDrawingThreshold>?` | `null` | Colors by the percentage of the range |
@@ -1425,13 +1444,15 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `Fade` | Opacity rises; scatter points also grow from 60% of their size |
 | | `Grow` | Values grow from the baseline; a pie widens from `StartAngle`, a radar from the center, heatmap cells from their centers and state timeline bands from the middle of their rows |
 | | `Reveal` | Drawn from the start of the X axis; a pie is revealed from `StartAngle`, a radar clockwise from 12 o'clock and a heatmap and a state timeline from the left |
-| `ChartOrientation` | `Vertical` | X along the bottom |
-| | `Horizontal` | X along the left, first at the top |
+| `ChartOrientation` | `Vertical` | X along the bottom; for `TitleOrientation`, a title turned by 90° |
+| | `Horizontal` | X along the left, first at the top; for `TitleOrientation`, a horizontal title |
 | `ChartStackMode` | `Normal` | Stacks the values |
 | | `Percent` | Stacks the shares to 100% |
 | `ChartLegendPosition` | `Top`, `Bottom`, `Left`, `Right` | Place of the legend |
 | `ChartLegendMode` | `List` | Markers and names in rows or a column |
 | | `Table` | A table of names and values |
+| `ChartLegendSortKey` | `Name` | Sorts a legend table by the names |
+| | `Last`, `Min`, `Max`, `Mean` | Sorts a legend table by that value column |
 | `ChartLegendValues` | `None`, `Last`, `Min`, `Max`, `Mean` | Flags for the value columns of a legend table |
 | `ChartDownsampling` | `None` | Draws every point |
 | | `Auto` | Thins dense lines and areas for drawing |
@@ -1445,6 +1466,8 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartTrackballMode` | `None` | No trackball |
 | | `LongPress` | Starts after a long press |
 | | `Touch` | Starts at once |
+| `ChartTrackingGroupMode` | `Crosshair` | A following chart draws the line and the markers |
+| | `Tooltip` | A following chart also draws its tooltip |
 | `ChartAxisTarget` | `Primary`, `Secondary` | Value axis of a series |
 | `ChartAxisPosition` | `Auto` | Y on the left and X at the bottom |
 | | `Opposite` | The other side |
@@ -1457,6 +1480,7 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartLineInterpolation` | `Linear` | Straight lines |
 | | `Smooth` | Monotone cubic curve that does not overshoot the data |
 | | `Step` | Keeps the value until the next point |
+| | `StepBefore` | Moves to the next value first and keeps it until the next point |
 | `ChartMarkerMode` | `Auto` | The last point and the selected point |
 | | `None` | No markers |
 | | `All` | Every point |
@@ -1510,6 +1534,8 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartBarGaugeValueMode` | `Value` | The value |
 | | `Percent` | Percentage of the maximum |
 | | `ValueOfMaximum` | The value and the maximum (`72 / 100`) |
+| `ChartBarGaugeValueColorMode` | `Bar` | The bar color, or the threshold color at the value |
+| | `Text` | `PrimaryTextColor` |
 | `ChartRadialBarMode` | `Basic` | One color |
 | | `Gradient` | Gradient of the threshold colors or of shades of the ring color |
 | | `Segmented` | Cells lit before the value |

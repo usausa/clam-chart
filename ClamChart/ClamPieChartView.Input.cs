@@ -6,9 +6,18 @@ using ClamChart.Layout;
 
 public partial class ClamPieChartView
 {
+    public static readonly BindableProperty LegendToggleEnabledProperty = BindableProperty.Create(nameof(LegendToggleEnabled), typeof(bool), typeof(ClamPieChartView), false, propertyChanged: OnLegendToggleEnabledChanged);
     public static readonly BindableProperty LegendItemTappedCommandProperty = BindableProperty.Create(nameof(LegendItemTappedCommand), typeof(ICommand), typeof(ClamPieChartView));
 
+    private readonly HashSet<string> hiddenLabels = [with(StringComparer.Ordinal)];
+
     public event EventHandler<ChartLegendEventArgs>? LegendItemTapped;
+
+    public bool LegendToggleEnabled
+    {
+        get => (bool)GetValue(LegendToggleEnabledProperty);
+        set => SetValue(LegendToggleEnabledProperty, value);
+    }
 
     public ICommand? LegendItemTappedCommand
     {
@@ -16,7 +25,7 @@ public partial class ClamPieChartView
         set => SetValue(LegendItemTappedCommandProperty, value);
     }
 
-    private bool HasLegendHandlers => (LegendItemTapped is not null) || (LegendItemTappedCommand is not null);
+    private bool HasLegendHandlers => LegendToggleEnabled || (LegendItemTapped is not null) || (LegendItemTappedCommand is not null);
 
     private bool HasItemHandlers => (SelectionMode != ChartSelectionMode.None) || HasItemTapHandlers;
 
@@ -111,11 +120,23 @@ public partial class ClamPieChartView
         }
     }
 
-    private void TapLegend(int sliceIndex)
+    private static void OnLegendToggleEnabledChanged(BindableObject bindable, object oldValue, object newValue)
     {
-        var slice = ChartLayout.Slices[sliceIndex];
+        var view = (ClamPieChartView)bindable;
+        if (!(bool)newValue && (view.hiddenLabels.Count > 0))
+        {
+            view.hiddenLabels.Clear();
+            view.hiddenChanged = true;
+            view.InvalidateLayout();
+        }
+    }
+
+    private void TapLegend(int legendIndex)
+    {
+        var slice = ChartLayout.GetLegendSlice(legendIndex);
+        var hidden = ChartLayout.IsHiddenLegendSlice(legendIndex);
         var generation = InputGeneration;
-        var args = HasLegendHandlers ? new ChartLegendEventArgs(null, GetItem(slice), slice.DataIndex) : null;
+        var args = (LegendItemTapped is not null) || (LegendItemTappedCommand is not null) ? new ChartLegendEventArgs(null, GetItem(slice), slice.DataIndex) : null;
         if (args is not null)
         {
             LegendItemTapped?.Invoke(this, args);
@@ -130,7 +151,11 @@ public partial class ClamPieChartView
             return;
         }
 
-        if ((SelectionMode != ChartSelectionMode.None) && !slice.IsOthers)
+        if (LegendToggleEnabled)
+        {
+            ToggleSlice(slice, hidden);
+        }
+        else if ((SelectionMode != ChartSelectionMode.None) && !slice.IsOthers)
         {
             ToggleSelection(slice.DataIndex);
         }
@@ -139,6 +164,50 @@ public partial class ClamPieChartView
         {
             ExecuteCommand(LegendItemTappedCommand, args);
         }
+    }
+
+    private void ToggleSlice(PieSlice slice, bool hidden)
+    {
+        if (slice.IsOthers || String.IsNullOrEmpty(slice.Label))
+        {
+            return;
+        }
+
+        if (hidden)
+        {
+            hiddenLabels.Remove(slice.Label);
+        }
+        else
+        {
+            if (!HasOtherVisibleSlice(slice.Label))
+            {
+                return;
+            }
+
+            hiddenLabels.Add(slice.Label);
+            if (interaction.SelectedKey == slice.DataIndex)
+            {
+                ClearSelection();
+            }
+        }
+
+        hiddenChanged = true;
+        InvalidateLayout();
+    }
+
+    private bool HasOtherVisibleSlice(string label)
+    {
+        var values = snapshot.Y;
+        for (var i = 0; i < values.Length; i++)
+        {
+            var name = snapshot.GetLabel(i);
+            if (Double.IsFinite(values[i]) && (values[i] > 0) && !String.Equals(name, label, StringComparison.Ordinal) && (String.IsNullOrEmpty(name) || !hiddenLabels.Contains(name)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void TapChart(Point position)

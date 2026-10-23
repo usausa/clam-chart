@@ -105,6 +105,39 @@ public sealed class ChartDrawingRadialBarTests
         AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { BarGlow = true, DisplayMode = mode, CapStyle = ChartCapStyle.Round });
     }
 
+    [Theory]
+    [InlineData(ChartRadialBarMode.Basic, false)]
+    [InlineData(ChartRadialBarMode.Gradient, false)]
+    [InlineData(ChartRadialBarMode.Segmented, false)]
+    [InlineData(ChartRadialBarMode.Basic, true)]
+    [InlineData(ChartRadialBarMode.Gradient, true)]
+    public void ThresholdMarkersMatchTheView(ChartRadialBarMode mode, bool glow)
+    {
+        // Arrange
+        using var view = Rings(70, 35);
+        view.DisplayMode = mode;
+        view.BarGlow = glow;
+        view.ThresholdMarkersVisible = true;
+        AddThresholds(view.Thresholds);
+
+        // Act & Assert
+        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { DisplayMode = mode, BarGlow = glow, ThresholdMarkersVisible = true, Thresholds = Thresholds() });
+    }
+
+    [Fact]
+    public void ThresholdMarkersOnAHalfCircleMatchTheView()
+    {
+        // Arrange
+        using var view = Rings(60, 30);
+        view.StartAngle = 270;
+        view.SweepAngle = 180;
+        view.ThresholdMarkersVisible = true;
+        AddThresholds(view.Thresholds);
+
+        // Act & Assert
+        AssertSameAsView(view, [60, 30], new RadialBarDrawOptions { StartAngle = 270, SweepAngle = 180, ThresholdMarkersVisible = true, Thresholds = Thresholds() });
+    }
+
     [Fact]
     public void SizesAndTrackMatchTheView()
     {

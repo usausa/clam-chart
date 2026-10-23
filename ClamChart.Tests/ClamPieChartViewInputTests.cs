@@ -223,6 +223,199 @@ public sealed class ClamPieChartViewInputTests
     }
 
     [Fact]
+    public void LegendToggleCapturesLegendTouches()
+    {
+        // Arrange
+        using var view = Chart(10, 30);
+        using var bitmap = view.Paint(340, 340);
+
+        // Act
+        view.LegendToggleEnabled = true;
+
+        // Assert
+        Assert.Equal(ChartTouchMode.HitOnly, view.EffectiveTouchMode);
+        Assert.True(view.IsInputTarget(LegendItem(view, 0)));
+        Assert.False(view.IsInputTarget(SlicePoint(view, 0)));
+    }
+
+    [Fact]
+    public void LegendToggleHidesTheSliceAndShowsItAgain()
+    {
+        // Arrange
+        using var view = Chart(10, 30, 60);
+        view.LegendToggleEnabled = true;
+        view.SelectionMode = ChartSelectionMode.Item;
+        view.LegendValueMode = ChartLegendValueMode.Percent;
+        using var first = view.Paint(340, 340);
+
+        // Act
+        Tap(view, LegendItem(view, 1));
+        using var hidden = view.Paint(340, 340);
+
+        // Assert
+        var layout = view.ChartLayout;
+        Assert.Equal([0, 2], layout.Slices.Select(static x => x.DataIndex));
+        Assert.Equal(70, layout.Total);
+        Assert.Equal(1d / 7, layout.Slices[0].End, 9);
+        var slice = Assert.Single(layout.HiddenSlices);
+        Assert.Equal(1, slice.DataIndex);
+        Assert.Equal(PieLayout.HiddenPercentText, slice.PercentText);
+        Assert.Equal([0, 2, 1], layout.Legend.Items.Select(static x => x.SeriesIndex));
+        Assert.Equal(-1, view.SelectedIndex);
+
+        // Act
+        Tap(view, LegendItem(view, 1));
+        using var shown = view.Paint(340, 340);
+
+        // Assert
+        Assert.Equal([0, 1, 2], view.ChartLayout.Slices.Select(static x => x.DataIndex));
+        Assert.Empty(view.ChartLayout.HiddenSlices);
+    }
+
+    [Fact]
+    public void TheLastVisibleSliceCannotBeHidden()
+    {
+        // Arrange
+        using var view = Chart(10, 30);
+        view.LegendToggleEnabled = true;
+        using var first = view.Paint(340, 340);
+        Tap(view, LegendItem(view, 0));
+        using var second = view.Paint(340, 340);
+
+        // Act
+        Tap(view, LegendItem(view, 1));
+        using var third = view.Paint(340, 340);
+
+        // Assert
+        Assert.Equal([1], view.ChartLayout.Slices.Select(static x => x.DataIndex));
+        Assert.Equal([0], view.ChartLayout.HiddenSlices.Select(static x => x.DataIndex));
+    }
+
+    [Fact]
+    public void HidingTheSelectedSliceClearsTheSelection()
+    {
+        // Arrange
+        var entries = Entries(10, 30);
+        using var view = Chart(entries);
+        view.SelectionMode = ChartSelectionMode.Item;
+        view.LegendToggleEnabled = true;
+        view.SelectedIndex = 1;
+        ChartSelectionChangedEventArgs? changed = null;
+        view.SelectionChanged += (_, e) => changed = e;
+        using var first = view.Paint(340, 340);
+
+        // Act
+        Tap(view, LegendItem(view, 1));
+
+        // Assert
+        Assert.Equal(-1, view.SelectedIndex);
+        Assert.Null(view.SelectedItem);
+        Assert.NotNull(changed);
+        Assert.Same(entries[1], changed.OldItem);
+        Assert.Equal(-1, changed.NewIndex);
+    }
+
+    [Fact]
+    public void HiddenSlicesKeepTheirColorsAndTheirPlaceInTheLegend()
+    {
+        // Arrange
+        using var view = Chart(10, 30, 60);
+        view.SortMode = ChartSortMode.Descending;
+        view.LegendToggleEnabled = true;
+        using var first = view.Paint(340, 340);
+        var ranks = view.ChartLayout.Slices.Select(static x => (x.DataIndex, x.ColorRank)).ToList();
+
+        // Act
+        Tap(view, LegendItem(view, 1));
+        using var second = view.Paint(340, 340);
+
+        // Assert
+        var layout = view.ChartLayout;
+        Assert.Equal([(2, 2), (1, 1), (0, 0)], ranks);
+        Assert.Equal([(2, 2), (0, 0)], layout.Slices.Select(static x => (x.DataIndex, x.ColorRank)));
+        Assert.Equal(1, layout.HiddenSlices[0].ColorRank);
+        Assert.Equal([0, 2, 1], layout.Legend.Items.Select(static x => x.SeriesIndex));
+    }
+
+    [Fact]
+    public void ItemsLeavingTheMergedSliceDoNotShiftTheColors()
+    {
+        // Arrange
+        using var view = Chart(40, 5, 30, 20);
+        view.MaxSlices = 3;
+        view.LegendToggleEnabled = true;
+        using var first = view.Paint(340, 340);
+        var before = view.ChartLayout.Slices.Where(static x => !x.IsOthers).Select(static x => (x.DataIndex, x.ColorRank)).ToList();
+
+        // Act
+        Tap(view, LegendItem(view, 0));
+        using var second = view.Paint(340, 340);
+
+        // Assert
+        Assert.Equal([(0, 0), (2, 1)], before);
+        Assert.Equal([(1, 2), (2, 1), (3, 3)], view.ChartLayout.Slices.Select(static x => (x.DataIndex, x.ColorRank)));
+        Assert.Equal(0, view.ChartLayout.HiddenSlices[0].ColorRank);
+    }
+
+    [Fact]
+    public void OthersIsNotToggled()
+    {
+        // Arrange
+        using var view = Chart(10, 30, 60);
+        view.MaxSlices = 2;
+        view.LegendToggleEnabled = true;
+        using var first = view.Paint(340, 340);
+
+        // Act
+        Tap(view, LegendItem(view, 1));
+        using var second = view.Paint(340, 340);
+
+        // Assert
+        Assert.Equal(2, view.ChartLayout.Slices.Count);
+        Assert.True(view.ChartLayout.Slices[1].IsOthers);
+        Assert.Empty(view.ChartLayout.HiddenSlices);
+    }
+
+    [Fact]
+    public void TurningTheToggleOffShowsEverySlice()
+    {
+        // Arrange
+        using var view = Chart(10, 30);
+        view.LegendToggleEnabled = true;
+        using var first = view.Paint(340, 340);
+        Tap(view, LegendItem(view, 0));
+        using var second = view.Paint(340, 340);
+
+        // Act
+        view.LegendToggleEnabled = false;
+        using var third = view.Paint(340, 340);
+
+        // Assert
+        Assert.Equal([0, 1], view.ChartLayout.Slices.Select(static x => x.DataIndex));
+        Assert.Empty(view.ChartLayout.HiddenSlices);
+    }
+
+    [Fact]
+    public void HiddenSlicesFollowTheirNamesThroughDataChanges()
+    {
+        // Arrange
+        var entries = new ObservableCollection<ChartEntry>(Entries(10, 30, 60));
+        using var view = new TestClamPieChartView { ItemsSource = entries, LegendVisible = true, LegendToggleEnabled = true };
+        view.OnAttached();
+        using var first = view.Paint(340, 340);
+        Tap(view, LegendItem(view, 1));
+        using var second = view.Paint(340, 340);
+
+        // Act
+        entries.Insert(0, new ChartEntry("C9", 5));
+        using var third = view.Paint(340, 340);
+
+        // Assert
+        Assert.Equal([0, 1, 3], view.ChartLayout.Slices.Select(static x => x.DataIndex));
+        Assert.Equal([2], view.ChartLayout.HiddenSlices.Select(static x => x.DataIndex));
+    }
+
+    [Fact]
     public void ReleaseOnAnotherSliceIsNotATap()
     {
         // Arrange

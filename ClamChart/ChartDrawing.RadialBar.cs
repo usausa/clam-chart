@@ -25,24 +25,25 @@ public static partial class ChartDrawing
         var innerRadius = Single.IsNaN(options.InnerRadius) ? 0 : Math.Clamp(options.InnerRadius, 0, MaxInnerRadius);
         var spacing = GetLength(options.Spacing);
         var area = new ChartRect(bounds.Left, bounds.Top, bounds.Width, bounds.Height);
-        var (centerX, centerY, radius, thickness) = RadialBarLayout.FitRings(area, startAngle, sweepAngle, innerRadius, options.Thickness is { } width ? GetLength(width) : null, spacing, values.Length, options.BarGlow, options.CapStyle);
-        if ((radius <= 0) || (thickness <= 0))
+        var steps = RentSteps(options.Thresholds, out var stepCount);
+        var fit = RadialBarLayout.FitRings(area, startAngle, sweepAngle, innerRadius, options.Thickness is { } width ? GetLength(width) : null, spacing, values.Length, options.BarGlow, options.CapStyle, options.ThresholdMarkersVisible && (stepCount > 0));
+        if ((fit.Radius <= 0) || (fit.Thickness <= 0))
         {
+            ReturnSteps(steps);
             return SKRect.Empty;
         }
 
         var range = options.Maximum - options.Minimum;
         var segmented = options.DisplayMode == ChartRadialBarMode.Segmented;
         var wrap = (options.OverflowMode == ChartOverflowMode.Wrap) && !segmented;
-        var ring = new Ring(startAngle, sweepAngle, radius, thickness, spacing, options.CapStyle, options.DisplayMode, options.SegmentCount, GetLength(options.SegmentGap), options.Minimum, Double.IsFinite(range) ? range : 0, wrap);
-        var steps = RentSteps(options.Thresholds, out var stepCount);
+        var ring = new Ring(startAngle, sweepAngle, fit.Radius, fit.Thickness, spacing, options.CapStyle, options.DisplayMode, options.SegmentCount, GetLength(options.SegmentGap), options.Minimum, Double.IsFinite(range) ? range : 0, wrap);
         canvas.Save();
         try
         {
-            canvas.Translate((float)centerX, (float)centerY);
+            canvas.Translate((float)fit.CenterX, (float)fit.CenterY);
             if (options.BarGlow)
             {
-                DrawGlows(canvas, values, ring, steps.AsSpan(0, stepCount), options);
+                DrawGlows(canvas, values, ring, fit, steps.AsSpan(0, stepCount), options);
             }
 
             using var paint = new SKPaint();
@@ -51,6 +52,8 @@ public static partial class ChartDrawing
             {
                 DrawRing(canvas, ring, i, values[i], steps.AsSpan(0, stepCount), options, paint);
             }
+
+            DrawThresholdMarkers(canvas, ring, fit, steps.AsSpan(0, stepCount), options, paint);
         }
         finally
         {
@@ -58,7 +61,34 @@ public static partial class ChartDrawing
             ReturnSteps(steps);
         }
 
-        return GetHole(centerX, centerY, ring.GetRadius(values.Length - 1) - (thickness / 2));
+        return GetHole(fit.CenterX, fit.CenterY, ring.GetRadius(values.Length - 1) - (fit.Thickness / 2));
+    }
+
+    private static void DrawThresholdMarkers(SKCanvas canvas, in Ring ring, in RingFit fit, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options, SKPaint paint)
+    {
+        if ((fit.MarkerWidth <= 0) || (steps.Length == 0))
+        {
+            return;
+        }
+
+        var baseColor = GetRingColor(0, options);
+        var radius = (float)fit.MarkerRadius;
+        paint.Style = SKPaintStyle.Stroke;
+        paint.StrokeWidth = (float)fit.MarkerWidth;
+        paint.StrokeCap = SKStrokeCap.Butt;
+        paint.StrokeJoin = SKStrokeJoin.Miter;
+        if (ring.DisplayMode == ChartRadialBarMode.Gradient)
+        {
+            var (colors, positions) = RadialBarGradient.GetThresholdStops(steps, baseColor);
+            using var shader = RadialBarRenderer.CreateGradient(colors, positions, ring.StartAngle, ring.SweepAngle);
+            paint.Shader = shader;
+            paint.Color = SKColors.Black;
+            RadialBarRenderer.DrawMarkerArc(canvas, ring.StartAngle, ring.SweepAngle, radius, 0, 1, paint);
+            paint.Shader = null;
+            return;
+        }
+
+        RadialBarRenderer.DrawMarkerBands(canvas, ring.StartAngle, ring.SweepAngle, radius, steps, baseColor, 1, paint);
     }
 
     private static SKColor GetRingColor(int index, in RadialBarDrawOptions options)
@@ -89,7 +119,7 @@ public static partial class ChartDrawing
         return new SKPoint((float)(x * radius), (float)(y * radius));
     }
 
-    private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options)
+    private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, in RingFit fit, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options)
     {
         var segmented = ring.DisplayMode == ChartRadialBarMode.Segmented;
         var gradient = ring.DisplayMode == ChartRadialBarMode.Gradient;
@@ -151,6 +181,8 @@ public static partial class ChartDrawing
                 DrawSweep(canvas, ring, radius, 0, drawn, paint);
             }
         }
+
+        DrawThresholdMarkers(canvas, ring, fit, steps, options, paint);
     }
 
     private static void DrawRing(SKCanvas canvas, in Ring ring, int index, double value, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options, SKPaint paint)

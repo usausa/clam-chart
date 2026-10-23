@@ -1,6 +1,7 @@
 namespace ClamChart.Tests;
 
 using SkiaSharp;
+using SkiaSharp.Views.Maui;
 
 [Collection(nameof(ClamChartSettings))]
 public sealed class ClamPieChartViewAnimationTests
@@ -229,6 +230,39 @@ public sealed class ClamPieChartViewAnimationTests
         Assert.Empty(driver.Starts);
         Assert.False(view.Interpolator.IsMorphing);
         Assert.Equal(0.75, view.Interpolator.GetSlice(0).End, 9);
+    }
+
+    [Fact]
+    public void HiddenSliceShrinksEvenWithoutUpdateAnimations()
+    {
+        // Arrange
+        using var view = Quiet(Entries(1, 1));
+        view.UpdateAnimationEnabled = false;
+        view.LegendVisible = true;
+        view.LegendToggleEnabled = true;
+        var driver = Driver(view);
+        using var first = view.Paint(300, 300);
+        var legend = view.ChartLayout.Legend.Items[0].Bounds;
+        var point = new Point(legend.CenterX, legend.CenterY);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, point, 0);
+        view.HandleTouch(1, SKTouchAction.Released, point, 10);
+        using var second = view.Paint(300, 300);
+        driver.Frame(Data, 0.5);
+
+        // Assert
+        Assert.Equal([(Data, 450u)], driver.Starts);
+        Assert.True(view.Interpolator.IsMorphing);
+        Assert.Equal((0d, 0.25), view.Interpolator.GetSlice(0));
+        Assert.Equal((0.25, 1d), view.Interpolator.GetSlice(1));
+
+        // Act
+        driver.Finish(Data);
+
+        // Assert
+        Assert.Equal(1, view.Interpolator.Count);
+        Assert.Equal((0d, 1d), view.Interpolator.GetSlice(0));
     }
 
     [Fact]

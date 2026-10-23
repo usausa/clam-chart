@@ -5,5 +5,6 @@ internal enum ChartHitKind
     None,
     Plot,
     Item,
-    Legend
+    Legend,
+    LegendHeader
 }

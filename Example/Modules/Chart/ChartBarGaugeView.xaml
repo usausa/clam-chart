@@ -38,7 +38,7 @@
                     <clam:ClamBarGaugeView ItemsSource="{Binding Storages}"
                                            BarThickness="16" ContentPadding="0" DisplayMode="Gradient" LabelPosition="Left"
                                            Thresholds="{Binding UsageThresholds}"
-                                           ValueMode="ValueOfMaximum" />
+                                           ValueColorMode="Text" ValueMode="ValueOfMaximum" />
                 </VerticalStackLayout>
             </Border>
             <Border Style="{StaticResource StatBorder}">

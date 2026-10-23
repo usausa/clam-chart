@@ -25,6 +25,7 @@
                    Text="{Binding Header}" />
             <clam:ClamChartView HeightRequest="260"
                                 TrackballMode="{Binding TrackballMode}"
+                                TrackballSnapEnabled="{Binding TrackballSnapEnabled}"
                                 TrackedItem="{Binding TrackedSales, Mode=OneWayToSource}"
                                 ValueAccessors="{x:Static models:MonthlySales.Accessors}"
                                 XKey="month">

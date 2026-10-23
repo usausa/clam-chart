@@ -32,6 +32,8 @@ internal sealed class PieLayout
 
     public const int TotalCenterKey = -1;
 
+    public const string HiddenPercentText = "-";
+
     private const double CenterFontRatio = 0.5;
 
     private const double CaptionFontRatio = 0.45;
@@ -43,7 +45,11 @@ internal sealed class PieLayout
     private const int FitAttempts = 3;
 
     private readonly List<PieCandidate> candidates = [];
+    private readonly List<PieCandidate> hiddenCandidates = [];
+    private readonly List<PieCandidate> allCandidates = [];
+    private readonly List<int> ranks = [];
     private readonly List<PieSlice> slices = [];
+    private readonly List<PieSlice> hiddenSlices = [];
     private readonly List<PieCenterText> sliceCenters = [];
     private readonly List<LegendEntry> legendEntries = [];
     private readonly List<PieOutsideLabel> outsideLabels = [];
@@ -80,6 +86,8 @@ internal sealed class PieLayout
     public ChartLegendValueMode LegendValueMode { get; private set; }
 
     public IReadOnlyList<PieSlice> Slices => slices;
+
+    public IReadOnlyList<PieSlice> HiddenSlices => hiddenSlices;
 
     public LegendLayout Legend { get; } = new();
 
@@ -136,6 +144,10 @@ internal sealed class PieLayout
     }
 
     public double GetAngle(double fraction) => StartAngle + (SweepAngle * fraction);
+
+    public PieSlice GetLegendSlice(int index) => index < slices.Count ? slices[index] : hiddenSlices[index - slices.Count];
+
+    public bool IsHiddenLegendSlice(int index) => index >= slices.Count;
 
     public double GetLabelRadius() => InnerRadius > 0 ? (OuterRadius + InnerRadius) / 2 : OuterRadius * LabelRadius;
 
@@ -286,10 +298,55 @@ internal sealed class PieLayout
 
     private static double RoundSize(double size) => Math.Floor(size * 2) / 2;
 
+    private static bool IsHidden(string? label, IReadOnlySet<string>? hidden) =>
+        (hidden is { Count: > 0 }) && !String.IsNullOrEmpty(label) && hidden.Contains(label);
+
+    private static void SortSlices(Span<PieCandidate> items, ChartSortMode mode)
+    {
+        if (mode == ChartSortMode.Descending)
+        {
+            items.Sort(default(LargerFirst));
+        }
+        else if (mode == ChartSortMode.Ascending)
+        {
+            items.Sort(default(SmallerFirst));
+        }
+    }
+
+    private void RankByData(int count, PieLayoutOptions options)
+    {
+        ranks.Clear();
+        for (var i = 0; i < count; i++)
+        {
+            ranks.Add(-1);
+        }
+
+        allCandidates.Clear();
+        allCandidates.AddRange(candidates);
+        allCandidates.AddRange(hiddenCandidates);
+        var total = 0d;
+        foreach (var item in allCandidates)
+        {
+            total += item.Value;
+        }
+
+        var all = CollectionsMarshal.AsSpan(allCandidates);
+        all.Sort(default(LargerFirst));
+        var kept = CountKept(all, total, options);
+        all[..kept].Sort(default(DataOrder));
+        all[kept..].Sort(default(DataOrder));
+        for (var k = 0; k < all.Length; k++)
+        {
+            ranks[all[k].Index] = k;
+        }
+    }
+
     private void BuildSlices(DataSnapshot data, PieLayoutOptions options, ChartStyle style, CultureInfo culture, IChartTextMeasurer measurer)
     {
         slices.Clear();
+        hiddenSlices.Clear();
         candidates.Clear();
+        hiddenCandidates.Clear();
         HasNegativeValues = false;
         var values = data.Y;
         var total = 0d;
@@ -302,9 +359,27 @@ internal sealed class PieLayout
             }
             else if (Double.IsFinite(value) && (value > 0))
             {
-                candidates.Add(new PieCandidate(value, i, -1));
-                total += value;
+                if (IsHidden(data.GetLabel(i), options.HiddenLabels))
+                {
+                    hiddenCandidates.Add(new PieCandidate(value, i, -1));
+                }
+                else
+                {
+                    candidates.Add(new PieCandidate(value, i, -1));
+                    total += value;
+                }
             }
+        }
+
+        if (candidates.Count == 0)
+        {
+            foreach (var candidate in hiddenCandidates)
+            {
+                candidates.Add(candidate);
+                total += candidate.Value;
+            }
+
+            hiddenCandidates.Clear();
         }
 
         Total = Double.IsFinite(total) ? total : 0;
@@ -314,23 +389,30 @@ internal sealed class PieLayout
             return;
         }
 
+        RankByData(values.Length, options);
         var sorted = CollectionsMarshal.AsSpan(candidates);
         sorted.Sort(default(LargerFirst));
         var kept = CountKept(sorted, total, options);
         var shown = sorted[..kept];
+        var hidden = CollectionsMarshal.AsSpan(hiddenCandidates);
         shown.Sort(default(DataOrder));
+        hidden.Sort(default(DataOrder));
         for (var k = 0; k < shown.Length; k++)
         {
-            shown[k] = shown[k] with { Rank = k };
+            shown[k] = shown[k] with { Rank = ranks[shown[k].Index] };
         }
 
-        if (options.SortMode == ChartSortMode.Descending)
+        for (var k = 0; k < hidden.Length; k++)
         {
-            shown.Sort(default(LargerFirst));
+            hidden[k] = hidden[k] with { Rank = ranks[hidden[k].Index] };
         }
-        else if (options.SortMode == ChartSortMode.Ascending)
+
+        SortSlices(shown, options.SortMode);
+        SortSlices(hidden, options.SortMode);
+        foreach (var item in hidden)
         {
-            shown.Sort(default(SmallerFirst));
+            var text = ChartTextFormat.FormatValue(item.Value, options.ValueFormatter, options.ValueConverter, options.ValueFormat, culture);
+            hiddenSlices.Add(new PieSlice(item.Index, item.Value, 0, 0, item.Rank, data.GetColor(item.Index), data.GetLabel(item.Index), HiddenPercentText, text, null, 0));
         }
 
         var cumulative = 0d;
@@ -364,24 +446,59 @@ internal sealed class PieLayout
         return new PieSlice(index, value, start, end, rank, color, label, percent, text, labelText, width);
     }
 
+    private static bool Precedes(PieSlice hidden, PieSlice slice, ChartSortMode mode) => mode switch
+    {
+        ChartSortMode.Descending => (hidden.Value > slice.Value) || (hidden.Value.Equals(slice.Value) && (hidden.DataIndex < slice.DataIndex)),
+        ChartSortMode.Ascending => (hidden.Value < slice.Value) || (hidden.Value.Equals(slice.Value) && (hidden.DataIndex < slice.DataIndex)),
+        _ => hidden.DataIndex < slice.DataIndex
+    };
+
+    private void AddLegendEntry(int index, PieSlice slice, ChartLegendValueMode mode)
+    {
+        if (String.IsNullOrEmpty(slice.Label))
+        {
+            return;
+        }
+
+        var value = mode switch
+        {
+            ChartLegendValueMode.Value => slice.ValueText,
+            ChartLegendValueMode.Percent => slice.PercentText,
+            _ => null
+        };
+        legendEntries.Add(new LegendEntry(index, slice.Label, LegendMarkerKind.Dot, value));
+    }
+
     private void PlaceLegend(PieLayoutOptions options, ChartStyle style, IChartTextMeasurer measurer)
     {
         legendEntries.Clear();
+        var others = -1;
+        var next = 0;
         for (var i = 0; i < slices.Count; i++)
         {
             var slice = slices[i];
-            if (String.IsNullOrEmpty(slice.Label))
+            if (slice.IsOthers)
             {
+                others = i;
                 continue;
             }
 
-            var value = options.LegendValueMode switch
+            for (; (next < hiddenSlices.Count) && Precedes(hiddenSlices[next], slice, options.SortMode); next++)
             {
-                ChartLegendValueMode.Value => slice.ValueText,
-                ChartLegendValueMode.Percent => slice.PercentText,
-                _ => null
-            };
-            legendEntries.Add(new LegendEntry(i, slice.Label, LegendMarkerKind.Dot, value));
+                AddLegendEntry(slices.Count + next, hiddenSlices[next], options.LegendValueMode);
+            }
+
+            AddLegendEntry(i, slice, options.LegendValueMode);
+        }
+
+        for (; next < hiddenSlices.Count; next++)
+        {
+            AddLegendEntry(slices.Count + next, hiddenSlices[next], options.LegendValueMode);
+        }
+
+        if (others >= 0)
+        {
+            AddLegendEntry(others, slices[others], options.LegendValueMode);
         }
 
         var area = Bounds;

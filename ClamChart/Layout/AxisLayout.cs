@@ -11,6 +11,8 @@ internal sealed class AxisLayout
 
     private const double DisplayTolerance = 0.5;
 
+    private const string Ellipsis = "…";
+
     private static readonly AxisLayoutOptions DefaultOptions = new();
 
     private static readonly double SampleTime = new DateTime(2000, 10, 20, 20, 0, 0).Ticks;
@@ -32,6 +34,8 @@ internal sealed class AxisLayout
     public bool ShowsLabels => Options.IsVisible && Options.LabelsVisible;
 
     public bool ShowsTitle => Options.IsVisible && !String.IsNullOrEmpty(Options.Title);
+
+    public bool RotatesTitle => IsVertical && ShowsTitle && (Options.TitleOrientation == ChartOrientation.Vertical);
 
     public bool HasDefaultFormat => (Options.LabelFormatter is null) && (Options.LabelConverter is null) && Options.LabelFormat.IsDefault;
 
@@ -67,6 +71,10 @@ internal sealed class AxisLayout
     public double TitleMaxWidth { get; private set; }
 
     public ChartRect TitleBounds { get; private set; }
+
+    public ChartRect TitleArea { get; private set; }
+
+    public double TitleRotation { get; private set; }
 
     public IReadOnlyList<ChartRect> TitleMarkers => titleMarkers;
 
@@ -147,30 +155,16 @@ internal sealed class AxisLayout
 
     public void PlaceTitle(ChartRect row, double lineHeight, int markerCount, double markerSize)
     {
-        titleMarkers.Clear();
-        if (!ShowsTitle)
-        {
-            TitleBounds = default;
-            return;
-        }
+        TitleArea = default;
+        TitleRotation = 0;
+        PlaceTitleText(row, lineHeight, markerCount, markerSize, !IsVertical);
+    }
 
-        var markersWidth = GetMarkersWidth(markerCount, markerSize);
-        var total = markersWidth + TitleWidth;
-        var start = Side switch
-        {
-            AxisSide.Left => row.X,
-            AxisSide.Right => row.Right - total,
-            _ => row.CenterX - (total / 2)
-        };
-        start = Math.Max(row.X, Math.Min(start, row.Right - total));
-        var textX = Side == AxisSide.Right ? start : start + markersWidth;
-        var markerX = Side == AxisSide.Right ? start + TitleWidth + LegendLayout.MarkerGap : start;
-        for (var i = 0; i < markerCount; i++)
-        {
-            titleMarkers.Add(new ChartRect(markerX + (i * (markerSize + LegendLayout.MarkerGap)), row.Y + ((lineHeight - markerSize) / 2), markerSize, markerSize));
-        }
-
-        TitleBounds = new ChartRect(textX, row.Y, TitleWidth, lineHeight);
+    public void PlaceRotatedTitle(ChartRect area, double lineHeight, int markerCount, double markerSize)
+    {
+        TitleArea = area;
+        TitleRotation = Side == AxisSide.Left ? -90 : 90;
+        PlaceTitleText(new ChartRect(-area.Height / 2, -lineHeight / 2, area.Height, lineHeight), lineHeight, markerCount, markerSize, true);
     }
 
     public string GetLabelText(double value, IReadOnlyList<string?> categories) => GetText(value, categories);
@@ -207,6 +201,29 @@ internal sealed class AxisLayout
         }
 
         return Scale.Minimum + (fraction * Scale.Span);
+    }
+
+    private void PlaceTitleText(ChartRect row, double lineHeight, int markerCount, double markerSize, bool centered)
+    {
+        titleMarkers.Clear();
+        if (!ShowsTitle)
+        {
+            TitleBounds = default;
+            return;
+        }
+
+        var markersWidth = GetMarkersWidth(markerCount, markerSize);
+        var total = markersWidth + TitleWidth;
+        var start = centered ? row.CenterX - (total / 2) : Side == AxisSide.Right ? row.Right - total : row.X;
+        start = Math.Max(row.X, Math.Min(start, row.Right - total));
+        var textX = Side == AxisSide.Right ? start : start + markersWidth;
+        var markerX = Side == AxisSide.Right ? start + TitleWidth + LegendLayout.MarkerGap : start;
+        for (var i = 0; i < markerCount; i++)
+        {
+            titleMarkers.Add(new ChartRect(markerX + (i * (markerSize + LegendLayout.MarkerGap)), row.Y + ((lineHeight - markerSize) / 2), markerSize, markerSize));
+        }
+
+        TitleBounds = new ChartRect(textX, row.Y, TitleWidth, lineHeight);
     }
 
     private static double GetMarkersWidth(int markerCount, double markerSize) =>
@@ -295,7 +312,7 @@ internal sealed class AxisLayout
 
         foreach (var tick in ticks)
         {
-            var text = GetText(tick, categories);
+            var text = Shorten(GetText(tick, categories));
             var width = measurer.Measure(text, fontSize, maxLabelWidth);
             labels.Add(new AxisLabel(tick, text, width, maxLabelWidth, default));
             LabelWidth = Math.Max(LabelWidth, width);
@@ -323,6 +340,17 @@ internal sealed class AxisLayout
         }
 
         return text;
+    }
+
+    private string Shorten(string text)
+    {
+        if (Options.LabelMaxLength is not { } maxLength)
+        {
+            return text;
+        }
+
+        var info = new StringInfo(text);
+        return info.LengthInTextElements > maxLength ? info.SubstringByTextElements(0, maxLength).TrimEnd() + Ellipsis : text;
     }
 
     private static string FormatPercent(double value, CultureInfo culture)

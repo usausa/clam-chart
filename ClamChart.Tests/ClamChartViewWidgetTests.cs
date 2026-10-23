@@ -74,6 +74,110 @@ public sealed class ClamChartViewWidgetTests
     }
 
     [Fact]
+    public void UnsnappedLeaderSharesTheFingerPosition()
+    {
+        // Arrange
+        using var leader = NumericChart("ops");
+        leader.TrackballSnapEnabled = false;
+        using var snapping = NumericChart("ops");
+        using var free = NumericChart("ops");
+        free.TrackballSnapEnabled = false;
+        Paint(leader, snapping, free);
+        var plot = leader.ChartLayout.PlotBounds;
+        var y = plot.Y + (plot.Height * 0.6);
+
+        // Act
+        leader.HandleTouch(1, SKTouchAction.Pressed, new Point(leader.ChartLayout.XAxis.ToPixel(7), y), 0);
+        using var snapped = snapping.Paint(360, 240);
+        using var followed = free.Paint(360, 240);
+
+        // Assert
+        var line = ChartStyles.Light.TrackballLineColor.ToSKColor();
+        var top = plot.Y + 3;
+        Assert.Equal(line, GetPixel(snapped, snapping.ChartLayout.XAxis.ToPixel(10), top));
+        Assert.NotEqual(line, GetPixel(snapped, snapping.ChartLayout.XAxis.ToPixel(7), top));
+        Assert.Equal(line, GetPixel(followed, free.ChartLayout.XAxis.ToPixel(7), top));
+        Assert.NotEqual(line, GetPixel(followed, free.ChartLayout.XAxis.ToPixel(10), top));
+        Assert.NotEqual(line, GetPixel(followed, plot.X + 3, y));
+        Assert.Null(free.TrackedItem);
+    }
+
+    [Fact]
+    public void UnsnappedCategoryFollowerKeepsThePlaceWithinTheCategory()
+    {
+        // Arrange
+        using var leader = Chart("ops", ["A", "B", "C"]);
+        leader.TrackballSnapEnabled = false;
+        using var follower = Chart("ops", ["B", "C"]);
+        follower.TrackballSnapEnabled = false;
+        Paint(leader, follower);
+
+        // Act
+        leader.HandleTouch(1, SKTouchAction.Pressed, new Point(leader.ChartLayout.XAxis.ToPixel(1.3), 100), 0);
+        using var followed = follower.Paint(360, 240);
+
+        // Assert
+        var line = ChartStyles.Light.TrackballLineColor.ToSKColor();
+        var top = follower.ChartLayout.PlotBounds.Y + 3;
+        Assert.Equal(line, GetPixel(followed, follower.ChartLayout.XAxis.ToPixel(0.3), top));
+        Assert.NotEqual(line, GetPixel(followed, follower.ChartLayout.XAxis.ToPixel(0), top));
+    }
+
+    [Fact]
+    public void TooltipModeShowsTheTooltipOfTheFollowerAtTheSameHeight()
+    {
+        // Arrange
+        using var leader = Chart("ops", ["A", "B", "C"]);
+        using var tooltip = Chart("ops", ["A", "B", "C"]);
+        tooltip.TrackingGroupMode = ChartTrackingGroupMode.Tooltip;
+        using var crosshair = Chart("ops", ["A", "B", "C"]);
+        Paint(leader, tooltip, crosshair);
+        var plot = leader.ChartLayout.PlotBounds;
+
+        // Act
+        leader.HandleTouch(1, SKTouchAction.Pressed, new Point(leader.ChartLayout.XAxis.ToPixel(1), plot.Y + (plot.Height * 0.75)), 0);
+
+        // Assert
+        Assert.Equal("B", tooltip.TooltipHeader);
+        var anchor = tooltip.TooltipPoint;
+        var follower = tooltip.ChartLayout.PlotBounds;
+        Assert.Equal(tooltip.ChartLayout.XAxis.ToPixel(1), anchor.X, 6);
+        Assert.Equal(follower.Y + (follower.Height * 0.75), anchor.Y, 6);
+        Assert.Equal("2", tooltip.GetTrackingText(0, 1));
+        Assert.Null(tooltip.TrackedItem);
+        Assert.Equal(-1, tooltip.TrackedIndex);
+        Assert.Null(crosshair.TooltipHeader);
+
+        // Act
+        leader.HandleTouch(1, SKTouchAction.Released, new Point(leader.ChartLayout.XAxis.ToPixel(1), 100), 10);
+
+        // Assert
+        Assert.Null(tooltip.TooltipHeader);
+    }
+
+    [Fact]
+    public void TooltipModeFollowerDrawsTheTooltip()
+    {
+        // Arrange
+        using var leader = Chart("ops", ["A", "B", "C"]);
+        using var follower = Chart("ops", ["A", "B", "C"]);
+        Paint(leader, follower);
+        var plot = leader.ChartLayout.PlotBounds;
+        leader.HandleTouch(1, SKTouchAction.Pressed, new Point(leader.ChartLayout.XAxis.ToPixel(1), plot.Y + (plot.Height * 0.75)), 0);
+        using var crosshair = follower.Paint(360, 240);
+
+        // Act
+        follower.TrackingGroupMode = ChartTrackingGroupMode.Tooltip;
+        using var tooltip = follower.Paint(360, 240);
+
+        // Assert
+        var anchor = follower.TooltipPoint;
+        var background = ChartStyles.Light.TooltipBackground.ToSKColor();
+        Assert.NotEqual(background, GetPixel(crosshair, anchor.X + 4, anchor.Y - 50));
+        Assert.Equal(background, GetPixel(tooltip, anchor.X + 4, anchor.Y - 50));
+    }
+
+    [Fact]
     public void CategoryWidthRequestsTheLengthOfTheCategories()
     {
         // Arrange
@@ -155,6 +259,13 @@ public sealed class ClamChartViewWidgetTests
     {
         var view = new TestClamChartView { TrackballMode = ChartTrackballMode.Touch, TrackingGroup = group };
         view.Series.Add(new LineSeries { ItemsSource = categories.Select(static (x, i) => new ChartEntry(x, i + 1)).ToList() });
+        return view;
+    }
+
+    private static TestClamChartView NumericChart(string group)
+    {
+        var view = new TestClamChartView { TrackballMode = ChartTrackballMode.Touch, TrackingGroup = group };
+        view.Series.Add(new LineSeries { ItemsSource = new List<ChartPoint> { new(0, 1), new(10, 2), new(20, 3) } });
         return view;
     }
 

@@ -26,11 +26,19 @@ internal sealed class CartesianInteraction
 
     public bool IsFollowing { get; set; }
 
+    public bool Snaps { get; set; } = true;
+
     public ChartAxisKind FollowKind { get; set; }
 
     public double FollowX { get; set; } = Double.NaN;
 
     public string? FollowCategory { get; set; }
+
+    public double FollowOffset { get; set; }
+
+    public double FollowAcross { get; set; } = Double.NaN;
+
+    public double FollowValue { get; set; } = Double.NaN;
 
     public int LeadSeries { get; set; } = -1;
 
@@ -69,6 +77,7 @@ internal sealed class CartesianInteraction
         IsTracking = false;
         IsCrosshair = false;
         IsFollowing = false;
+        FollowValue = Double.NaN;
         LeadSeries = -1;
         LeadIndex = -1;
         TooltipHeader = null;

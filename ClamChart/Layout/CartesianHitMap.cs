@@ -12,6 +12,12 @@ internal static class CartesianHitMap
             return new ChartHit(ChartHitKind.Legend, legend);
         }
 
+        var column = HitLegendHeader(layout.Legend, x, y);
+        if (column >= 0)
+        {
+            return new ChartHit(ChartHitKind.LegendHeader, -1, column);
+        }
+
         var plot = layout.PlotBounds;
         if (plot.IsEmpty)
         {
@@ -130,6 +136,25 @@ internal static class CartesianHitMap
             if ((x >= bounds.X - gapX) && (x < bounds.Right + gapX) && (y >= bounds.Y - gapY) && (y < bounds.Bottom + gapY))
             {
                 return item.SeriesIndex;
+            }
+        }
+
+        return -1;
+    }
+
+    private static int HitLegendHeader(LegendLayout legend, double x, double y)
+    {
+        if (!legend.IsVisible || !legend.IsTable)
+        {
+            return -1;
+        }
+
+        var columns = legend.HeaderColumns;
+        for (var i = 0; i < columns.Count; i++)
+        {
+            if (columns[i].Contains(x, y))
+            {
+                return i;
             }
         }
 

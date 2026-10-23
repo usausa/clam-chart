@@ -36,6 +36,8 @@ public readonly record struct RadialBarDrawOptions
 
     public bool BarGlow { get; init; }
 
+    public bool ThresholdMarkersVisible { get; init; }
+
     public ChartOverflowMode OverflowMode { get; init; }
 
     public IReadOnlyList<SKColor>? Colors { get; init; }

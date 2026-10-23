@@ -22,6 +22,9 @@ public sealed partial class ChartBubbleViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial double MaxBubbleSize { get; set; } = LargeBubbleSize;
 
+    [ObservableProperty]
+    public partial bool SizeIncludesZero { get; set; } = true;
+
     public ChartBubbleViewModel()
     {
         for (var i = 0; i < CityCount; i++)
@@ -48,6 +51,13 @@ public sealed partial class ChartBubbleViewModel : ChartViewModelBase
 
     protected override Task OnNotifyFunction3()
     {
+        if ((MaxBubbleSize > SmallBubbleSize) && SizeIncludesZero)
+        {
+            SizeIncludesZero = false;
+            return Task.CompletedTask;
+        }
+
+        SizeIncludesZero = true;
         MaxBubbleSize = MaxBubbleSize > SmallBubbleSize ? SmallBubbleSize : LargeBubbleSize;
         return Task.CompletedTask;
     }

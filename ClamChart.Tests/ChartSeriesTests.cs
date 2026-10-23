@@ -111,6 +111,9 @@ public sealed class ChartSeriesTests
         Assert.True(input.IsBubble);
         Assert.Equal(8, input.MinBubbleSize);
         Assert.Equal(40, input.MaxBubbleSize);
+        Assert.True(series.SizeIncludesZero);
+        Assert.True(input.SizeIncludesZero);
+        Assert.False(new BubbleSeries { SizeIncludesZero = false }.CreateLayoutSeries().SizeIncludesZero);
         Assert.Equal("population", options.SizeKey);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.MaxBubbleSize = -1);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.MinBubbleSize = Double.NaN);

@@ -28,6 +28,8 @@ internal sealed record RadialBarLayoutOptions
 
     public bool BarGlow { get; init; }
 
+    public bool ThresholdMarkers { get; init; }
+
     public ChartValueFormatting Formatting { get; init; } = ChartValueFormatting.Default;
 
     public bool LegendVisible { get; init; }

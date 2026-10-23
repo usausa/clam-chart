@@ -34,6 +34,7 @@ public partial class ClamRadialBarView : ChartViewBase
     public static readonly BindableProperty SegmentCountProperty = BindableProperty.Create(nameof(SegmentCount), typeof(int), typeof(ClamRadialBarView), 20, validateValue: static (_, value) => ValidateSegmentCount(value, nameof(SegmentCount)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty TrackVisibleProperty = BindableProperty.Create(nameof(TrackVisible), typeof(bool), typeof(ClamRadialBarView), true, propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty BarGlowProperty = BindableProperty.Create(nameof(BarGlow), typeof(bool), typeof(ClamRadialBarView), false, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty ThresholdMarkersVisibleProperty = BindableProperty.Create(nameof(ThresholdMarkersVisible), typeof(bool), typeof(ClamRadialBarView), false, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty OverflowModeProperty = BindableProperty.Create(nameof(OverflowMode), typeof(ChartOverflowMode), typeof(ClamRadialBarView), ChartOverflowMode.Clamp, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty ThresholdsProperty = BindableProperty.Create(nameof(Thresholds), typeof(IList<ChartThreshold>), typeof(ClamRadialBarView), defaultValueCreator: static _ => new ObservableCollection<ChartThreshold>(), validateValue: static (_, value) => ValidateThresholds(value, nameof(Thresholds)), propertyChanged: OnThresholdsChanged);
     public static readonly BindableProperty CenterValueModeProperty = BindableProperty.Create(nameof(CenterValueMode), typeof(ChartCenterValueMode), typeof(ClamRadialBarView), ChartCenterValueMode.Auto, propertyChanged: OnLayoutInputChanged);
@@ -167,6 +168,12 @@ public partial class ClamRadialBarView : ChartViewBase
     {
         get => (bool)GetValue(BarGlowProperty);
         set => SetValue(BarGlowProperty, value);
+    }
+
+    public bool ThresholdMarkersVisible
+    {
+        get => (bool)GetValue(ThresholdMarkersVisibleProperty);
+        set => SetValue(ThresholdMarkersVisibleProperty, value);
     }
 
     public ChartOverflowMode OverflowMode
@@ -451,6 +458,7 @@ public partial class ClamRadialBarView : ChartViewBase
             SegmentCount = SegmentCount,
             OverflowMode = OverflowMode,
             BarGlow = (density != ChartDensity.Minimal) && BarGlow,
+            ThresholdMarkers = (density != ChartDensity.Minimal) && ThresholdMarkersVisible && (Thresholds.Count > 0),
             Formatting = new ChartValueFormatting(ValueFormatter, ValueConverter, valueFormat, culture),
             LegendVisible = (density != ChartDensity.Minimal) && (LegendVisible ?? (density == ChartDensity.Full)),
             LegendPosition = LegendPosition,

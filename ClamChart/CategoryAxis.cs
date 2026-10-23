@@ -6,6 +6,7 @@ public sealed class CategoryAxis : ChartAxis
 {
     public static readonly BindableProperty LabelPlacementProperty = BindableProperty.Create(nameof(LabelPlacement), typeof(ChartLabelPlacement), typeof(CategoryAxis), ChartLabelPlacement.BetweenTicks, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty CategoryWidthProperty = BindableProperty.Create(nameof(CategoryWidth), typeof(double?), typeof(CategoryAxis), validateValue: static (_, value) => ValidatePositive(value, nameof(CategoryWidth)), propertyChanged: OnCategoryWidthChanged);
+    public static readonly BindableProperty LabelMaxLengthProperty = BindableProperty.Create(nameof(LabelMaxLength), typeof(int?), typeof(CategoryAxis), validateValue: static (_, value) => ValidateAtLeastOne(value, nameof(LabelMaxLength)), propertyChanged: OnLayoutChanged);
 
     public ChartLabelPlacement LabelPlacement
     {
@@ -17,6 +18,12 @@ public sealed class CategoryAxis : ChartAxis
     {
         get => (double?)GetValue(CategoryWidthProperty);
         set => SetValue(CategoryWidthProperty, value);
+    }
+
+    public int? LabelMaxLength
+    {
+        get => (int?)GetValue(LabelMaxLengthProperty);
+        set => SetValue(LabelMaxLengthProperty, value);
     }
 
     public Func<string, string>? LabelFormatter
@@ -35,6 +42,7 @@ public sealed class CategoryAxis : ChartAxis
         CreateCommonOptions(context) with
         {
             LabelPlacement = LabelPlacement,
+            LabelMaxLength = LabelMaxLength,
             CategoryFormatter = LabelFormatter
         };
 

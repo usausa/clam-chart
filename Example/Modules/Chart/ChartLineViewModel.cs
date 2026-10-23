@@ -13,6 +13,9 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
     public partial ChartTrackballMode TrackballMode { get; set; } = ChartTrackballMode.LongPress;
 
     [ObservableProperty]
+    public partial bool TrackballSnapEnabled { get; set; } = true;
+
+    [ObservableProperty]
     public partial MonthlySales? TrackedSales { get; set; }
 
     [ObservableProperty]
@@ -35,6 +38,7 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
         {
             ChartLineInterpolation.Linear => ChartLineInterpolation.Smooth,
             ChartLineInterpolation.Smooth => ChartLineInterpolation.Step,
+            ChartLineInterpolation.Step => ChartLineInterpolation.StepBefore,
             _ => ChartLineInterpolation.Linear
         };
         return Task.CompletedTask;
@@ -42,6 +46,13 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
 
     protected override Task OnNotifyFunction3()
     {
+        if ((TrackballMode == ChartTrackballMode.Touch) && TrackballSnapEnabled)
+        {
+            TrackballSnapEnabled = false;
+            return Task.CompletedTask;
+        }
+
+        TrackballSnapEnabled = true;
         TrackballMode = TrackballMode switch
         {
             ChartTrackballMode.LongPress => ChartTrackballMode.Touch,

@@ -28,7 +28,7 @@
                                   Title="CPU (%)" />
             </clam:ClamChartView.XAxis>
             <clam:ClamChartView.YAxis>
-                <clam:NumericAxis Title="応答時間 (ms)" />
+                <clam:NumericAxis Title="応答時間 (ms)" TitleOrientation="Vertical" />
             </clam:ClamChartView.YAxis>
             <clam:ClamChartView.Annotations>
                 <clam:ChartReferenceBand Axis="X" End="100" Label="高負荷" Start="80" />

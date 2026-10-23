@@ -7,10 +7,11 @@ public abstract class ChartAxis : Element
 {
     public static readonly BindableProperty IsVisibleProperty = BindableProperty.Create(nameof(IsVisible), typeof(bool?), typeof(ChartAxis), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty TitleProperty = BindableProperty.Create(nameof(Title), typeof(string), typeof(ChartAxis), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty TitleOrientationProperty = BindableProperty.Create(nameof(TitleOrientation), typeof(ChartOrientation), typeof(ChartAxis), ChartOrientation.Horizontal, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty LabelsVisibleProperty = BindableProperty.Create(nameof(LabelsVisible), typeof(bool), typeof(ChartAxis), true, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty LabelFormatProperty = BindableProperty.Create(nameof(LabelFormat), typeof(string), typeof(ChartAxis), propertyChanged: OnLabelFormatChanged);
     public static readonly BindableProperty LabelConverterProperty = BindableProperty.Create(nameof(LabelConverter), typeof(IValueConverter), typeof(ChartAxis), propertyChanged: OnLayoutChanged);
-    public static readonly BindableProperty MaxLabelCountProperty = BindableProperty.Create(nameof(MaxLabelCount), typeof(int?), typeof(ChartAxis), validateValue: static (_, value) => ValidateLabelCount(value, nameof(MaxLabelCount)), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty MaxLabelCountProperty = BindableProperty.Create(nameof(MaxLabelCount), typeof(int?), typeof(ChartAxis), validateValue: static (_, value) => ValidateAtLeastOne(value, nameof(MaxLabelCount)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty GridLinesVisibleProperty = BindableProperty.Create(nameof(GridLinesVisible), typeof(bool?), typeof(ChartAxis), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty PositionProperty = BindableProperty.Create(nameof(Position), typeof(ChartAxisPosition), typeof(ChartAxis), ChartAxisPosition.Auto, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty IsInversedProperty = BindableProperty.Create(nameof(IsInversed), typeof(bool), typeof(ChartAxis), false, propertyChanged: OnLayoutChanged);
@@ -25,6 +26,12 @@ public abstract class ChartAxis : Element
     {
         get => (string?)GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
+    }
+
+    public ChartOrientation TitleOrientation
+    {
+        get => (ChartOrientation)GetValue(TitleOrientationProperty);
+        set => SetValue(TitleOrientationProperty, value);
     }
 
     public bool LabelsVisible
@@ -92,6 +99,7 @@ public abstract class ChartAxis : Element
             IsVisible = visible,
             LabelsVisible = LabelsVisible,
             Title = context.TitleVisible ? Title : null,
+            TitleOrientation = TitleOrientation,
             MaxLabelCount = MaxLabelCount ?? context.MaxLabelCount,
             IsInversed = IsInversed,
             Position = Position,
@@ -116,7 +124,7 @@ public abstract class ChartAxis : Element
     internal static bool ValidatePositive(object? value, string name) =>
         (value is not double number) || (Double.IsFinite(number) && (number > 0)) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be a finite value greater than zero.");
 
-    private static bool ValidateLabelCount(object? value, string name) =>
+    internal static bool ValidateAtLeastOne(object? value, string name) =>
         (value is not int count) || (count >= 1) ? true : throw new ArgumentOutOfRangeException(name, value, "The value must be 1 or more.");
 
     private static void OnLabelFormatChanged(BindableObject bindable, object oldValue, object newValue)

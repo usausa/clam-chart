@@ -4,5 +4,6 @@ public enum ChartLineInterpolation
 {
     Linear,
     Smooth,
-    Step
+    Step,
+    StepBefore
 }

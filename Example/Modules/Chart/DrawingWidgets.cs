@@ -65,6 +65,7 @@ internal static class DrawingWidgets
                 DisplayMode = mode,
                 Thickness = 18,
                 SegmentCount = 16,
+                ThresholdMarkersVisible = true,
                 Thresholds = GetThresholds(style),
                 IsDark = dark
             };

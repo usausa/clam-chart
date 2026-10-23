@@ -4,7 +4,7 @@ using Example.Models;
 
 public sealed partial class ChartBarViewModel : ChartViewModelBase
 {
-    private static readonly string[] Products = ["Coffee", "Tea", "Juice", "Water", "Soda", "Milk", "Cocoa", "Smoothie"];
+    private static readonly string[] Products = ["Cold brew coffee", "Green tea latte", "Orange juice", "Sparkling water", "Ginger ale", "Strawberry milk", "Hot cocoa", "Mango smoothie"];
 
     private int stack;
 

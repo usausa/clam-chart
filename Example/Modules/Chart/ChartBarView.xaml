@@ -44,6 +44,9 @@
                             SelectionMode="{Binding SelectionMode}"
                             ValueAccessors="{x:Static models:ProductRank.Accessors}"
                             XKey="name">
+            <clam:ClamChartView.XAxis>
+                <clam:CategoryAxis LabelMaxLength="10" />
+            </clam:ClamChartView.XAxis>
             <clam:BarSeries ItemsSource="{Binding Ranking}"
                             Title="Units" TrackVisible="True" YKey="units" />
         </clam:ClamChartView>

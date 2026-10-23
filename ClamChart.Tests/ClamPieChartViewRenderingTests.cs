@@ -265,6 +265,32 @@ public sealed class ClamPieChartViewRenderingTests
         Assert.Equal(0, selected);
     }
 
+    [Fact]
+    public void HiddenSliceIsFadedInTheLegend()
+    {
+        // Arrange
+        using var view = Chart(1, 1);
+        view.LegendVisible = true;
+        view.LegendToggleEnabled = true;
+        using var first = view.Paint(300, 300);
+        var bounds = view.ChartLayout.Legend.Items[0].Bounds;
+        var point = new Point(bounds.CenterX, bounds.CenterY);
+
+        // Act
+        view.HandleTouch(1, SkiaSharp.Views.Maui.SKTouchAction.Pressed, point, 0);
+        view.HandleTouch(1, SkiaSharp.Views.Maui.SKTouchAction.Released, point, 10);
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        var items = view.ChartLayout.Legend.Items;
+        var hidden = GetPixel(bitmap, items[0].Marker.CenterX, items[0].Marker.CenterY);
+        var alpha = (int)Math.Round(255 * ChartStyles.Light.DimmedOpacity);
+        Assert.InRange(hidden.Alpha, alpha - 2, alpha + 2);
+        Assert.Equal(Orange, GetPixel(bitmap, items[1].Marker.CenterX, items[1].Marker.CenterY));
+        Assert.Equal(Orange, GetPixel(bitmap, Ring(view.ChartLayout, 90)));
+        Assert.Equal(Orange, GetPixel(bitmap, Ring(view.ChartLayout, 270)));
+    }
+
     private static TestClamPieChartView Chart(params double[] values) =>
         new() { ItemsSource = values.Select(static (value, index) => new ChartEntry($"C{index}", value)).ToList(), CenterValueMode = ChartCenterValueMode.None };
 

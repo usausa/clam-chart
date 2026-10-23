@@ -13,6 +13,8 @@ internal sealed partial class CartesianRenderer : IDisposable
 
     private const float LegendLineThickness = 2;
 
+    private const float SortArrowThickness = 1.25f;
+
     private const double EdgeTolerance = 0.5;
 
     private const float DataLabelOffset = 4;
@@ -906,24 +908,64 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
     }
 
+    private static float GetTrackballPosition(CartesianLayout layout, SnapshotInterpolator display, CartesianInteraction interaction, float scale)
+    {
+        if (!interaction.Snaps)
+        {
+            if (!interaction.IsFollowing)
+            {
+                return GetPointerAlong(layout, interaction, scale);
+            }
+
+            return Double.IsFinite(interaction.FollowValue) ? Snap(layout.XAxis.ToDisplayPixel(interaction.FollowValue), scale) : Single.NaN;
+        }
+
+        var lead = interaction.LeadSeries;
+        if ((lead < 0) || (lead >= layout.Geometries.Count))
+        {
+            return Single.NaN;
+        }
+
+        var geometry = display.GetGeometry(layout, lead);
+        var index = display.ToDisplayIndex(lead, interaction.LeadIndex);
+        return (index >= 0) && (index < geometry.Count) ? Snap(layout.XAxis.ToDisplayPixel(geometry.X[index]), scale) : Single.NaN;
+    }
+
+    private static float GetPointerAlong(CartesianLayout layout, CartesianInteraction interaction, float scale)
+    {
+        var plot = layout.PlotBounds;
+        var point = interaction.TrackPoint;
+        return Snap(layout.XAxis.IsVertical ? Math.Clamp(point.Y, plot.Y, plot.Bottom) : Math.Clamp(point.X, plot.X, plot.Right), scale);
+    }
+
+    private static float GetPointerAcross(CartesianLayout layout, CartesianInteraction interaction, float scale)
+    {
+        var plot = layout.PlotBounds;
+        var point = interaction.TrackPoint;
+        return Snap(layout.XAxis.IsVertical ? Math.Clamp(point.X, plot.X, plot.Right) : Math.Clamp(point.Y, plot.Y, plot.Bottom), scale);
+    }
+
     private void DrawTrackball(SKCanvas canvas, CartesianLayout layout, SnapshotInterpolator display, IReadOnlyList<ChartSeries> series, IReadOnlyList<SKColor> colors, ChartStyle style, CartesianInteraction interaction, CartesianRenderState state, float scale, float width, float height)
     {
-        var lead = interaction.LeadSeries;
-        if (!interaction.IsTracking || (lead < 0) || (lead >= layout.Geometries.Count))
+        if (!interaction.IsTracking)
         {
             return;
         }
 
-        var leadGeometry = display.GetGeometry(layout, lead);
-        var leadIndex = display.ToDisplayIndex(lead, interaction.LeadIndex);
-        if ((leadIndex < 0) || (leadIndex >= leadGeometry.Count))
+        var position = GetTrackballPosition(layout, display, interaction, scale);
+        if (Single.IsNaN(position))
         {
             return;
         }
 
         var plot = layout.PlotBounds;
-        var position = Snap(layout.XAxis.ToDisplayPixel(leadGeometry.X[leadIndex]), scale);
-        DrawLine(canvas, layout.XAxis.IsVertical, position, plot, paints.Stroke(style.TrackballLineColor.ToSKColor(), 0, SKStrokeCap.Butt));
+        var paint = paints.Stroke(style.TrackballLineColor.ToSKColor(), 0, SKStrokeCap.Butt);
+        DrawLine(canvas, layout.XAxis.IsVertical, position, plot, paint);
+        if (!interaction.Snaps && !interaction.IsFollowing)
+        {
+            DrawLine(canvas, !layout.XAxis.IsVertical, GetPointerAcross(layout, interaction, scale), plot, paint);
+        }
+
         var indices = interaction.TrackedIndices;
         var knockout = (float)style.MarkerKnockout;
         var horizontal = layout.Orientation == ChartOrientation.Horizontal;
@@ -1146,6 +1188,14 @@ internal sealed partial class CartesianRenderer : IDisposable
             return;
         }
 
+        var rotated = axis.TitleRotation != 0;
+        if (rotated)
+        {
+            canvas.Save();
+            canvas.Translate((float)axis.TitleArea.CenterX, (float)axis.TitleArea.CenterY);
+            canvas.RotateDegrees((float)axis.TitleRotation);
+        }
+
         DrawText(canvas, title, axis.TitleBounds, style.AxisTitleFontSize, axis.TitleMaxWidth, style.SecondaryTextColor.ToSKColor(), style);
         var markers = axis.TitleMarkers;
         var index = 0;
@@ -1156,6 +1206,11 @@ internal sealed partial class CartesianRenderer : IDisposable
                 var marker = markers[index++];
                 canvas.DrawCircle((float)marker.CenterX, (float)marker.CenterY, (float)marker.Width / 2, paints.Fill(colors[s]));
             }
+        }
+
+        if (rotated)
+        {
+            canvas.Restore();
         }
     }
 
@@ -1216,6 +1271,20 @@ internal sealed partial class CartesianRenderer : IDisposable
             var cell = legend.Cells[i];
             DrawText(canvas, cell.Text, cell.Bounds, style.LegendFontSize, cell.MaxWidth, color, style);
         }
+
+        if (!legend.SortArrow.IsEmpty)
+        {
+            DrawSortArrow(canvas, legend.SortArrow, legend.SortDescending, paints.Stroke(color, SortArrowThickness, SKStrokeCap.Square));
+        }
+    }
+
+    private static void DrawSortArrow(SKCanvas canvas, ChartRect bounds, bool descending, SKPaint paint)
+    {
+        var tip = (float)(descending ? bounds.Bottom : bounds.Y);
+        var ends = (float)(descending ? bounds.Y : bounds.Bottom);
+        var center = (float)bounds.CenterX;
+        canvas.DrawLine((float)bounds.X, ends, center, tip, paint);
+        canvas.DrawLine(center, tip, (float)bounds.Right, ends, paint);
     }
 
     private static void DrawSeparator(SKCanvas canvas, ChartRect bounds, double bottom, SKPaint paint, float snap)

@@ -111,6 +111,8 @@ public partial class ClamChartView
             LegendMode = LegendMode,
             LegendValues = LegendValues,
             LegendWidth = LegendWidth,
+            LegendSortBy = LegendSortBy,
+            LegendSortMode = LegendSortMode,
             DataLabelsMode = density switch
             {
                 ChartDensity.Full => DataLabelsMode,

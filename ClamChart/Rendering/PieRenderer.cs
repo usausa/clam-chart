@@ -409,14 +409,23 @@ internal sealed class PieRenderer : IDisposable
             return;
         }
 
-        var color = style.SecondaryTextColor.ToSKColor();
+        var visibleColor = style.SecondaryTextColor.ToSKColor();
+        var hiddenColor = style.MutedTextColor.ToSKColor();
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < legend.Items.Count; i++)
         {
             var item = legend.Items[i];
-            var slice = layout.Slices[item.SeriesIndex];
+            var slice = layout.GetLegendSlice(item.SeriesIndex);
+            var hidden = layout.IsHiddenLegendSlice(item.SeriesIndex);
             var marker = item.Marker;
-            canvas.DrawCircle((float)marker.CenterX, (float)marker.CenterY, (float)marker.Height / 2, paints.Fill(GetColor(slice.ColorSource, palette, style)));
+            var markerColor = GetColor(slice.ColorSource, palette, style);
+            if (hidden)
+            {
+                markerColor = markerColor.WithAlpha((byte)Math.Round(markerColor.Alpha * style.DimmedOpacity));
+            }
+
+            var color = hidden ? hiddenColor : visibleColor;
+            canvas.DrawCircle((float)marker.CenterX, (float)marker.CenterY, (float)marker.Height / 2, paints.Fill(markerColor));
             text.DrawText(canvas, slice.Label ?? String.Empty, item.Text, style.LegendFontSize, item.TextMaxWidth, color, style);
             if (!item.Value.IsEmpty)
             {

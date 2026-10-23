@@ -19,6 +19,8 @@ public partial class ClamPieChartView
     private int[]? pendingMap;
     private bool pendingPositional;
     private bool sourceReplaced;
+    private bool dataUpdated;
+    private bool hiddenChanged;
     private bool entranceShown;
     private bool entranceRequested;
     private int countedKey = PieLayout.TotalCenterKey;
@@ -97,7 +99,7 @@ public partial class ClamPieChartView
     private bool PrepareTransition()
     {
         Interpolator.Easing = AnimationEasing;
-        var allowed = !Interpolator.IsEntrance && (ChartLayout.Slices.Count > 0) && UpdateAnimationEnabled && CanAnimate;
+        var allowed = !Interpolator.IsEntrance && (ChartLayout.Slices.Count > 0) && CanAnimate && (UpdateAnimationEnabled || (hiddenChanged && !dataUpdated));
         if (allowed)
         {
             Interpolator.Capture(ChartLayout);
@@ -135,6 +137,8 @@ public partial class ClamPieChartView
         SyncCenterCount(entrance, captured);
         ReleasePendingMap();
         pendingPositional = false;
+        dataUpdated = false;
+        hiddenChanged = false;
     }
 
     private void SyncCenterCount(bool entrance, bool animate)

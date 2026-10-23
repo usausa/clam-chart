@@ -93,16 +93,16 @@ FallbackFonts.Typefaces = [SKTypeface.FromStream(await FileSystem.OpenAppPackage
 |---|---|
 | Theme | `ChartStyle` with the `ChartStyles.Light` and `ChartStyles.Dark` presets, `OverlayLight` and `OverlayDark` for photos and maps, or a style of your own made with `with` |
 | Colors | `Palette` of eight colors in a fixed order, the Grafana palettes and shades of one hue, `Color` of a series, `ColorKey` of a slice |
-| Lines | `Thickness`, `Interpolation` (`Linear`, `Smooth`, `Step`), `DashPattern`, `MarkerMode`, `MarkerShape`, `GlowRadius`, `LiveIndicatorVisible` for a pulsing last point |
+| Lines | `Thickness`, `Interpolation` (`Linear`, `Smooth`, `Step`, `StepBefore`), `DashPattern`, `MarkerMode`, `MarkerShape`, `GlowRadius`, `LiveIndicatorVisible` for a pulsing last point |
 | Areas | `FillOpacity`, `FillMode` with a gradient, `BaselineValue`, `StackGroup` |
 | Bars | `CornerRadius`, `MaxBarWidth`, `BarWidthRatio`, `NegativeColor`, `StackGroup`, `FillMode` with a gradient, `TrackVisible` for a progress track, `Orientation` for horizontal bars, `RangeBarSeries` from a low to a high value |
-| Points | `ScatterSeries` with `MarkerShape` and `FillOpacity`, `BubbleSeries` sized by a value between `MinBubbleSize` and `MaxBubbleSize` |
+| Points | `ScatterSeries` with `MarkerShape` and `FillOpacity`, `BubbleSeries` sized by a value between `MinBubbleSize` and `MaxBubbleSize`, from 0 or from the smallest value (`SizeIncludesZero`) |
 | Pies | `InnerRadius`, `StartAngle` and `SweepAngle` for half donuts, `SliceGap`, `MaxSlices` with a merged slice, labels inside or outside with leader lines, and the center value |
 | Radars | `ClamRadarChartView` with `GridShape` (polygon or circle), `LevelCount`, `Minimum` and `Maximum`, and `RadarSeries` with `Thickness` and `FillOpacity` |
 | Heatmaps | `ClamHeatmapView` as a matrix or a calendar, the Grafana Oranges scale or a `ColorScale` of your own, `CellGap` and a color scale legend |
 | State timelines | `ClamStateTimelineView` with Grafana value mappings (`ValueMappings`) and `Thresholds`, and the panel options of Grafana: `MergeValues`, `ShowValue`, `AlignValue`, `RowHeight`, `FillOpacity` and `LineWidth` |
 | Thresholds | `Thresholds` with `ThresholdsMode` lines, bands or colored series, reference lines and bands as annotations |
-| Tiles and gauges | `ColorMode` of a KPI tile from a quiet value to a Grafana gradient background, basic, gradient and segmented gauges, `BarGlow` for glowing rings, `AlertAnimationEnabled` for a critical value |
+| Tiles and gauges | `ColorMode` of a KPI tile from a quiet value to a Grafana gradient background, basic, gradient and segmented gauges, values in the bar color or the text color, threshold markers around radial bars, `BarGlow` for glowing rings, `AlertAnimationEnabled` for a critical value |
 | Labels | Legend as a list or a table with last, minimum, maximum and mean, data labels, tooltip and axis labels, with a format, a converter or a delegate |
 | Size | `Density` thins the axes, the legend and the labels as the chart gets smaller |
 
@@ -180,9 +180,9 @@ Bind `Minimum` and `Maximum` of a `DateTimeAxis` to switch between a day, a week
 | Category | Detail |
 |---|---|
 | **Charts** | Line, area, bar, range bar, scatter and bubble series mixed in one chart, grouped, stacked and 100% stacked bars, horizontal bars, pie, donut and half donut, radar with polygon or circle grids, matrix and calendar heatmaps, state timelines, line, area, bar and win-loss sparklines, KPI tiles, bar gauges and radial bars |
-| **Axes** | Category, numeric and date and time axes, a second value axis with aligned or independent ticks, fixed and soft ranges, a sliding time window, label thinning, categories wide enough to scroll |
+| **Axes** | Category, numeric and date and time axes, a second value axis with aligned or independent ticks, fixed and soft ranges, a sliding time window, label thinning, a length limit for category labels, turned titles of vertical axes, categories wide enough to scroll |
 | **Data** | Lists of numbers, chart models or items of any type through typed accessors, collection and item changes, missing values, dense lines thinned for drawing (LTTB) |
-| **Interaction** | Taps, selection that dims the other elements, a long-press or touch trackball with a tooltip, a crosshair shared by a group of charts, legend toggles, haptic feedback, touch pass-through for overlays |
+| **Interaction** | Taps, selection that dims the other elements, a long-press or touch trackball with a tooltip that snaps to the points or follows the finger, a crosshair or a tooltip shared by a group of charts, legend toggles for series and pie slices, legend tables sorted by a header tap, haptic feedback, touch pass-through for overlays |
 | **Animation** | Entrance, updates, streaming, selection and legend toggles, a loading shimmer, a pulsing live point and a critical alert, switchable per chart, for the whole app and by the system animation scale |
 | **Widgets** | Edge-to-edge sparklines for cards, overlay styles, a placeholder while loading, images of a chart (`RenderToImage`, `SaveAsPngAsync`), sparklines, radial bars and bar gauges drawn on any canvas and on any thread (`ChartDrawing`) and summaries for screen readers |
 | **Size** | Full, compact and minimal density chosen from the size; sparklines in lists, gauges and tiles draw without allocations of their own |

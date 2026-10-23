@@ -36,6 +36,18 @@ internal sealed class RadialBarLayout
 
     private const double GlowSigmaRatio = 0.08;
 
+    private const double MarkerWidthRatio = 0.2;
+
+    private const double MarkerWidthPower = 0.92;
+
+    private const double MinMarkerWidth = 4;
+
+    private const double MaxMarkerWidth = 12;
+
+    private const double MinMarkerSpacing = 2;
+
+    private const double MaxMarkerSpacing = 12;
+
     private const int FitAttempts = 3;
 
     private const string PercentPattern = "P0";
@@ -62,6 +74,10 @@ internal sealed class RadialBarLayout
     public double Thickness { get; private set; }
 
     public double Spacing { get; private set; }
+
+    public double MarkerRadius { get; private set; }
+
+    public double MarkerWidth { get; private set; }
 
     public double StartAngle { get; private set; }
 
@@ -266,7 +282,7 @@ internal sealed class RadialBarLayout
         RingBounds = new ChartRect(left ? area.X + width + LegendGap : area.X, area.Y, area.Width - width - LegendGap, area.Height);
     }
 
-    public static (double CenterX, double CenterY, double Radius, double Thickness) FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, bool barGlow, ChartCapStyle capStyle)
+    public static RingFit FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, bool barGlow, ChartCapStyle capStyle, bool markers)
     {
         if (barGlow)
         {
@@ -283,7 +299,27 @@ internal sealed class RadialBarLayout
             thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
         }
 
-        return (area.CenterX - (radius * (left + right) / 2), area.CenterY - (radius * (top + bottom) / 2), radius, thickness);
+        var centerX = area.CenterX - (radius * (left + right) / 2);
+        var centerY = area.CenterY - (radius * (top + bottom) / 2);
+        if (!markers || !(thickness > 0))
+        {
+            return new RingFit(centerX, centerY, radius, thickness, 0, 0);
+        }
+
+        var (width, gap) = GetMarkerSize(thickness);
+        var inner = radius - width - gap;
+        if (!(inner > 0))
+        {
+            return new RingFit(centerX, centerY, radius, thickness, 0, 0);
+        }
+
+        return new RingFit(centerX, centerY, inner, ResolveThickness(inner, innerRadius, ringThickness, spacing, count), radius - (width / 2), width);
+    }
+
+    public static (double Width, double Spacing) GetMarkerSize(double thickness)
+    {
+        var width = Math.Clamp(MarkerWidthRatio * Math.Pow(thickness, MarkerWidthPower), MinMarkerWidth, MaxMarkerWidth);
+        return (width, Math.Clamp(width / 2, MinMarkerSpacing, MaxMarkerSpacing));
     }
 
     public static double GetGlowSigma(double thickness) => GlowSigmaBase + (thickness * GlowSigmaRatio);
@@ -297,7 +333,7 @@ internal sealed class RadialBarLayout
     }
 
     private void PlaceRings(RadialBarLayoutOptions options) =>
-        (CenterX, CenterY, OuterRadius, Thickness) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, BarGlow, CapStyle);
+        (CenterX, CenterY, OuterRadius, Thickness, MarkerRadius, MarkerWidth) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, BarGlow, CapStyle, options.ThresholdMarkers && (rows.Count > 0));
 
     private static double GetRadius(ChartRect area, double left, double top, double right, double bottom) =>
         Math.Max(0, Math.Min(area.Width / Math.Max(right - left, MinExtent), area.Height / Math.Max(bottom - top, MinExtent)));

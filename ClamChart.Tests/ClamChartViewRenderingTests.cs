@@ -934,6 +934,40 @@ public sealed class ClamChartViewRenderingTests
     }
 
     [Fact]
+    public void BubblesCanTakeTheirSizeFromTheSmallestValue()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.Series.Add(new BubbleSeries { ItemsSource = BubblePoints(), SizeSelector = static x => ((ChartPoint)x).X * 10, SizeIncludesZero = false });
+        view.Series.Add(new BubbleSeries { ItemsSource = new List<ChartPoint> { new(3, 13) }, SizeSelector = static _ => 55 });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var layout = view.ChartLayout;
+        var sizes = layout.Geometries[0].Size;
+        Assert.Equal(8, sizes[0], 9);
+        Assert.Equal(Math.Sqrt(64 + (1536 * 40d / 90)), sizes[1], 9);
+        Assert.Equal(40, sizes[2], 9);
+        Assert.Equal(Math.Sqrt(64 + (1536 * 0.55)), layout.Geometries[1].Size[0], 9);
+    }
+
+    [Fact]
+    public void BubblesOfEqualSizeTakeTheSmallestSizeFromTheSmallestValue()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.Series.Add(new BubbleSeries { ItemsSource = BubblePoints(), SizeSelector = static _ => 30, SizeIncludesZero = false });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        Assert.Equal([8d, 8d, 8d], view.ChartLayout.Geometries[0].Size.ToArray());
+    }
+
+    [Fact]
     public void BubblesAddNoAllocationToAFrame()
     {
         // Arrange
@@ -968,6 +1002,48 @@ public sealed class ClamChartViewRenderingTests
         var layout = view.ChartLayout;
         Assert.Equal(Lime.WithAlpha(128), GetPixel(bitmap, layout.XAxis.ToPixel(5), layout.YAxis.ToPixel(4.3)));
         Assert.Equal(Red.WithAlpha(128), GetPixel(bitmap, layout.XAxis.ToPixel(10) - 4, layout.YAxis.ToPixel(10) + 4));
+    }
+
+    [Fact]
+    public void VerticalAxisTitleIsDrawnTurned()
+    {
+        // Arrange
+        using var view = new TestClamChartView { YAxis = new NumericAxis { Title = "Sales", TitleOrientation = ChartOrientation.Vertical } };
+        view.Series.Add(new LineSeries { ItemsSource = new List<double> { 1, 2, 3 } });
+
+        // Act
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        var area = view.ChartLayout.YAxis.TitleArea;
+        var middle = (float)area.CenterY;
+        Assert.True(CountPixels(bitmap, new SKRect((float)area.X, middle - 12, (float)area.Right, middle - 6), static x => x.Alpha > 0) > 0);
+        Assert.True(CountPixels(bitmap, new SKRect((float)area.X, middle + 6, (float)area.Right, middle + 12), static x => x.Alpha > 0) > 0);
+        Assert.Equal(0, CountPixels(bitmap, new SKRect((float)area.X, (float)area.Y, (float)area.Right, middle - 24), static x => x.Alpha > 0));
+    }
+
+    [Fact]
+    public void SortedLegendHeaderShowsTheDirection()
+    {
+        // Arrange
+        using var view = new TestClamChartView { LegendMode = ChartLegendMode.Table, LegendValues = ChartLegendValues.Max, LegendSortBy = ChartLegendSortKey.Max, LegendSortMode = ChartSortMode.Descending };
+        view.Series.Add(new LineSeries { Title = "a", ItemsSource = new List<double> { 1, 4 } });
+        view.Series.Add(new LineSeries { Title = "b", ItemsSource = new List<double> { 2, 9 } });
+
+        // Act
+        using var descending = view.Paint(360, 400);
+        var arrow = view.ChartLayout.Legend.SortArrow;
+        view.LegendSortMode = ChartSortMode.Ascending;
+        using var ascending = view.Paint(360, 400);
+
+        // Assert
+        var center = (float)arrow.CenterX;
+        var top = new SKRect(center - 0.5f, (float)arrow.Y - 0.25f, center + 0.5f, (float)arrow.Y + 0.25f);
+        var bottom = new SKRect(center - 0.5f, (float)arrow.Bottom - 0.25f, center + 0.5f, (float)arrow.Bottom + 0.25f);
+        Assert.True(CountPixels(descending, bottom, static x => x.Alpha > 0) > 0);
+        Assert.Equal(0, CountPixels(descending, top, static x => x.Alpha > 0));
+        Assert.True(CountPixels(ascending, top, static x => x.Alpha > 0) > 0);
+        Assert.Equal(0, CountPixels(ascending, bottom, static x => x.Alpha > 0));
     }
 
     private static SKColor GetPixel(SKBitmap bitmap, double x, double y) => bitmap.GetPixel((int)(x * Scale), (int)(y * Scale));

@@ -108,7 +108,7 @@ internal sealed class BarGaugeRenderer : IDisposable
 
             if ((row.ValueText is { } value) && !layout.ValueTemplate.IsEmpty)
             {
-                var color = GetColor(state, row.Percent, baseColor, style).ToSKColor();
+                var color = state.ValueColorMode == ChartBarGaugeValueColorMode.Text ? style.PrimaryTextColor.ToSKColor() : GetColor(state, row.Percent, baseColor, style).ToSKColor();
                 DrawAligned(canvas, value, layout.GetValueBounds(slot), layout.ValueFontSize, layout.IsHorizontal ? 1 : 0, ChartColor.Fade(color, alpha * overlay), style);
             }
         }

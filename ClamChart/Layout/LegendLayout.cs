@@ -24,15 +24,26 @@ internal sealed class LegendLayout
 
     public const double MinNameWidth = 55;
 
+    public const double SortArrowGap = 3;
+
     private const double LineMarkerRatio = 1.5;
+
+    private const double SortArrowRatio = 0.6;
 
     private readonly List<LegendItemLayout> items = [];
     private readonly List<LegendCell> cells = [];
     private readonly List<double> columnWidths = [];
+    private readonly List<ChartRect> headerColumns = [];
 
     public IReadOnlyList<LegendItemLayout> Items => items;
 
     public IReadOnlyList<LegendCell> Cells => cells;
+
+    public IReadOnlyList<ChartRect> HeaderColumns => headerColumns;
+
+    public ChartRect SortArrow { get; private set; }
+
+    public bool SortDescending { get; private set; }
 
     public int OverflowCount { get; private set; }
 
@@ -55,11 +66,14 @@ internal sealed class LegendLayout
     {
         items.Clear();
         cells.Clear();
+        headerColumns.Clear();
         OverflowCount = 0;
         OverflowText = String.Empty;
         OverflowBounds = default;
         Bounds = default;
         HeaderBounds = default;
+        SortArrow = default;
+        SortDescending = false;
         IsTable = false;
         IsVisible = false;
     }
@@ -155,7 +169,9 @@ internal sealed class LegendLayout
         return width;
     }
 
-    public double MeasureTable(IReadOnlyList<LegendEntry> entries, IReadOnlyList<string> headers, IReadOnlyList<string> values, double width, double maxHeight, IChartTextMeasurer measurer, double fontSize, double markerSize)
+    public static double GetSortArrowWidth(double fontSize) => fontSize * SortArrowRatio;
+
+    public double MeasureTable(IReadOnlyList<LegendEntry> entries, IReadOnlyList<string> headers, IReadOnlyList<string> values, double width, double maxHeight, IChartTextMeasurer measurer, double fontSize, double markerSize, int sortColumn = -1, bool sortDescending = false)
     {
         Clear();
         var lineHeight = measurer.GetLineHeight(fontSize);
@@ -175,12 +191,13 @@ internal sealed class LegendLayout
         }
 
         markerColumn += CellPaddingX * 2;
+        var arrow = GetSortArrowWidth(fontSize);
         var columns = headers.Count - 1;
         var used = markerColumn + MinNameWidth;
         columnWidths.Clear();
         for (var c = 0; c < columns; c++)
         {
-            var columnWidth = measurer.Measure(headers[c + 1], fontSize, Double.PositiveInfinity);
+            var columnWidth = measurer.Measure(headers[c + 1], fontSize, Double.PositiveInfinity) + (c + 1 == sortColumn ? SortArrowGap + arrow : 0);
             for (var i = 0; i < shown; i++)
             {
                 columnWidth = Math.Max(columnWidth, measurer.Measure(values[(i * columns) + c], fontSize, Double.PositiveInfinity));
@@ -197,12 +214,12 @@ internal sealed class LegendLayout
         }
 
         IsTable = true;
+        SortDescending = sortDescending;
         var nameX = markerColumn + CellPaddingX;
         var nameMaxWidth = Math.Max(0, width - used + MinNameWidth - (CellPaddingX * 2));
         var textY = CellPaddingY + ((contentHeight - lineHeight) / 2);
         HeaderBounds = new ChartRect(0, 0, width, rowHeight);
-        cells.Add(new LegendCell(-1, headers[0], new ChartRect(nameX, textY, measurer.Measure(headers[0], fontSize, nameMaxWidth), lineHeight), nameMaxWidth));
-        AddValueCells(-1, headers, 1, 0, width, textY, lineHeight, measurer, fontSize);
+        AddHeaderCells(headers, width, markerColumn, nameMaxWidth, textY, lineHeight, rowHeight, measurer, fontSize, sortColumn, arrow);
         for (var i = 0; i < shown; i++)
         {
             var entry = entries[i];
@@ -244,8 +261,14 @@ internal sealed class LegendLayout
             cells[i] = cell with { Bounds = Move(cell.Bounds, x, y) };
         }
 
+        for (var i = 0; i < headerColumns.Count; i++)
+        {
+            headerColumns[i] = Move(headerColumns[i], x, y);
+        }
+
         OverflowBounds = OverflowCount > 0 ? Move(OverflowBounds, x, y) : default;
         HeaderBounds = IsTable ? Move(HeaderBounds, x, y) : default;
+        SortArrow = SortArrow.IsEmpty ? default : Move(SortArrow, x, y);
         Bounds = Move(Bounds, x, y);
     }
 
@@ -264,6 +287,43 @@ internal sealed class LegendLayout
             new ChartRect(x + markerWidth + MarkerGap, y + ((rowHeight - lineHeight) / 2), textWidth, lineHeight),
             textMaxWidth,
             valueWidth > 0 ? new ChartRect(x + width - valueWidth, y + ((rowHeight - lineHeight) / 2), valueWidth, lineHeight) : default);
+
+    private void AddHeaderCells(IReadOnlyList<string> headers, double width, double markerColumn, double nameMaxWidth, double textY, double lineHeight, double rowHeight, IChartTextMeasurer measurer, double fontSize, int sortColumn, double arrow)
+    {
+        var arrowHeight = arrow / 2;
+        var arrowY = textY + ((lineHeight - arrowHeight) / 2);
+        var right = width;
+        foreach (var columnWidth in columnWidths)
+        {
+            right -= columnWidth;
+        }
+
+        var nameX = markerColumn + CellPaddingX;
+        var maxWidth = sortColumn == 0 ? Math.Max(0, nameMaxWidth - SortArrowGap - arrow) : nameMaxWidth;
+        var nameWidth = measurer.Measure(headers[0], fontSize, maxWidth);
+        cells.Add(new LegendCell(-1, headers[0], new ChartRect(nameX, textY, nameWidth, lineHeight), maxWidth));
+        headerColumns.Add(new ChartRect(markerColumn, 0, Math.Max(0, right - markerColumn), rowHeight));
+        if (sortColumn == 0)
+        {
+            SortArrow = new ChartRect(nameX + nameWidth + SortArrowGap, arrowY, arrow, arrowHeight);
+        }
+
+        for (var c = 0; c < columnWidths.Count; c++)
+        {
+            headerColumns.Add(new ChartRect(right, 0, columnWidths[c], rowHeight));
+            right += columnWidths[c];
+            var end = right - CellPaddingX;
+            if (c + 1 == sortColumn)
+            {
+                SortArrow = new ChartRect(end - arrow, arrowY, arrow, arrowHeight);
+                end -= arrow + SortArrowGap;
+            }
+
+            var text = headers[c + 1];
+            var textWidth = measurer.Measure(text, fontSize, Double.PositiveInfinity);
+            cells.Add(new LegendCell(-1, text, new ChartRect(end - textWidth, textY, textWidth, lineHeight), Double.PositiveInfinity));
+        }
+    }
 
     private void AddValueCells(int row, IReadOnlyList<string> texts, int offset, double y, double width, double textY, double lineHeight, IChartTextMeasurer measurer, double fontSize)
     {

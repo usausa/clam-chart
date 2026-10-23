@@ -145,6 +145,27 @@ public sealed class ClamBarGaugeViewRenderingTests
     }
 
     [Fact]
+    public void TheValueCanUseThePrimaryText()
+    {
+        // Arrange
+        using var view = Gauge(new ChartEntry("A", 50));
+        Assert.Equal(ChartBarGaugeValueColorMode.Bar, view.ValueColorMode);
+        view.ValueVisible = true;
+        view.ValueColorMode = ChartBarGaugeValueColorMode.Text;
+        view.Thresholds.Add(new ChartThreshold { Level = ChartThresholdLevel.Good });
+        view.Thresholds.Add(new ChartThreshold { Value = 40, Level = ChartThresholdLevel.Critical });
+
+        // Act
+        using var bitmap = view.Paint(300, 40);
+
+        // Assert
+        var bounds = view.ChartLayout.GetValueBounds(0);
+        Assert.True(CountColor(bitmap, bounds, ChartStyles.Light.PrimaryTextColor.ToSKColor()) > 0);
+        Assert.Equal(0, CountColor(bitmap, bounds, Critical));
+        Assert.Equal(Critical.WithAlpha(89), GetPixel(bitmap, 10, view.ChartLayout.GetTrackBounds(0).CenterY), ColorComparer.Loose);
+    }
+
+    [Fact]
     public void LabelsUseTheSecondaryText()
     {
         // Arrange

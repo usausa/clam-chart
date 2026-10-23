@@ -276,6 +276,7 @@ public sealed class ClamRadialBarViewRenderingTests
             DisplayMode = mode,
             CapStyle = cap,
             BarGlow = glow,
+            ThresholdMarkersVisible = true,
             OverflowMode = ChartOverflowMode.Wrap,
             LegendVisible = true,
             LegendValueMode = ChartLegendValueMode.Percent,
@@ -300,6 +301,44 @@ public sealed class ClamRadialBarViewRenderingTests
 
         // Assert
         Assert.Equal(0, allocated);
+    }
+
+    [Fact]
+    public void ThresholdMarkersColorTheRangesOutsideTheRing()
+    {
+        // Arrange
+        using var view = Ring(50);
+        view.ThresholdMarkersVisible = true;
+        view.Thresholds.Add(new ChartThreshold { Value = 50, Level = ChartThresholdLevel.Warning });
+        view.Thresholds.Add(new ChartThreshold { Value = 80, Level = ChartThresholdLevel.Critical });
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        var layout = view.ChartLayout;
+        Assert.Equal(4, layout.MarkerWidth);
+        Assert.Equal(148, layout.MarkerRadius);
+        Assert.Equal(Blue, GetPixel(bitmap, 90, 148), ColorComparer.Loose);
+        Assert.Equal(Warning, GetPixel(bitmap, 234, 148), ColorComparer.Loose);
+        Assert.Equal(Critical, GetPixel(bitmap, 324, 148), ColorComparer.Loose);
+        Assert.Equal(0, GetPixel(bitmap, 90, 145).Alpha);
+        Assert.Equal(Warning, GetPixel(bitmap, 90, 132), ColorComparer.Loose);
+    }
+
+    [Fact]
+    public void ThresholdMarkersNeedThresholds()
+    {
+        // Arrange
+        using var view = Ring(50);
+        view.ThresholdMarkersVisible = true;
+
+        // Act
+        using var bitmap = view.Paint(300, 300);
+
+        // Assert
+        Assert.Equal(0, view.ChartLayout.MarkerWidth);
+        Assert.Equal(150, view.ChartLayout.OuterRadius);
     }
 
     private static TestClamRadialBarView Ring(double value) => Rings(new ChartEntry("A", value));

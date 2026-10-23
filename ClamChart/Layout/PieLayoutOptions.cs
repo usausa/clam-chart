@@ -34,6 +34,8 @@ internal sealed record PieLayoutOptions
 
     public ChartLegendValueMode LegendValueMode { get; init; }
 
+    public IReadOnlySet<string>? HiddenLabels { get; init; }
+
     public ChartCenterValueMode CenterValueMode { get; init; }
 
     public double? CenterValue { get; init; }

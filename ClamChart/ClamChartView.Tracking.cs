@@ -10,6 +10,7 @@ using ClamChart.Rendering;
 public partial class ClamChartView
 {
     public static readonly BindableProperty TrackballModeProperty = BindableProperty.Create(nameof(TrackballMode), typeof(ChartTrackballMode), typeof(ClamChartView), ChartTrackballMode.None, propertyChanged: OnInputModeChanged);
+    public static readonly BindableProperty TrackballSnapEnabledProperty = BindableProperty.Create(nameof(TrackballSnapEnabled), typeof(bool), typeof(ClamChartView), true, propertyChanged: OnTrackballSnapEnabledChanged);
     public static readonly BindableProperty TooltipVisibleProperty = BindableProperty.Create(nameof(TooltipVisible), typeof(bool), typeof(ClamChartView), true, propertyChanged: OnTooltipVisibleChanged);
     public static readonly BindableProperty TrackedItemProperty = BindableProperty.Create(nameof(TrackedItem), typeof(object), typeof(ClamChartView), defaultBindingMode: BindingMode.OneWayToSource);
     public static readonly BindableProperty TrackedIndexProperty = BindableProperty.Create(nameof(TrackedIndex), typeof(int), typeof(ClamChartView), -1, BindingMode.OneWayToSource);
@@ -28,6 +29,12 @@ public partial class ClamChartView
     {
         get => (ChartTrackballMode)GetValue(TrackballModeProperty);
         set => SetValue(TrackballModeProperty, value);
+    }
+
+    public bool TrackballSnapEnabled
+    {
+        get => (bool)GetValue(TrackballSnapEnabledProperty);
+        set => SetValue(TrackballSnapEnabledProperty, value);
     }
 
     public bool TooltipVisible
@@ -68,6 +75,10 @@ public partial class ClamChartView
 
     internal override ChartTrackballMode InputTrackballMode => EffectiveDensity == ChartDensity.Minimal ? ChartTrackballMode.None : TrackballMode;
 
+    internal string? TooltipHeader => interaction.TooltipHeader;
+
+    internal Point TooltipPoint => interaction.TrackPoint;
+
     internal override void OnTrackStarted(Point point)
     {
         interaction.IsFollowing = false;
@@ -91,13 +102,13 @@ public partial class ClamChartView
             UpdateTrackingTexts();
             UpdateTrackedItem();
             RaiseTracking(TrackingChanged);
-            ShareTracking();
             if (lead != (interaction.LeadSeries, interaction.LeadIndex))
             {
                 PerformHaptic(ChartHaptic.Tick);
             }
         }
 
+        ShareTracking();
         InvalidateCanvas();
     }
 
@@ -108,6 +119,22 @@ public partial class ClamChartView
         RaiseTracking(TrackingEnded);
         ShareTracking();
         InvalidateCanvas();
+    }
+
+    private static void OnTrackballSnapEnabledChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (ClamChartView)bindable;
+        view.interaction.Snaps = (bool)newValue;
+        if (view.interaction.IsFollowing)
+        {
+            view.PlaceFollowingPoint();
+        }
+        else if (view.interaction.IsTracking)
+        {
+            view.ShareTracking();
+        }
+
+        view.InvalidateCanvas();
     }
 
     private static void OnTooltipVisibleChanged(BindableObject bindable, object oldValue, object newValue)
@@ -128,10 +155,19 @@ public partial class ClamChartView
 
         var changed = ResolveTracking();
         UpdateTrackingTexts();
-        if (changed && !interaction.IsFollowing)
+        if (interaction.IsFollowing)
+        {
+            return;
+        }
+
+        if (changed)
         {
             UpdateTrackedItem();
             RaiseTracking(TrackingChanged);
+        }
+
+        if (changed || !interaction.Snaps)
+        {
             ShareTracking();
         }
     }
@@ -241,7 +277,7 @@ public partial class ClamChartView
         var texts = interaction.TrackedTexts;
         texts.Clear();
         interaction.TooltipHeader = null;
-        if (!interaction.IsTracking || interaction.IsFollowing || !TooltipVisible || (interaction.LeadSeries < 0))
+        if (!interaction.IsTracking || (interaction.IsFollowing && (TrackingGroupMode != ChartTrackingGroupMode.Tooltip)) || !TooltipVisible || (interaction.LeadSeries < 0))
         {
             return;
         }

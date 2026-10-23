@@ -10,6 +10,9 @@ public partial class ClamChartView
     public static readonly BindableProperty LegendValuesProperty = BindableProperty.Create(nameof(LegendValues), typeof(ChartLegendValues), typeof(ClamChartView), ChartLegendValues.None, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendWidthProperty = BindableProperty.Create(nameof(LegendWidth), typeof(double), typeof(ClamChartView), LegendLayout.MaxSideWidth, validateValue: static (_, value) => ChartAxis.ValidatePositive(value, nameof(LegendWidth)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendToggleEnabledProperty = BindableProperty.Create(nameof(LegendToggleEnabled), typeof(bool), typeof(ClamChartView), false);
+    public static readonly BindableProperty LegendSortEnabledProperty = BindableProperty.Create(nameof(LegendSortEnabled), typeof(bool), typeof(ClamChartView), false);
+    public static readonly BindableProperty LegendSortByProperty = BindableProperty.Create(nameof(LegendSortBy), typeof(ChartLegendSortKey), typeof(ClamChartView), ChartLegendSortKey.Name, BindingMode.TwoWay, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty LegendSortModeProperty = BindableProperty.Create(nameof(LegendSortMode), typeof(ChartSortMode), typeof(ClamChartView), ChartSortMode.None, BindingMode.TwoWay, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendItemTappedCommandProperty = BindableProperty.Create(nameof(LegendItemTappedCommand), typeof(ICommand), typeof(ClamChartView));
 
     public event EventHandler<ChartLegendEventArgs>? LegendItemTapped;
@@ -38,10 +41,46 @@ public partial class ClamChartView
         set => SetValue(LegendToggleEnabledProperty, value);
     }
 
+    public bool LegendSortEnabled
+    {
+        get => (bool)GetValue(LegendSortEnabledProperty);
+        set => SetValue(LegendSortEnabledProperty, value);
+    }
+
+    public ChartLegendSortKey LegendSortBy
+    {
+        get => (ChartLegendSortKey)GetValue(LegendSortByProperty);
+        set => SetValue(LegendSortByProperty, value);
+    }
+
+    public ChartSortMode LegendSortMode
+    {
+        get => (ChartSortMode)GetValue(LegendSortModeProperty);
+        set => SetValue(LegendSortModeProperty, value);
+    }
+
     public ICommand? LegendItemTappedCommand
     {
         get => (ICommand?)GetValue(LegendItemTappedCommandProperty);
         set => SetValue(LegendItemTappedCommandProperty, value);
+    }
+
+    private void TapLegendHeader(int column)
+    {
+        if (!LegendSortEnabled || (ChartLayout.GetLegendSortKey(column) is not { } key))
+        {
+            return;
+        }
+
+        if ((key != LegendSortBy) || (LegendSortMode == ChartSortMode.None))
+        {
+            LegendSortBy = key;
+            LegendSortMode = ChartSortMode.Descending;
+        }
+        else
+        {
+            LegendSortMode = LegendSortMode == ChartSortMode.Descending ? ChartSortMode.Ascending : ChartSortMode.None;
+        }
     }
 
     private void TapLegend(int seriesIndex)

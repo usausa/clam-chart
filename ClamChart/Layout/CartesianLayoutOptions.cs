@@ -24,6 +24,10 @@ internal sealed record CartesianLayoutOptions
 
     public double LegendWidth { get; init; } = LegendLayout.MaxSideWidth;
 
+    public ChartLegendSortKey LegendSortBy { get; init; }
+
+    public ChartSortMode LegendSortMode { get; init; }
+
     public ChartDataLabelsMode DataLabelsMode { get; init; }
 
     public bool LastMarkerOnly { get; init; }

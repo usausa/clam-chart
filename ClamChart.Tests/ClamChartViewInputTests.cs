@@ -701,6 +701,189 @@ public sealed class ClamChartViewInputTests
         Assert.Equal(line, bitmap.GetPixel((int)Math.Floor(right * 2), (int)((layout.PlotBounds.Y + 3) * 2)));
     }
 
+    [Fact]
+    public void LegendHeaderTapsCycleTheSort()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { Title = "a", ItemsSource = Entries(1, 4) }, new LineSeries { Title = "b", ItemsSource = Entries(2, 9) });
+        view.LegendMode = ChartLegendMode.Table;
+        view.LegendValues = ChartLegendValues.Max;
+        view.LegendSortEnabled = true;
+        using var first = view.Paint(360, 400);
+
+        // Act
+        TapHeader(view, 1);
+
+        // Assert
+        Assert.Equal(ChartTouchMode.HitOnly, view.ResolveTouchMode());
+        Assert.Equal(ChartLegendSortKey.Max, view.LegendSortBy);
+        Assert.Equal(ChartSortMode.Descending, view.LegendSortMode);
+        using var descending = view.Paint(360, 400);
+        Assert.Equal([1, 0], view.ChartLayout.Legend.Items.Select(static x => x.SeriesIndex));
+
+        // Act
+        TapHeader(view, 1);
+
+        // Assert
+        Assert.Equal(ChartSortMode.Ascending, view.LegendSortMode);
+
+        // Act
+        TapHeader(view, 1);
+
+        // Assert
+        Assert.Equal(ChartSortMode.None, view.LegendSortMode);
+        using var unsorted = view.Paint(360, 400);
+        Assert.Equal([0, 1], view.ChartLayout.Legend.Items.Select(static x => x.SeriesIndex));
+
+        // Act
+        TapHeader(view, 1);
+        TapHeader(view, 0);
+
+        // Assert
+        Assert.Equal(ChartLegendSortKey.Name, view.LegendSortBy);
+        Assert.Equal(ChartSortMode.Descending, view.LegendSortMode);
+    }
+
+    [Fact]
+    public void LegendHeaderIsNotTappedUnlessSortingIsEnabled()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { Title = "a", ItemsSource = Entries(1, 4) }, new LineSeries { Title = "b", ItemsSource = Entries(2, 9) });
+        view.LegendMode = ChartLegendMode.Table;
+        view.LegendValues = ChartLegendValues.Max;
+        view.LegendToggleEnabled = true;
+        using var bitmap = view.Paint(360, 400);
+        var column = view.ChartLayout.Legend.HeaderColumns[1];
+        var point = new Point(column.CenterX, column.CenterY);
+
+        // Act
+        Tap(view, point);
+
+        // Assert
+        Assert.False(view.IsInputTarget(point));
+        Assert.Equal(ChartSortMode.None, view.LegendSortMode);
+        Assert.True(view.Series[0].IsVisible);
+        Assert.True(view.Series[1].IsVisible);
+    }
+
+    [Fact]
+    public void UnsnappedTrackballDrawsTheCrossAtTheFingerAndKeepsTheNearestPoint()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { Title = "Sales", ItemsSource = Entries(10, 20, 30, 40) });
+        view.TrackballMode = ChartTrackballMode.Touch;
+        view.TrackballSnapEnabled = false;
+        using var first = view.Paint(360, 240);
+        var layout = view.ChartLayout;
+        var plot = layout.PlotBounds;
+        var x = layout.XAxis.ToPixel(1.3);
+        var y = plot.Y + (plot.Height * 0.6);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, new Point(x, y), 0);
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        Assert.Equal(1, view.TrackedIndex);
+        Assert.Equal("C1", view.TooltipHeader);
+        var line = ChartStyles.Light.TrackballLineColor.ToSKColor();
+        var top = (int)((plot.Y + 3) * 2);
+        Assert.Equal(line, bitmap.GetPixel((int)Math.Floor(x * 2), top));
+        Assert.NotEqual(line, bitmap.GetPixel((int)Math.Floor(layout.XAxis.ToPixel(1) * 2), top));
+        Assert.Equal(line, bitmap.GetPixel((int)((plot.X + 3) * 2), (int)Math.Floor(y * 2)));
+    }
+
+    [Fact]
+    public void SnappedTrackballHasNoHorizontalLine()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { Title = "Sales", ItemsSource = Entries(10, 20, 30, 40) });
+        view.TrackballMode = ChartTrackballMode.Touch;
+        using var first = view.Paint(360, 240);
+        var layout = view.ChartLayout;
+        var plot = layout.PlotBounds;
+        var y = plot.Y + (plot.Height * 0.6);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, new Point(layout.XAxis.ToPixel(1.3), y), 0);
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        Assert.True(view.TrackballSnapEnabled);
+        var line = ChartStyles.Light.TrackballLineColor.ToSKColor();
+        Assert.Equal(line, bitmap.GetPixel((int)Math.Floor(layout.XAxis.ToPixel(1) * 2), (int)((plot.Y + 3) * 2)));
+        Assert.NotEqual(line, bitmap.GetPixel((int)((plot.X + 3) * 2), (int)Math.Floor(y * 2)));
+    }
+
+    [Fact]
+    public void UnsnappedScatterCrossFollowsTheFinger()
+    {
+        // Arrange
+        var points = new List<ChartPoint> { new(0, 10), new(10, 0) };
+        using var view = Chart(new ScatterSeries { Title = "Points", ItemsSource = points });
+        view.TrackballMode = ChartTrackballMode.Touch;
+        view.TrackballSnapEnabled = false;
+        using var first = view.Paint(360, 240);
+        var layout = view.ChartLayout;
+        var plot = layout.PlotBounds;
+        var x = layout.XAxis.ToPixel(7);
+        var y = layout.YAxis.ToPixel(2);
+
+        // Act
+        view.HandleTouch(1, SKTouchAction.Pressed, new Point(x, y), 0);
+        using var bitmap = view.Paint(360, 240);
+
+        // Assert
+        Assert.Same(points[1], view.TrackedItem);
+        var line = ChartStyles.Light.TrackballLineColor.ToSKColor();
+        Assert.Equal(line, bitmap.GetPixel((int)Math.Floor(x * 2), (int)((plot.Y + 3) * 2)));
+        Assert.Equal(line, bitmap.GetPixel((int)((plot.X + 3) * 2), (int)Math.Floor(y * 2)));
+        Assert.NotEqual(line, bitmap.GetPixel((int)Math.Floor(layout.XAxis.ToPixel(10) * 2), (int)((plot.Y + 3) * 2)));
+    }
+
+    [Fact]
+    public void UnsnappedCrossAddsNoAllocationToAFrame()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { Title = "Sales", ItemsSource = Entries(10, 20, 30, 40) });
+        view.TrackballMode = ChartTrackballMode.Touch;
+        view.TrackballSnapEnabled = false;
+        using var bitmap = view.Paint(360, 240);
+        using var surface = SKSurface.Create(new SKImageInfo(720, 480));
+        var idle = MeasureFrame(view, surface.Canvas);
+        view.HandleTouch(1, SKTouchAction.Pressed, new Point(view.ChartLayout.XAxis.ToPixel(1.2), 100), 0);
+
+        // Act
+        var tracking = MeasureFrame(view, surface.Canvas);
+
+        // Assert
+        Assert.True(view.IsTracking);
+        Assert.Equal(idle, tracking);
+    }
+
+    [Fact]
+    public void UnsnappedTrackingMovesDoNotAllocate()
+    {
+        // Arrange
+        using var view = Chart(new LineSeries { Title = "Sales", ItemsSource = Entries(10, 20, 30, 40) });
+        view.TrackballMode = ChartTrackballMode.Touch;
+        view.TrackballSnapEnabled = false;
+        using var bitmap = view.Paint(360, 240);
+        var x = view.ChartLayout.XAxis.ToPixel(1);
+        view.HandleTouch(1, SKTouchAction.Pressed, new Point(x - 20, 100), 0);
+        view.HandleTouch(1, SKTouchAction.Moved, new Point(x + 10, 100), 1);
+        Move(view, x, 2);
+
+        // Act
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        Move(view, x, 100);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        // Assert
+        Assert.True(view.IsTracking);
+        Assert.Equal(0, allocated);
+    }
+
     private static TestClamChartView Chart(params ChartSeries[] series)
     {
         var view = new TestClamChartView();
@@ -735,6 +918,13 @@ public sealed class ClamChartViewInputTests
     {
         view.HandleTouch(1, SKTouchAction.Pressed, point, 0);
         view.HandleTouch(1, SKTouchAction.Released, point, 10);
+    }
+
+    private static void TapHeader(TestClamChartView view, int column)
+    {
+        using var bitmap = view.Paint(360, 400);
+        var bounds = view.ChartLayout.Legend.HeaderColumns[column];
+        Tap(view, new Point(bounds.CenterX, bounds.CenterY));
     }
 
     private static void Move(TestClamChartView view, double x, double time)

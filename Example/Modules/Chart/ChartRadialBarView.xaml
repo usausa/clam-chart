@@ -49,6 +49,7 @@
                                             ItemsSource="{Binding Cpu}"
                                             CapStyle="{Binding CapStyle}"
                                             ContentPadding="0" DisplayMode="Gradient" StartAngle="250" SweepAngle="220"
+                                            ThresholdMarkersVisible="True"
                                             Thresholds="{Binding LoadThresholds}" />
                 </Grid>
             </Border>
@@ -77,7 +78,7 @@
                                             CapStyle="{Binding CapStyle}"
                                             ContentPadding="0"
                                             DisplayMode="{Binding DisplayMode}"
-                                            LegendValueMode="Percent" LegendVisible="True" SelectionMode="Item"
+                                            LegendValueMode="Percent" LegendVisible="True" SelectionMode="Item" ThresholdMarkersVisible="True"
                                             Thresholds="{Binding LoadThresholds}" />
                 </Grid>
             </Border>

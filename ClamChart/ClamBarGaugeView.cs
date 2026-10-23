@@ -33,6 +33,7 @@ public partial class ClamBarGaugeView : ChartViewBase
     public static readonly BindableProperty LabelPositionProperty = BindableProperty.Create(nameof(LabelPosition), typeof(ChartBarGaugeLabelPosition), typeof(ClamBarGaugeView), ChartBarGaugeLabelPosition.Top, propertyChanged: OnSizeInputChanged);
     public static readonly BindableProperty ValueVisibleProperty = BindableProperty.Create(nameof(ValueVisible), typeof(bool), typeof(ClamBarGaugeView), true, propertyChanged: OnSizeInputChanged);
     public static readonly BindableProperty ValueModeProperty = BindableProperty.Create(nameof(ValueMode), typeof(ChartBarGaugeValueMode), typeof(ClamBarGaugeView), ChartBarGaugeValueMode.Percent, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty ValueColorModeProperty = BindableProperty.Create(nameof(ValueColorMode), typeof(ChartBarGaugeValueColorMode), typeof(ClamBarGaugeView), ChartBarGaugeValueColorMode.Bar, propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty ValueFormatProperty = BindableProperty.Create(nameof(ValueFormat), typeof(string), typeof(ClamBarGaugeView), propertyChanged: OnValueFormatChanged);
     public static readonly BindableProperty ValueConverterProperty = BindableProperty.Create(nameof(ValueConverter), typeof(IValueConverter), typeof(ClamBarGaugeView), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty TrackVisibleProperty = BindableProperty.Create(nameof(TrackVisible), typeof(bool), typeof(ClamBarGaugeView), true, propertyChanged: OnRenderInputChanged);
@@ -157,6 +158,12 @@ public partial class ClamBarGaugeView : ChartViewBase
     {
         get => (ChartBarGaugeValueMode)GetValue(ValueModeProperty);
         set => SetValue(ValueModeProperty, value);
+    }
+
+    public ChartBarGaugeValueColorMode ValueColorMode
+    {
+        get => (ChartBarGaugeValueColorMode)GetValue(ValueColorModeProperty);
+        set => SetValue(ValueColorModeProperty, value);
     }
 
     public string? ValueFormat
@@ -391,7 +398,7 @@ public partial class ClamBarGaugeView : ChartViewBase
         var palette = Palette ?? ChartStyle.Palette;
         var color = Color ?? (palette.Count > 0 ? palette[0] : ChartStyle.OtherColor);
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, new BarGaugeRenderState(color, Thresholds, TrackVisible, TargetVisible), ChartStyle);
+        painter.Render(canvas, ChartLayout, Interpolator, new BarGaugeRenderState(color, Thresholds, TrackVisible, TargetVisible, ValueColorMode), ChartStyle);
     }
 
     private static bool ValidateFinite(object? value, string name) =>

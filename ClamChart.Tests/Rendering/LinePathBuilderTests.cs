@@ -19,6 +19,35 @@ public sealed class LinePathBuilderTests
     }
 
     [Fact]
+    public void StepBeforeMovesToTheNextValueFirst()
+    {
+        // Arrange
+        using var builder = new SKPathBuilder();
+
+        // Act
+        LinePathBuilder.AddLine(builder, [0f, 10, 20], [5f, 1, 3], [0f, 0, 0], ChartLineInterpolation.StepBefore, false);
+        using var path = builder.Detach();
+
+        // Assert
+        Assert.Equal([new SKPoint(0, 5), new SKPoint(0, 1), new SKPoint(10, 1), new SKPoint(10, 3), new SKPoint(20, 3)], path.Points);
+    }
+
+    [Fact]
+    public void ReversedStepBeforeTracesTheSameShapeBack()
+    {
+        // Arrange
+        using var builder = new SKPathBuilder();
+        builder.MoveTo(0, 0);
+
+        // Act
+        LinePathBuilder.AddReversedLine(builder, [0f, 10, 20], [5f, 1, 3], [0f, 0, 0], ChartLineInterpolation.StepBefore, false);
+        using var path = builder.Detach();
+
+        // Assert
+        Assert.Equal([new SKPoint(0, 0), new SKPoint(20, 3), new SKPoint(10, 3), new SKPoint(10, 1), new SKPoint(0, 1), new SKPoint(0, 5)], path.Points);
+    }
+
+    [Fact]
     public void HorizontalLinesSwapTheCoordinates()
     {
         // Arrange

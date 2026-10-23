@@ -177,6 +177,23 @@ public sealed class ChartAxisTests
     }
 
     [Fact]
+    public void CategoryLabelLengthAndTitleOrientationReachTheOptions()
+    {
+        // Arrange
+        var axis = new CategoryAxis();
+
+        // Act & Assert
+        Assert.Equal(ChartOrientation.Horizontal, axis.TitleOrientation);
+        Assert.Null(axis.LabelMaxLength);
+        Assert.Throws<ArgumentOutOfRangeException>(() => axis.LabelMaxLength = 0);
+        axis.LabelMaxLength = 3;
+        axis.TitleOrientation = ChartOrientation.Vertical;
+        var options = axis.CreateOptions(Context with { ValueAxis = false });
+        Assert.Equal(3, options.LabelMaxLength);
+        Assert.Equal(ChartOrientation.Vertical, options.TitleOrientation);
+    }
+
+    [Fact]
     public void CategoryOptionsKeepThePlacementAndTheFormatter()
     {
         // Arrange

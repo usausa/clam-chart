@@ -109,6 +109,73 @@ public sealed class CartesianLayoutTests
     }
 
     [Fact]
+    public void VerticalTitlesTurnBesideTheLabels()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddEntries(ChartSeriesKind.Bar, [("Jan", 10), ("Feb", 20), ("Mar", 30)]);
+        var options = CategoryBars with
+        {
+            XAxis = CategoryBars.XAxis with { Title = "Month", TitleOrientation = ChartOrientation.Vertical },
+            YAxis = CategoryBars.YAxis with { Title = "Sales", TitleOrientation = ChartOrientation.Vertical }
+        };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        Assert.Equal(new ChartRect(40, 14.5, 312, 181), layout.PlotBounds);
+        Assert.Equal(new ChartRect(8, 14.5, 13, 181), layout.YAxis.TitleArea);
+        Assert.Equal(-90, layout.YAxis.TitleRotation);
+        Assert.Equal(new ChartRect(-13.75, -6.5, 27.5, 13), layout.YAxis.TitleBounds);
+        Assert.Equal(0, layout.XAxis.TitleRotation);
+        Assert.Equal(new ChartRect(182.25, 219, 27.5, 13), layout.XAxis.TitleBounds);
+    }
+
+    [Fact]
+    public void TurnedTitleOfTheSecondaryAxisReadsDownwardWithItsColors()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [0, 50, 100], title: "Temp");
+        set.AddValues(ChartSeriesKind.Area, [10, 37, 20], axis: ChartAxisTarget.Secondary, title: "Humidity");
+        var options = new CartesianLayoutOptions
+        {
+            YAxis = new AxisLayoutOptions { Title = "Temp" },
+            SecondaryYAxis = new AxisLayoutOptions { Title = "Humidity", TitleOrientation = ChartOrientation.Vertical }
+        };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        var axis = layout.SecondaryYAxis;
+        Assert.Equal(90, axis.TitleRotation);
+        Assert.Equal(layout.PlotBounds.Right + axis.LabelWidth + CartesianLayout.LabelGap + CartesianLayout.TitleGap, axis.TitleArea.X);
+        Assert.Equal(352, axis.TitleArea.Right);
+        Assert.Equal(layout.PlotBounds.Height, axis.TitleArea.Height);
+        Assert.Equal(new ChartRect(-28, -6.5, 44, 13), axis.TitleBounds);
+        Assert.Equal([new ChartRect(20, -4, 8, 8)], axis.TitleMarkers);
+        Assert.Equal(new ChartRect(20, 8, 22, 13), layout.YAxis.TitleBounds);
+    }
+
+    [Fact]
+    public void CategoryLabelsAreCutToTheMaximumLength()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddEntries(ChartSeriesKind.Bar, [("January", 10), ("Feb", 20), ("渋谷駅前店", 30), ("👍👍👍👍", 40), ("Ab cd", 50)]);
+        var options = CategoryBars with { XAxis = CategoryBars.XAxis with { LabelMaxLength = 3 } };
+
+        // Act
+        using var layout = Update(set, options);
+
+        // Assert
+        Assert.Equal(["Jan…", "Feb", "渋谷駅…", "👍👍👍…", "Ab…"], layout.XAxis.Labels.Select(static x => x.Text));
+        Assert.Equal("January", layout.GetTrackingLabel(0, []));
+    }
+
+    [Fact]
     public void SecondaryAxisAlignsToThePrimaryAndShowsTheColorsOfItsSeries()
     {
         // Arrange
@@ -365,6 +432,98 @@ public sealed class CartesianLayoutTests
     }
 
     [Fact]
+    public void LegendTableIsSortedByTheValueColumn()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [1, 4], title: "a");
+        set.AddValues(ChartSeriesKind.Line, [2, 9], title: "b");
+        set.AddValues(ChartSeriesKind.Line, [Double.NaN, Double.NaN], title: "c");
+        set.AddValues(ChartSeriesKind.Line, [3, 4], title: "d");
+        var options = Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table, LegendValues = ChartLegendValues.Max, LegendSortBy = ChartLegendSortKey.Max, LegendSortMode = ChartSortMode.Descending };
+
+        // Act
+        using var descending = Update(set, options, 360, 400);
+        using var ascending = Update(set, options with { LegendSortMode = ChartSortMode.Ascending }, 360, 400);
+        using var unsorted = Update(set, options with { LegendSortMode = ChartSortMode.None }, 360, 400);
+
+        // Assert
+        Assert.Equal([1, 0, 3, 2], descending.Legend.Items.Select(static x => x.SeriesIndex));
+        Assert.Equal(["Name", "Max", "9", "4", "4"], descending.Legend.Cells.Select(static x => x.Text));
+        Assert.True(descending.Legend.SortDescending);
+        Assert.Equal([2, 0, 3, 1], ascending.Legend.Items.Select(static x => x.SeriesIndex));
+        Assert.False(ascending.Legend.SortDescending);
+        Assert.Equal([0, 1, 2, 3], unsorted.Legend.Items.Select(static x => x.SeriesIndex));
+        Assert.True(unsorted.Legend.SortArrow.IsEmpty);
+    }
+
+    [Fact]
+    public void LegendTableNamesAreSortedWithTheNumbersInOrder()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [1, 2], title: "cpu10");
+        set.AddValues(ChartSeriesKind.Line, [1, 2], title: "CPU2");
+        set.AddValues(ChartSeriesKind.Line, [1, 2], title: "cpu1");
+        var options = Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table, LegendSortBy = ChartLegendSortKey.Name, LegendSortMode = ChartSortMode.Ascending };
+
+        // Act
+        using var layout = Update(set, options, 360, 400);
+
+        // Assert
+        Assert.Equal([2, 1, 0], layout.Legend.Items.Select(static x => x.SeriesIndex));
+    }
+
+    [Fact]
+    public void LegendSortArrowSitsBesideTheSortedHeader()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [1, 4], title: "a");
+        set.AddValues(ChartSeriesKind.Line, [2, 9], title: "b");
+        var options = Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table, LegendValues = ChartLegendValues.Max, LegendSortBy = ChartLegendSortKey.Max, LegendSortMode = ChartSortMode.Descending };
+
+        // Act
+        using var value = Update(set, options, 360, 400);
+        using var name = Update(set, options with { LegendSortBy = ChartLegendSortKey.Name }, 360, 400);
+
+        // Assert
+        var legend = value.Legend;
+        var arrow = LegendLayout.GetSortArrowWidth(ChartStyles.Light.LegendFontSize);
+        var header = legend.Cells[1];
+        Assert.Equal(legend.Bounds.Right - LegendLayout.CellPaddingX, legend.SortArrow.Right, 6);
+        Assert.Equal(arrow, legend.SortArrow.Width, 6);
+        Assert.Equal(arrow / 2, legend.SortArrow.Height, 6);
+        Assert.Equal(legend.SortArrow.X - LegendLayout.SortArrowGap, header.Bounds.Right, 6);
+        Assert.Equal(header.Bounds.CenterY, legend.SortArrow.CenterY, 6);
+        Assert.Equal(2, legend.HeaderColumns.Count);
+        Assert.Equal(legend.Bounds.Right, legend.HeaderColumns[1].Right, 6);
+        Assert.Equal(legend.HeaderColumns[1].X, legend.HeaderColumns[0].Right, 6);
+        Assert.Equal(legend.HeaderBounds.Height, legend.HeaderColumns[0].Height, 6);
+        Assert.Equal(name.Legend.Cells[0].Bounds.Right + LegendLayout.SortArrowGap, name.Legend.SortArrow.X, 6);
+        Assert.Equal(ChartLegendSortKey.Name, value.GetLegendSortKey(0));
+        Assert.Equal(ChartLegendSortKey.Max, value.GetLegendSortKey(1));
+        Assert.Null(value.GetLegendSortKey(2));
+    }
+
+    [Fact]
+    public void LegendIsNotSortedByAColumnItDoesNotShow()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddValues(ChartSeriesKind.Line, [1, 4], title: "a");
+        set.AddValues(ChartSeriesKind.Line, [2, 9], title: "b");
+        var options = Exact with { LegendVisible = true, LegendMode = ChartLegendMode.Table, LegendValues = ChartLegendValues.Last, LegendSortBy = ChartLegendSortKey.Max, LegendSortMode = ChartSortMode.Descending };
+
+        // Act
+        using var layout = Update(set, options, 360, 400);
+
+        // Assert
+        Assert.Equal([0, 1], layout.Legend.Items.Select(static x => x.SeriesIndex));
+        Assert.True(layout.Legend.SortArrow.IsEmpty);
+    }
+
+    [Fact]
     public void TimeWindowShowsTheLatestPointsAlignedToTheRight()
     {
         // Arrange
@@ -435,6 +594,17 @@ public sealed class CartesianLayoutTests
         Assert.Equal(40, CartesianLayout.GetBubbleSize(100, 100, 8, 40));
         Assert.Equal(Math.Sqrt(448), CartesianLayout.GetBubbleSize(25, 100, 8, 40), 9);
         Assert.Equal(8, CartesianLayout.GetBubbleSize(25, 0, 8, 40));
+    }
+
+    [Fact]
+    public void BubbleAreaCanGrowFromTheSmallestValue()
+    {
+        // Act & Assert
+        Assert.Equal(8, CartesianLayout.GetRangeBubbleSize(10, 10, 110, 8, 40));
+        Assert.Equal(40, CartesianLayout.GetRangeBubbleSize(110, 10, 110, 8, 40));
+        Assert.Equal(Math.Sqrt(832), CartesianLayout.GetRangeBubbleSize(60, 10, 110, 8, 40), 9);
+        Assert.Equal(Math.Sqrt(448), CartesianLayout.GetRangeBubbleSize(-5, -10, 10, 8, 40), 9);
+        Assert.Equal(8, CartesianLayout.GetRangeBubbleSize(30, 30, 30, 8, 40));
     }
 
     [Fact]
@@ -725,6 +895,26 @@ public sealed class CartesianLayoutTests
         Assert.Equal(10, linear.YAxis.Scale.Maximum);
         Assert.Equal(0, step.YAxis.Scale.Minimum);
         Assert.Equal(10, step.YAxis.Scale.Maximum);
+    }
+
+    [Fact]
+    public void StepBeforeAddsTheNextValueAtTheEdges()
+    {
+        // Arrange
+        using var set = new TestSeriesSet();
+        set.AddPoints(ChartSeriesKind.Line, [(0, 0), (10, 10), (20, 30), (30, 0)]);
+        set.Replace(0, set[0] with { Interpolation = ChartLineInterpolation.Step });
+        using var after = Update(set, FixedXRange(15, 25));
+        set.Replace(0, set[0] with { Interpolation = ChartLineInterpolation.StepBefore });
+
+        // Act
+        using var before = Update(set, FixedXRange(15, 25));
+
+        // Assert
+        Assert.Equal(10, after.YAxis.Scale.Minimum);
+        Assert.Equal(30, after.YAxis.Scale.Maximum);
+        Assert.Equal(0, before.YAxis.Scale.Minimum);
+        Assert.Equal(30, before.YAxis.Scale.Maximum);
     }
 
     [Fact]

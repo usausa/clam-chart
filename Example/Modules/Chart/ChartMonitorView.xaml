@@ -63,10 +63,10 @@
                     <clam:ClamChartView Grid.Row="1"
                                         ContentPadding="0" HapticFeedbackEnabled="True"
                                         LegendMode="{Binding LegendMode}"
-                                        LegendToggleEnabled="True" LegendValues="Last,Max,Mean"
+                                        LegendSortEnabled="True" LegendToggleEnabled="True" LegendValues="Last,Max,Mean"
                                         Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.BlueShadesLight},
                                                                   Dark={x:Static clam:ChartPalettes.BlueShadesDark}}"
-                                        TrackballMode="LongPress" TrackingGroup="monitor"
+                                        TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor" TrackingGroupMode="Tooltip"
                                         ValueAccessors="{x:Static models:MonitorSample.Accessors}"
                                         XKey="time">
                         <clam:ClamChartView.XAxis>
@@ -104,10 +104,10 @@
                     <clam:ClamChartView Grid.Row="1"
                                         ContentPadding="0"
                                         LegendMode="{Binding LegendMode}"
-                                        LegendValues="Last"
+                                        LegendSortEnabled="True" LegendValues="Last"
                                         Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.RedShadesLight},
                                                                   Dark={x:Static clam:ChartPalettes.RedShadesDark}}"
-                                        TrackballMode="LongPress" TrackingGroup="monitor"
+                                        TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor" TrackingGroupMode="Tooltip"
                                         ValueAccessors="{x:Static models:MonitorSample.Accessors}"
                                         XKey="time">
                         <clam:ClamChartView.XAxis>
@@ -137,10 +137,10 @@
                     <clam:ClamChartView Grid.Row="1"
                                         ContentPadding="0"
                                         LegendMode="{Binding LegendMode}"
-                                        LegendValues="Last,Max"
+                                        LegendSortEnabled="True" LegendValues="Last,Max"
                                         Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.PurpleShadesLight},
                                                                   Dark={x:Static clam:ChartPalettes.PurpleShadesDark}}"
-                                        TrackballMode="LongPress" TrackingGroup="monitor"
+                                        TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor" TrackingGroupMode="Tooltip"
                                         ValueAccessors="{x:Static models:MonitorSample.Accessors}"
                                         XKey="time">
                         <clam:ClamChartView.XAxis>
@@ -170,7 +170,8 @@
                            Style="{StaticResource PanelTitleLabel}"
                            Text="{Binding RunQueue, StringFormat='{0:N0}'}" />
                     <clam:ClamChartView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                        ContentPadding="0" TrackballMode="LongPress" TrackingGroup="monitor"
+                                        ContentPadding="0" TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor"
+                                        TrackingGroupMode="Tooltip"
                                         ValueAccessors="{x:Static models:MonitorSample.Accessors}"
                                         XKey="time">
                         <clam:ClamChartView.XAxis>

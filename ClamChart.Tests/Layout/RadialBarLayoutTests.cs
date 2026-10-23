@@ -219,6 +219,35 @@ public sealed class RadialBarLayoutTests
         Assert.Equal(0.75 + (layout.Thickness * 0.08), RadialBarLayout.GetGlowSigma(layout.Thickness), Precision);
     }
 
+    [Fact]
+    public void ThresholdMarkersTakeAThinRingOutsideTheBars()
+    {
+        // Act
+        var plain = Layout([Entry(0, "A", 50)]);
+        var marked = Layout([Entry(0, "A", 50)], new RadialBarLayoutOptions { ThresholdMarkers = true });
+
+        // Assert
+        var (width, spacing) = RadialBarLayout.GetMarkerSize(plain.Thickness);
+        Assert.Equal(Math.Clamp(0.2 * Math.Pow(25, 0.92), 4, 12), width, Precision);
+        Assert.Equal(Math.Clamp(width / 2, 2, 12), spacing, Precision);
+        Assert.Equal(0, plain.MarkerWidth);
+        Assert.Equal(width, marked.MarkerWidth, Precision);
+        Assert.Equal(150 - (width / 2), marked.MarkerRadius, Precision);
+        Assert.Equal(150 - width - spacing, marked.OuterRadius, Precision);
+        Assert.Equal(marked.OuterRadius / 6, marked.Thickness, Precision);
+        Assert.Equal(150, marked.CenterX);
+        Assert.Equal(150, marked.CenterY);
+    }
+
+    [Fact]
+    public void ThresholdMarkersGrowWithTheBarsUpToTwelve()
+    {
+        // Act & Assert
+        Assert.Equal((4d, 2d), RadialBarLayout.GetMarkerSize(8));
+        Assert.Equal(0.2 * Math.Pow(60, 0.92), RadialBarLayout.GetMarkerSize(60).Width, Precision);
+        Assert.Equal((12d, 6d), RadialBarLayout.GetMarkerSize(400));
+    }
+
     private static GaugeEntry Entry(int index, string? label, double value, double maximum = Double.NaN) =>
         new(index, label, value, maximum, Double.NaN, null);
 

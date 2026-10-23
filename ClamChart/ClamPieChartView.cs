@@ -304,6 +304,7 @@ public partial class ClamPieChartView : ChartViewBase
             LabelSelector = LabelSelector
         });
         var data = DataSnapshotBuilder.Build(source.Source, reader, ChartEmptyPointMode.Gap);
+        dataUpdated = true;
         RecordChange(snapshot.Count, data.Count);
         ReplaceSnapshot(data);
         source.Changes.Clear();
@@ -432,6 +433,7 @@ public partial class ClamPieChartView : ChartViewBase
             LegendPosition = LegendPosition,
             LegendMaxRows = density == ChartDensity.Full ? LegendLayout.MaxRows : 1,
             LegendValueMode = LegendValueMode,
+            HiddenLabels = hiddenLabels,
             CenterValueMode = CenterValueMode,
             CenterValue = CenterValue,
             CenterLabel = CenterLabel,

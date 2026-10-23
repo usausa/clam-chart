@@ -76,6 +76,10 @@ internal static class LinePathBuilder
                     path.LineTo(ToPoint(along[i], across[i - 1], horizontal));
                     path.LineTo(ToPoint(along[i], across[i], horizontal));
                     break;
+                case ChartLineInterpolation.StepBefore:
+                    path.LineTo(ToPoint(along[i - 1], across[i], horizontal));
+                    path.LineTo(ToPoint(along[i], across[i], horizontal));
+                    break;
                 case ChartLineInterpolation.Smooth:
                     var third = (along[i] - along[i - 1]) / 3;
                     path.CubicTo(
@@ -100,6 +104,10 @@ internal static class LinePathBuilder
             {
                 case ChartLineInterpolation.Step:
                     path.LineTo(ToPoint(along[i], across[i - 1], horizontal));
+                    path.LineTo(ToPoint(along[i - 1], across[i - 1], horizontal));
+                    break;
+                case ChartLineInterpolation.StepBefore:
+                    path.LineTo(ToPoint(along[i - 1], across[i], horizontal));
                     path.LineTo(ToPoint(along[i - 1], across[i - 1], horizontal));
                     break;
                 case ChartLineInterpolation.Smooth:

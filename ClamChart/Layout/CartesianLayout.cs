@@ -1,6 +1,7 @@
 namespace ClamChart.Layout;
 
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 using ClamChart.Rendering;
 
@@ -36,7 +37,12 @@ internal sealed class CartesianLayout : IDisposable
     private readonly List<AxisLayout> axes = [];
     private readonly List<LegendEntry> legendEntries = [];
     private readonly List<string> legendHeaders = [];
+    private readonly List<ChartLegendSortKey> legendHeaderKeys = [];
     private readonly List<string> legendValues = [];
+    private readonly List<double> legendSortValues = [];
+    private readonly List<int> legendOrder = [];
+    private readonly List<LegendEntry> sortedEntries = [];
+    private readonly List<string> sortedValues = [];
     private readonly List<double> slotWidths = [];
     private readonly List<(int Last, int Minimum, int Maximum)> labelPoints = [];
     private readonly List<DataLabel> dataLabels = [];
@@ -47,6 +53,8 @@ internal sealed class CartesianLayout : IDisposable
     private TimeLabelPrecision? timePrecision;
     private (double Minimum, double Maximum) positionRange;
     private (double Low, double High) visibleRange;
+    private int legendSortColumn = -1;
+    private bool legendSortDescending;
 
     public ChartRect Bounds { get; private set; }
 
@@ -100,6 +108,9 @@ internal sealed class CartesianLayout : IDisposable
     public AxisLayout GetValueAxis(ChartAxisTarget target) =>
         (target == ChartAxisTarget.Secondary) && HasSecondaryAxis ? SecondaryYAxis : YAxis;
 
+    public ChartLegendSortKey? GetLegendSortKey(int column) =>
+        (column >= 0) && (column < legendHeaderKeys.Count) ? legendHeaderKeys[column] : null;
+
     public string GetTrackingLabel(double x, IReadOnlyList<CartesianSeries> series)
     {
         if ((XAxis.Options.Kind != ChartAxisKind.DateTime) || !XAxis.HasDefaultFormat)
@@ -142,7 +153,7 @@ internal sealed class CartesianLayout : IDisposable
         var top = Bounds.Y + (legendRows && (options.LegendPosition == ChartLegendPosition.Top) ? legendHeight + LegendGap : 0);
         var bottom = Bounds.Bottom - (legendRows && (options.LegendPosition == ChartLegendPosition.Bottom) ? legendHeight + LegendGap : 0);
         var titleRowTop = top;
-        if (ForVerticalAxes(static axis => axis.ShowsTitle))
+        if (ForVerticalAxes(static axis => axis.ShowsTitle && !axis.RotatesTitle))
         {
             top += titleLineHeight + TitleGap;
         }
@@ -165,8 +176,8 @@ internal sealed class CartesianLayout : IDisposable
         var plotHeight = Math.Max(0, bottom - top);
 
         ResolveAxes(true, series, plotHeight, measurer, style.AxisLabelFontSize, Bounds.Width * VerticalLabelRatio);
-        var left = Bounds.X + GetVerticalExtent(AxisSide.Left);
-        var right = Bounds.Right - GetVerticalExtent(AxisSide.Right);
+        var left = Bounds.X + GetVerticalExtent(AxisSide.Left, titleLineHeight);
+        var right = Bounds.Right - GetVerticalExtent(AxisSide.Right, titleLineHeight);
         if (legendVisible && !legendRows)
         {
             var legendWidth = MeasureLegendColumn(options, plotHeight, measurer, style);
@@ -216,7 +227,24 @@ internal sealed class CartesianLayout : IDisposable
     public static double GetBubbleSize(double value, double largest, double minimum, double maximum)
     {
         var ratio = (largest > 0) && (value > 0) ? Math.Min(value / largest, 1) : 0;
-        return Math.Sqrt((minimum * minimum) + (((maximum * maximum) - (minimum * minimum)) * ratio));
+        return GetBubbleDiameter(ratio, minimum, maximum);
+    }
+
+    public static double GetRangeBubbleSize(double value, double smallest, double largest, double minimum, double maximum)
+    {
+        var range = largest - smallest;
+        var ratio = range > 0 ? Math.Clamp((value - smallest) / range, 0, 1) : 0;
+        return GetBubbleDiameter(ratio, minimum, maximum);
+    }
+
+    private static double GetBubbleDiameter(double ratio, double minimum, double maximum) =>
+        Math.Sqrt((minimum * minimum) + (((maximum * maximum) - (minimum * minimum)) * ratio));
+
+    private static double GetBubbleSize(CartesianSeries item, double value, double smallest, double highest)
+    {
+        var minimum = item.MinBubbleSize;
+        var maximum = Math.Max(item.MaxBubbleSize, minimum);
+        return item.SizeIncludesZero ? GetBubbleSize(value, Math.Max(0, highest), minimum, maximum) : GetRangeBubbleSize(value, smallest, highest, minimum, maximum);
     }
 
     private static bool IsVertical(AxisSide side) => side is AxisSide.Left or AxisSide.Right;
@@ -385,15 +413,20 @@ internal sealed class CartesianLayout : IDisposable
     {
         legendEntries.Clear();
         legendHeaders.Clear();
+        legendHeaderKeys.Clear();
         legendValues.Clear();
+        legendSortValues.Clear();
+        legendSortColumn = -1;
+        legendSortDescending = options.LegendSortMode == ChartSortMode.Descending;
         var table = options.LegendVisible && (options.LegendMode == ChartLegendMode.Table);
         if (table)
         {
             legendHeaders.Add(NameHeader);
-            AddLegendHeader(options.LegendValues, ChartLegendValues.Last, LastHeader);
-            AddLegendHeader(options.LegendValues, ChartLegendValues.Min, MinHeader);
-            AddLegendHeader(options.LegendValues, ChartLegendValues.Max, MaxHeader);
-            AddLegendHeader(options.LegendValues, ChartLegendValues.Mean, MeanHeader);
+            legendHeaderKeys.Add(ChartLegendSortKey.Name);
+            AddLegendHeader(options.LegendValues, ChartLegendValues.Last, LastHeader, ChartLegendSortKey.Last);
+            AddLegendHeader(options.LegendValues, ChartLegendValues.Min, MinHeader, ChartLegendSortKey.Min);
+            AddLegendHeader(options.LegendValues, ChartLegendValues.Max, MaxHeader, ChartLegendSortKey.Max);
+            AddLegendHeader(options.LegendValues, ChartLegendValues.Mean, MeanHeader, ChartLegendSortKey.Mean);
         }
 
         for (var s = 0; s < series.Count; s++)
@@ -407,20 +440,60 @@ internal sealed class CartesianLayout : IDisposable
             legendEntries.Add(new LegendEntry(s, item.Title, item.Kind == ChartSeriesKind.Line ? LegendMarkerKind.Line : LegendMarkerKind.Dot));
             if (table && (legendHeaders.Count > 1))
             {
-                AddLegendValues(s, item, options.LegendValues, culture);
+                AddLegendValues(s, item, options, culture);
             }
+        }
+
+        if (table && (options.LegendSortMode != ChartSortMode.None))
+        {
+            SortLegend(options, culture);
         }
     }
 
-    private void AddLegendHeader(ChartLegendValues values, ChartLegendValues flag, string header)
+    private void AddLegendHeader(ChartLegendValues values, ChartLegendValues flag, string header, ChartLegendSortKey key)
     {
         if ((values & flag) != 0)
         {
             legendHeaders.Add(header);
+            legendHeaderKeys.Add(key);
         }
     }
 
-    private void AddLegendValues(int seriesIndex, CartesianSeries series, ChartLegendValues values, CultureInfo culture)
+    private void SortLegend(CartesianLayoutOptions options, CultureInfo culture)
+    {
+        var column = legendHeaderKeys.IndexOf(options.LegendSortBy);
+        if (column < 0)
+        {
+            return;
+        }
+
+        legendSortColumn = column;
+        legendOrder.Clear();
+        for (var i = 0; i < legendEntries.Count; i++)
+        {
+            legendOrder.Add(i);
+        }
+
+        var byName = options.LegendSortBy == ChartLegendSortKey.Name;
+        CollectionsMarshal.AsSpan(legendOrder).Sort(new LegendOrder(legendEntries, legendSortValues, byName, legendSortDescending, culture.CompareInfo));
+        sortedEntries.Clear();
+        sortedEntries.AddRange(legendEntries);
+        sortedValues.Clear();
+        sortedValues.AddRange(legendValues);
+        legendEntries.Clear();
+        legendValues.Clear();
+        var columns = legendHeaders.Count - 1;
+        foreach (var index in legendOrder)
+        {
+            legendEntries.Add(sortedEntries[index]);
+            for (var c = 0; (c < columns) && ((index * columns) + c < sortedValues.Count); c++)
+            {
+                legendValues.Add(sortedValues[(index * columns) + c]);
+            }
+        }
+    }
+
+    private void AddLegendValues(int seriesIndex, CartesianSeries series, CartesianLayoutOptions options, CultureInfo culture)
     {
         var (low, high) = visibleRange;
         var x = geometries[seriesIndex].X;
@@ -445,10 +518,20 @@ internal sealed class CartesianLayout : IDisposable
         }
 
         var axis = GetValueAxis(series.Axis).Options;
+        var values = options.LegendValues;
+        var mean = count > 0 ? sum / count : Double.NaN;
         AddLegendValue(values, ChartLegendValues.Last, last, series, axis, culture);
         AddLegendValue(values, ChartLegendValues.Min, minimum, series, axis, culture);
         AddLegendValue(values, ChartLegendValues.Max, maximum, series, axis, culture);
-        AddLegendValue(values, ChartLegendValues.Mean, count > 0 ? sum / count : Double.NaN, series, axis, culture);
+        AddLegendValue(values, ChartLegendValues.Mean, mean, series, axis, culture);
+        legendSortValues.Add(options.LegendSortBy switch
+        {
+            ChartLegendSortKey.Last => last,
+            ChartLegendSortKey.Min => minimum,
+            ChartLegendSortKey.Max => maximum,
+            ChartLegendSortKey.Mean => mean,
+            _ => Double.NaN
+        });
     }
 
     private void AddLegendValue(ChartLegendValues values, ChartLegendValues flag, double value, CartesianSeries series, AxisLayoutOptions axis, CultureInfo culture)
@@ -461,7 +544,7 @@ internal sealed class CartesianLayout : IDisposable
 
     private double MeasureLegendRows(CartesianLayoutOptions options, IChartTextMeasurer measurer, ChartStyle style) =>
         options.LegendMode == ChartLegendMode.Table
-            ? Legend.MeasureTable(legendEntries, legendHeaders, legendValues, Bounds.Width, Bounds.Height * LegendTableHeightRatio, measurer, style.LegendFontSize, style.LegendMarkerSize)
+            ? Legend.MeasureTable(legendEntries, legendHeaders, legendValues, Bounds.Width, Bounds.Height * LegendTableHeightRatio, measurer, style.LegendFontSize, style.LegendMarkerSize, legendSortColumn, legendSortDescending)
             : Legend.MeasureRows(legendEntries, Bounds.Width, measurer, style.LegendFontSize, style.LegendMarkerSize, options.LegendMaxRows);
 
     private double MeasureLegendColumn(CartesianLayoutOptions options, double height, IChartTextMeasurer measurer, ChartStyle style)
@@ -471,7 +554,7 @@ internal sealed class CartesianLayout : IDisposable
             return Legend.MeasureColumn(legendEntries, height, measurer, style.LegendFontSize, style.LegendMarkerSize, options.LegendWidth);
         }
 
-        Legend.MeasureTable(legendEntries, legendHeaders, legendValues, options.LegendWidth, height, measurer, style.LegendFontSize, style.LegendMarkerSize);
+        Legend.MeasureTable(legendEntries, legendHeaders, legendValues, options.LegendWidth, height, measurer, style.LegendFontSize, style.LegendMarkerSize, legendSortColumn, legendSortDescending);
         return options.LegendWidth;
     }
 
@@ -504,14 +587,24 @@ internal sealed class CartesianLayout : IDisposable
         return verticalLabels && !labels ? extent + (lineHeight / 2) : extent;
     }
 
-    private double GetVerticalExtent(AxisSide side)
+    private double GetVerticalExtent(AxisSide side, double titleLineHeight)
     {
         var extent = 0d;
         foreach (var axis in axes)
         {
-            if ((axis.Side == side) && axis.ShowsLabels)
+            if (axis.Side != side)
+            {
+                continue;
+            }
+
+            if (axis.ShowsLabels)
             {
                 extent += axis.LabelWidth + LabelGap;
+            }
+
+            if (axis.RotatesTitle)
+            {
+                extent += titleLineHeight + TitleGap;
             }
         }
 
@@ -540,7 +633,8 @@ internal sealed class CartesianLayout : IDisposable
 
     private void SizeBubbles(IReadOnlyList<CartesianSeries> series)
     {
-        var largest = 0d;
+        var smallest = Double.PositiveInfinity;
+        var highest = Double.NegativeInfinity;
         foreach (var item in series)
         {
             if (!item.IsBubble)
@@ -552,7 +646,8 @@ internal sealed class CartesianLayout : IDisposable
             {
                 if (Double.IsFinite(value))
                 {
-                    largest = Math.Max(largest, value);
+                    smallest = Math.Min(smallest, value);
+                    highest = Math.Max(highest, value);
                 }
             }
         }
@@ -569,12 +664,10 @@ internal sealed class CartesianLayout : IDisposable
             }
 
             var data = item.Data.Size;
-            var minimum = item.MinBubbleSize;
-            var maximum = Math.Max(item.MaxBubbleSize, minimum);
             for (var i = 0; i < sizes.Length; i++)
             {
                 var value = i < data.Length ? data[i] : Double.NaN;
-                sizes[i] = Double.IsNaN(value) ? Double.NaN : GetBubbleSize(value, largest, minimum, maximum);
+                sizes[i] = Double.IsNaN(value) ? Double.NaN : GetBubbleSize(item, value, smallest, highest);
                 if (item.IsVisible && Double.IsFinite(sizes[i]))
                 {
                     BubbleExtent = Math.Max(BubbleExtent, (sizes[i] / 2) + BubbleOutline);
@@ -797,7 +890,13 @@ internal sealed class CartesianLayout : IDisposable
     {
         if ((edge > Math.Min(x0, x1)) && (edge < Math.Max(x0, x1)))
         {
-            Include(interpolation == ChartLineInterpolation.Step ? value0 : value0 + ((value1 - value0) * (edge - x0) / (x1 - x0)), ref minimum, ref maximum);
+            var value = interpolation switch
+            {
+                ChartLineInterpolation.Step => value0,
+                ChartLineInterpolation.StepBefore => value1,
+                _ => value0 + ((value1 - value0) * (edge - x0) / (x1 - x0))
+            };
+            Include(value, ref minimum, ref maximum);
         }
     }
 
@@ -987,10 +1086,19 @@ internal sealed class CartesianLayout : IDisposable
 
     private void PlaceTitles(IReadOnlyList<CartesianSeries> series, IChartTextMeasurer measurer, ChartStyle style, double titleRowTop, double titleLineHeight, double lineHeight, double labelOffset)
     {
-        var both = ForVerticalAxes(static axis => axis.ShowsTitle && (axis.Side == AxisSide.Left)) && ForVerticalAxes(static axis => axis.ShowsTitle && (axis.Side == AxisSide.Right));
+        var both = ForVerticalAxes(static axis => axis.ShowsTitle && !axis.RotatesTitle && (axis.Side == AxisSide.Left)) && ForVerticalAxes(static axis => axis.ShowsTitle && !axis.RotatesTitle && (axis.Side == AxisSide.Right));
         foreach (var axis in axes)
         {
             var markers = GetTitleMarkerCount(series, axis);
+            if (axis.RotatesTitle)
+            {
+                axis.MeasureTitle(measurer, style.AxisTitleFontSize, PlotBounds.Height, markers, style.LegendMarkerSize);
+                var labels = axis.ShowsLabels ? axis.LabelWidth + LabelGap : 0;
+                var x = axis.Side == AxisSide.Left ? PlotBounds.X - labels - TitleGap - titleLineHeight : PlotBounds.Right + labels + TitleGap;
+                axis.PlaceRotatedTitle(new ChartRect(x, PlotBounds.Y, titleLineHeight, PlotBounds.Height), titleLineHeight, markers, style.LegendMarkerSize);
+                continue;
+            }
+
             ChartRect row;
             if (axis.IsVertical)
             {
@@ -1028,5 +1136,24 @@ internal sealed class CartesianLayout : IDisposable
         }
 
         return count;
+    }
+
+    private readonly struct LegendOrder(List<LegendEntry> entries, List<double> values, bool byName, bool descending, CompareInfo compare) : IComparer<int>
+    {
+        private const CompareOptions NameOptions = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace | CompareOptions.NumericOrdering;
+
+        public int Compare(int x, int y)
+        {
+            var result = byName ? compare.Compare(entries[x].Text, entries[y].Text, NameOptions) : GetValue(x).CompareTo(GetValue(y));
+            if (descending)
+            {
+                result = -result;
+            }
+
+            return result != 0 ? result : x.CompareTo(y);
+        }
+
+        private double GetValue(int index) =>
+            (index < values.Count) && !Double.IsNaN(values[index]) ? values[index] : Double.NegativeInfinity;
     }
 }
