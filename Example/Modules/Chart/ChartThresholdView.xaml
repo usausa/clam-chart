@@ -99,11 +99,11 @@
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectThresholdCommand}"
-                                    CommandParameter="0"
+                                    CommandParameter="{x:Int32 0}"
                                     Text="なし">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="0"
+                                                 Value="{x:Int32 0}"
                                                  Binding="{Binding ThresholdIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -113,11 +113,11 @@
                             <Button Grid.Column="1"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectThresholdCommand}"
-                                    CommandParameter="1"
+                                    CommandParameter="{x:Int32 1}"
                                     Text="線">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="1"
+                                                 Value="{x:Int32 1}"
                                                  Binding="{Binding ThresholdIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -127,11 +127,11 @@
                             <Button Grid.Column="2"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectThresholdCommand}"
-                                    CommandParameter="2"
+                                    CommandParameter="{x:Int32 2}"
                                     Text="帯">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="2"
+                                                 Value="{x:Int32 2}"
                                                  Binding="{Binding ThresholdIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -144,11 +144,11 @@
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectThresholdCommand}"
-                                    CommandParameter="3"
+                                    CommandParameter="{x:Int32 3}"
                                     Text="線と帯">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="3"
+                                                 Value="{x:Int32 3}"
                                                  Binding="{Binding ThresholdIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -158,11 +158,11 @@
                             <Button Grid.Column="1"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectThresholdCommand}"
-                                    CommandParameter="4"
+                                    CommandParameter="{x:Int32 4}"
                                     Text="色分け">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="4"
+                                                 Value="{x:Int32 4}"
                                                  Binding="{Binding ThresholdIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />

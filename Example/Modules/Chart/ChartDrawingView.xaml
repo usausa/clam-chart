@@ -106,11 +106,11 @@
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectModeCommand}"
-                                    CommandParameter="0"
+                                    CommandParameter="{x:Int32 0}"
                                     Text="基本">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="0"
+                                                 Value="{x:Int32 0}"
                                                  Binding="{Binding ModeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -120,11 +120,11 @@
                             <Button Grid.Column="1"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectModeCommand}"
-                                    CommandParameter="1"
+                                    CommandParameter="{x:Int32 1}"
                                     Text="グラデーション">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="1"
+                                                 Value="{x:Int32 1}"
                                                  Binding="{Binding ModeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -134,11 +134,11 @@
                             <Button Grid.Column="2"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectModeCommand}"
-                                    CommandParameter="2"
+                                    CommandParameter="{x:Int32 2}"
                                     Text="分割">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="2"
+                                                 Value="{x:Int32 2}"
                                                  Binding="{Binding ModeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />

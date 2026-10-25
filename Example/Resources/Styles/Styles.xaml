@@ -494,6 +494,7 @@
            TargetType="cmc:BottomSheetView">
         <Setter Property="CornerRadius" Value="16" />
         <Setter Property="HalfExpandedRatio" Value="0.45" />
+        <Setter Property="SheetBackgroundColor" Value="{AppThemeBinding Light=White, Dark={StaticResource DarkBackgroundColor}}" />
     </Style>
 
     <Style x:Key="SheetStack"
@@ -505,7 +506,7 @@
     <Style x:Key="SheetTitle"
            TargetType="Label">
         <Setter Property="Padding" Value="2,6,2,0" />
-        <Setter Property="TextColor" Value="{StaticResource SecondaryTextColor}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource SecondaryTextColor}, Dark={StaticResource DarkSecondaryTextColor}}" />
         <Setter Property="FontSize" Value="11" />
     </Style>
 
@@ -517,7 +518,7 @@
 
     <Style x:Key="SheetSwitchLabel"
            TargetType="Label">
-        <Setter Property="TextColor" Value="{StaticResource PrimaryTextColor}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryTextColor}, Dark={StaticResource DarkPrimaryTextColor}}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="VerticalTextAlignment" Value="Center" />
     </Style>
@@ -538,10 +539,10 @@
         <Setter Property="HeightRequest" Value="32" />
         <Setter Property="CornerRadius" Value="0" />
         <Setter Property="BorderWidth" Value="1" />
-        <Setter Property="BorderColor" Value="{StaticResource GrayLighten1}" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource GrayLighten1}, Dark={StaticResource DarkDividerColor}}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="BackgroundColor" Value="Transparent" />
-        <Setter Property="TextColor" Value="{StaticResource PrimaryTextColor}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryTextColor}, Dark={StaticResource DarkPrimaryTextColor}}" />
     </Style>
 
 </ResourceDictionary>

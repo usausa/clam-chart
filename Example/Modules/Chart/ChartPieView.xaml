@@ -44,11 +44,11 @@
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectShapeCommand}"
-                                    CommandParameter="0"
+                                    CommandParameter="{x:Int32 0}"
                                     Text="ドーナツ">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="0"
+                                                 Value="{x:Int32 0}"
                                                  Binding="{Binding ShapeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -58,11 +58,11 @@
                             <Button Grid.Column="1"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectShapeCommand}"
-                                    CommandParameter="1"
+                                    CommandParameter="{x:Int32 1}"
                                     Text="円">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="1"
+                                                 Value="{x:Int32 1}"
                                                  Binding="{Binding ShapeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -72,11 +72,11 @@
                             <Button Grid.Column="2"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectShapeCommand}"
-                                    CommandParameter="2"
+                                    CommandParameter="{x:Int32 2}"
                                     Text="半円">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="2"
+                                                 Value="{x:Int32 2}"
                                                  Binding="{Binding ShapeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />

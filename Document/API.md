@@ -54,7 +54,7 @@ Looping effects (the loading shimmer, the rings of `LiveIndicatorVisible` and th
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `ItemTapped` | `ChartItemEventArgs` | A data element (point, bar or slice) was tapped |
 | `ChartTapped` | `ChartTappedEventArgs` | The chart was tapped outside the data elements; in `Minimal` density the whole chart is one button |
@@ -263,7 +263,7 @@ Changes of a notifying list of thresholds are followed while the chart is attach
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; `Handled = true` skips the toggle |
 | `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property; not raised when only the position moved with the data |
@@ -595,7 +595,7 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; then, unless handled, the slice is hidden or shown when `LegendToggleEnabled` is `true`, or else selected when `SelectionMode` is set, or cleared when it is already selected |
 | `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property |
@@ -835,7 +835,7 @@ The first item is the outermost ring.
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; then, unless handled, the ring is selected when `SelectionMode` is set, or cleared when it is already selected |
 | `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property |
@@ -921,7 +921,7 @@ Derives from `ChartSeries`, so `Title`, `ItemsSource`, `ValueAccessors`, `Color`
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `LegendItemTapped` | `ChartLegendEventArgs` | A legend item was tapped; `Handled = true` skips the toggle |
 | `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property |
@@ -996,7 +996,7 @@ The colors follow the Grafana heatmap: the Oranges scheme in 64 steps, reversed 
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `SelectionChanged` | `ChartSelectionChangedEventArgs` | The selection changed by a tap or a property |
 | `TrackingStarted`, `TrackingChanged`, `TrackingEnded` | `ChartTrackingEventArgs` | The trackball started, moved to another cell or ended; `X` is the column or the date, `Index` is `-1` for an empty cell, and `Points` is empty |
@@ -1080,7 +1080,7 @@ A value mapping of Grafana for `ValueMappings`.
 
 ### 📣 Events
 
-| Name | Arguments | Description |
+| Name | EventArgs | Description |
 |---|---|---|
 | `TrackingStarted`, `TrackingChanged`, `TrackingEnded` | `ChartTrackingEventArgs` | The trackball started, moved to another state or ended; `X` is the time at the finger and `Points` is empty |
 
@@ -1260,17 +1260,6 @@ Settings for every chart in the application, read when an animation starts.
 | `AnimationEnabled` | `bool` | `true` | `false` turns every chart animation off, for kiosks, slow devices and automated screenshots |
 | `AnimationScale` | `double` | `1` | Multiplies every duration |
 | `RespectSystemAnimationScale` | `bool` | `true` | Follows the animator duration scale of Android: `0` turns the animations off and other values multiply the durations; animations are also off while Android disables animators, as in battery saver |
-
-## 🔤 Fonts
-
-Per character font fallback comes from [SkiaExtension](https://github.com/usausa/skia-extension).  
-Configure it with `FallbackFonts` in the `SkiaExtension` namespace at startup, before the first chart is shown.  
-`Languages` defaults to the UI language of the device.  
-
-```csharp
-FallbackFonts.Languages = ["ja", "en"];
-FallbackFonts.Typefaces = [SKTypeface.FromStream(await FileSystem.OpenAppPackageFileAsync("NotoSansJP-Regular.ttf"))];
-```
 
 ## 🧩 Data
 
@@ -1550,3 +1539,14 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartVisibilityMode` | `Auto` | Shown where it fits |
 | | `Always`, `Never` | Always or never shown |
 | `ChartValueAlignment` | `Left`, `Center`, `Right` | Alignment of a text |
+
+## 🔤 Fonts
+
+Per character font fallback comes from [SkiaExtension](https://github.com/usausa/skia-extension).  
+Configure it with `FallbackFonts` in the `SkiaExtension` namespace at startup, before the first chart is shown.  
+`Languages` defaults to the UI language of the device.  
+
+```csharp
+FallbackFonts.Languages = ["ja", "en"];
+FallbackFonts.Typefaces = [SKTypeface.FromStream(await FileSystem.OpenAppPackageFileAsync("NotoSansJP-Regular.ttf"))];
+```

@@ -52,11 +52,11 @@
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectSizeCommand}"
-                                    CommandParameter="0"
+                                    CommandParameter="{x:Int32 0}"
                                     Text="小">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="0"
+                                                 Value="{x:Int32 0}"
                                                  Binding="{Binding SizeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -66,11 +66,11 @@
                             <Button Grid.Column="1"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectSizeCommand}"
-                                    CommandParameter="1"
+                                    CommandParameter="{x:Int32 1}"
                                     Text="中">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="1"
+                                                 Value="{x:Int32 1}"
                                                  Binding="{Binding SizeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
@@ -80,11 +80,11 @@
                             <Button Grid.Column="2"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectSizeCommand}"
-                                    CommandParameter="2"
+                                    CommandParameter="{x:Int32 2}"
                                     Text="大">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="2"
+                                                 Value="{x:Int32 2}"
                                                  Binding="{Binding SizeIndex}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
