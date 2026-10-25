@@ -26,8 +26,25 @@ public sealed partial class ChartHeatmapViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial IReadOnlyList<Color>? ColorScale { get; set; }
 
+    public bool BlueColorScale
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(BlueColorScale));
+                ColorScale = value ? BlueScale : null;
+            }
+        }
+    }
+
+    public IObserveCommand SelectLegendCommand { get; }
+
     public ChartHeatmapViewModel()
     {
+        SelectLegendCommand = MakeDelegateCommand<ChartLegendPosition>(x => LegendPosition = x);
         for (var day = 0; day < Days.Length; day++)
         {
             for (var hour = 0; hour < Hours; hour++)
@@ -45,18 +62,6 @@ public sealed partial class ChartHeatmapViewModel : ChartViewModelBase
                 Activities.Add(CreateActivity(date));
             }
         }
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        LegendPosition = LegendPosition == ChartLegendPosition.Bottom ? ChartLegendPosition.Right : ChartLegendPosition.Bottom;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        ColorScale = ColorScale is null ? BlueScale : null;
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

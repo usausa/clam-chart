@@ -30,11 +30,20 @@ public sealed partial class ChartPaletteViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial IReadOnlyList<Color>? Palette { get; set; } = AppPalettes.Material;
 
-    protected override Task OnNotifyFunction2()
+    public bool MaterialPalette
     {
-        Palette = Palette is null ? AppPalettes.Material : null;
-        return Task.CompletedTask;
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(MaterialPalette));
+                Palette = value ? AppPalettes.Material : null;
+            }
+        }
     }
+        = true;
 
     private static ServiceLoad[] CreateMonths()
     {

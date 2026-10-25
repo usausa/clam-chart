@@ -25,6 +25,13 @@ public sealed partial class ChartScatterViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartThresholdsMode ThresholdsMode { get; set; }
 
+    [ObservableProperty]
+    public partial int ThresholdIndex { get; set; }
+
+    public IObserveCommand SelectShapeCommand { get; }
+
+    public IObserveCommand SelectThresholdCommand { get; }
+
     public ChartScatterViewModel()
     {
         for (var i = 0; i < WebCount; i++)
@@ -36,28 +43,9 @@ public sealed partial class ChartScatterViewModel : ChartViewModelBase
         {
             Api.Add(CreateApi());
         }
-    }
 
-    protected override Task OnNotifyFunction2()
-    {
-        MarkerShape = MarkerShape switch
-        {
-            ChartMarkerShape.Circle => ChartMarkerShape.Square,
-            ChartMarkerShape.Square => ChartMarkerShape.Diamond,
-            _ => ChartMarkerShape.Circle
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        ThresholdsMode = ThresholdsMode switch
-        {
-            ChartThresholdsMode.None => ChartThresholdsMode.ColorSeries,
-            ChartThresholdsMode.ColorSeries => ChartThresholdsMode.ColorSeries | ChartThresholdsMode.Bands,
-            _ => ChartThresholdsMode.None
-        };
-        return Task.CompletedTask;
+        SelectShapeCommand = MakeDelegateCommand<ChartMarkerShape>(x => MarkerShape = x);
+        SelectThresholdCommand = MakeDelegateCommand<int>(SelectThreshold);
     }
 
     protected override Task OnNotifyFunction4()
@@ -85,5 +73,16 @@ public sealed partial class ChartScatterViewModel : ChartViewModelBase
     {
         var cpu = SampleData.Next(5, 95);
         return new ChartPoint(Math.Round(cpu, 1), Math.Round(150 + (cpu * 2.5) + SampleData.Next(-60, 60)));
+    }
+
+    private void SelectThreshold(int index)
+    {
+        ThresholdIndex = index;
+        ThresholdsMode = index switch
+        {
+            1 => ChartThresholdsMode.ColorSeries,
+            2 => ChartThresholdsMode.ColorSeries | ChartThresholdsMode.Bands,
+            _ => ChartThresholdsMode.None
+        };
     }
 }

@@ -4,92 +4,152 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
+             xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartDrawingView"
              x:DataType="{x:Type module:ChartDrawingViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartDrawingViewModel}"
              shell:ShellProperty.Title="Drawing"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Mode"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function3Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
              shell:ShellProperty.Function3Enabled="True">
 
-    <Grid Style="{StaticResource StatGrid}"
-          RowDefinitions="3*,3*,2*,2*"
-          ColumnDefinitions="*,*">
-        <Border Grid.Row="0" Grid.Column="0"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="ストレージ" />
-                <Image Grid.Row="1"
-                       Source="{Binding StorageImage}"
-                       Aspect="AspectFit" />
-            </Grid>
-        </Border>
-        <Border Grid.Row="0" Grid.Column="1"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="今日の活動" />
-                <Image Grid.Row="1"
-                       Source="{Binding ActivityImage}"
-                       Aspect="AspectFit" />
-            </Grid>
-        </Border>
-        <Border Grid.Row="1" Grid.Column="0"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="CPU 使用率" />
-                <Image Grid.Row="1"
-                       Source="{Binding CpuImage}"
-                       Aspect="AspectFit" />
-            </Grid>
-        </Border>
-        <Border Grid.Row="1" Grid.Column="1"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="曜日ごとの負荷" />
-                <Image Grid.Row="1"
-                       Source="{Binding ColumnsImage}"
-                       Aspect="AspectFit" />
-            </Grid>
-        </Border>
-        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="目標の達成" />
-                <Image Grid.Row="1"
-                       Source="{Binding GoalsImage}"
-                       Aspect="AspectFit" />
-            </Grid>
-        </Border>
-        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="応答時間" />
-                <Image Grid.Row="1"
-                       Source="{Binding TrendImage}"
-                       Aspect="AspectFit" />
-            </Grid>
-        </Border>
+    <Grid>
+        <Grid Style="{StaticResource StatGrid}"
+              RowDefinitions="3*,3*,2*,2*"
+              ColumnDefinitions="*,*">
+            <Border Grid.Row="0" Grid.Column="0"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="ストレージ" />
+                    <Image Grid.Row="1"
+                           Source="{Binding StorageImage}"
+                           Aspect="AspectFit" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="0" Grid.Column="1"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="今日の活動" />
+                    <Image Grid.Row="1"
+                           Source="{Binding ActivityImage}"
+                           Aspect="AspectFit" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="1" Grid.Column="0"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="CPU 使用率" />
+                    <Image Grid.Row="1"
+                           Source="{Binding CpuImage}"
+                           Aspect="AspectFit" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="1" Grid.Column="1"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="曜日ごとの負荷" />
+                    <Image Grid.Row="1"
+                           Source="{Binding ColumnsImage}"
+                           Aspect="AspectFit" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="目標の達成" />
+                    <Image Grid.Row="1"
+                           Source="{Binding GoalsImage}"
+                           Aspect="AspectFit" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="応答時間" />
+                    <Image Grid.Row="1"
+                           Source="{Binding TrendImage}"
+                           Aspect="AspectFit" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartDrawingViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="描き方" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectModeCommand}"
+                                    CommandParameter="0"
+                                    Text="基本">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding ModeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectModeCommand}"
+                                    CommandParameter="1"
+                                    Text="グラデーション">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding ModeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectModeCommand}"
+                                    CommandParameter="2"
+                                    Text="分割">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding ModeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

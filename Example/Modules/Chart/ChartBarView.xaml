@@ -5,51 +5,200 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartBarView"
              x:DataType="{x:Type module:ChartBarViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartBarViewModel}"
              shell:ShellProperty.Title="Bar"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Stack"
-             shell:ShellProperty.Function3Text="Select"
-             shell:ShellProperty.Function4Text="Labels"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function1Enabled="True"
-             shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
-             shell:ShellProperty.Function4Enabled="True">
+             shell:ShellProperty.Function2Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}"
-          RowDefinitions="*,*">
-        <clam:ClamChartView Grid.Row="0"
-                            DataLabelsMode="{Binding LabelsMode}"
-                            SelectedItem="{Binding SelectedSales}"
-                            SelectionMode="{Binding SelectionMode}"
-                            StackMode="{Binding StackMode}"
-                            ValueAccessors="{x:Static models:MonthlySales.Accessors}"
-                            XKey="month">
-            <clam:BarSeries ItemsSource="{Binding Sales}"
-                            StackGroup="{Binding StackGroup}"
-                            Title="Store" YKey="store" />
-            <clam:BarSeries ItemsSource="{Binding Sales}"
-                            StackGroup="{Binding StackGroup}"
-                            Title="Online" YKey="online" />
-            <clam:BarSeries ItemsSource="{Binding Sales}"
-                            StackGroup="{Binding StackGroup}"
-                            Title="Wholesale" YKey="wholesale" />
-        </clam:ClamChartView>
-        <clam:ClamChartView Grid.Row="1"
-                            Orientation="Horizontal"
-                            DataLabelsMode="All"
-                            SelectionMode="{Binding SelectionMode}"
-                            ValueAccessors="{x:Static models:ProductRank.Accessors}"
-                            XKey="name">
-            <clam:ClamChartView.XAxis>
-                <clam:CategoryAxis LabelMaxLength="10" />
-            </clam:ClamChartView.XAxis>
-            <clam:BarSeries ItemsSource="{Binding Ranking}"
-                            Title="Units" TrackVisible="True" YKey="units" />
-        </clam:ClamChartView>
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}"
+              RowDefinitions="*,*">
+            <clam:ClamChartView Grid.Row="0"
+                                DataLabelsMode="{Binding LabelsMode}"
+                                SelectedItem="{Binding SelectedSales}"
+                                SelectionMode="{Binding SelectionMode}"
+                                StackMode="{Binding StackMode}"
+                                ValueAccessors="{x:Static models:MonthlySales.Accessors}"
+                                XKey="month">
+                <clam:BarSeries ItemsSource="{Binding Sales}"
+                                StackGroup="{Binding StackGroup}"
+                                Title="Store" YKey="store" />
+                <clam:BarSeries ItemsSource="{Binding Sales}"
+                                StackGroup="{Binding StackGroup}"
+                                Title="Online" YKey="online" />
+                <clam:BarSeries ItemsSource="{Binding Sales}"
+                                StackGroup="{Binding StackGroup}"
+                                Title="Wholesale" YKey="wholesale" />
+            </clam:ClamChartView>
+            <clam:ClamChartView Grid.Row="1"
+                                Orientation="Horizontal"
+                                DataLabelsMode="All"
+                                SelectionMode="{Binding SelectionMode}"
+                                ValueAccessors="{x:Static models:ProductRank.Accessors}"
+                                XKey="name">
+                <clam:ClamChartView.XAxis>
+                    <clam:CategoryAxis LabelMaxLength="10" />
+                </clam:ClamChartView.XAxis>
+                <clam:BarSeries ItemsSource="{Binding Ranking}"
+                                Title="Units" TrackVisible="True" YKey="units" />
+            </clam:ClamChartView>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartBarViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="積み上げ" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectStackCommand}"
+                                    CommandParameter="0"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding StackIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectStackCommand}"
+                                    CommandParameter="1"
+                                    Text="積み上げ">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding StackIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectStackCommand}"
+                                    CommandParameter="2"
+                                    Text="100%">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding StackIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="選択" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSelectionCommand}"
+                                    CommandParameter="{x:Static clam:ChartSelectionMode.Item}"
+                                    Text="項目">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSelectionMode.Item}"
+                                                 Binding="{Binding SelectionMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSelectionCommand}"
+                                    CommandParameter="{x:Static clam:ChartSelectionMode.Category}"
+                                    Text="分類">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSelectionMode.Category}"
+                                                 Binding="{Binding SelectionMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSelectionCommand}"
+                                    CommandParameter="{x:Static clam:ChartSelectionMode.None}"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSelectionMode.None}"
+                                                 Binding="{Binding SelectionMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="データラベル" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartDataLabelsMode.None}"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartDataLabelsMode.None}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartDataLabelsMode.All}"
+                                    Text="全部">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartDataLabelsMode.All}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartDataLabelsMode.Last}"
+                                    Text="最後">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartDataLabelsMode.Last}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

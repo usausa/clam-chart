@@ -12,6 +12,10 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartTrackballMode TrackballMode { get; set; } = ChartTrackballMode.LongPress;
 
+    public IObserveCommand SelectInterpolationCommand { get; }
+
+    public IObserveCommand SelectTrackballCommand { get; }
+
     [ObservableProperty]
     public partial bool TrackballSnapEnabled { get; set; } = true;
 
@@ -23,6 +27,8 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
 
     public ChartLineViewModel()
     {
+        SelectInterpolationCommand = MakeDelegateCommand<ChartLineInterpolation>(x => Interpolation = x);
+        SelectTrackballCommand = MakeDelegateCommand<ChartTrackballMode>(SelectTrackball);
         foreach (var month in SampleData.Months)
         {
             Sales.Add(Create(month));
@@ -30,36 +36,6 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
 
         SubscribeTrackedSales(_ => UpdateHeader());
         UpdateHeader();
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        Interpolation = Interpolation switch
-        {
-            ChartLineInterpolation.Linear => ChartLineInterpolation.Smooth,
-            ChartLineInterpolation.Smooth => ChartLineInterpolation.Step,
-            ChartLineInterpolation.Step => ChartLineInterpolation.StepBefore,
-            _ => ChartLineInterpolation.Linear
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        if ((TrackballMode == ChartTrackballMode.Touch) && TrackballSnapEnabled)
-        {
-            TrackballSnapEnabled = false;
-            return Task.CompletedTask;
-        }
-
-        TrackballSnapEnabled = true;
-        TrackballMode = TrackballMode switch
-        {
-            ChartTrackballMode.LongPress => ChartTrackballMode.Touch,
-            ChartTrackballMode.Touch => ChartTrackballMode.None,
-            _ => ChartTrackballMode.LongPress
-        };
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()
@@ -79,5 +55,11 @@ public sealed partial class ChartLineViewModel : ChartViewModelBase
     private void UpdateHeader()
     {
         Header = TrackedSales is { } tracked ? $"{tracked.Month}: {tracked.Sales:N0} / {tracked.Target:N0}" : $"Latest ({Sales[^1].Month}): {Sales[^1].Sales:N0}";
+    }
+
+    private void SelectTrackball(ChartTrackballMode mode)
+    {
+        TrackballSnapEnabled = true;
+        TrackballMode = mode;
     }
 }

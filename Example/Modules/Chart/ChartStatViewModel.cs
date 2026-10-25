@@ -94,6 +94,10 @@ public sealed partial class ChartStatViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartStatColorMode SalesColorMode { get; set; } = ChartStatColorMode.Value;
 
+    public IObserveCommand SelectLayoutCommand { get; }
+
+    public IObserveCommand SelectColorCommand { get; }
+
     public ChartStatViewModel()
     {
         SalesTrend = [.. SampleData.Walk(12, 10_500_000, 800_000, 7_000_000).Select(static x => Math.Round(x))];
@@ -116,6 +120,8 @@ public sealed partial class ChartStatViewModel : ChartViewModelBase
         Users = UserTrend[^1];
         LastUsers = UserTrend[^2];
         Requests = RequestTrend[^1];
+        SelectLayoutCommand = MakeDelegateCommand<ChartStatLayoutMode>(x => LayoutMode = x);
+        SelectColorCommand = MakeDelegateCommand<ChartStatColorMode>(x => SalesColorMode = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)
         {
@@ -133,30 +139,6 @@ public sealed partial class ChartStatViewModel : ChartViewModelBase
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        LayoutMode = LayoutMode switch
-        {
-            ChartStatLayoutMode.Auto => ChartStatLayoutMode.Vertical,
-            ChartStatLayoutMode.Vertical => ChartStatLayoutMode.Horizontal,
-            _ => ChartStatLayoutMode.Auto
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        SalesColorMode = SalesColorMode switch
-        {
-            ChartStatColorMode.Value => ChartStatColorMode.Indicator,
-            ChartStatColorMode.Indicator => ChartStatColorMode.Background,
-            ChartStatColorMode.Background => ChartStatColorMode.BackgroundGradient,
-            ChartStatColorMode.BackgroundGradient => ChartStatColorMode.None,
-            _ => ChartStatColorMode.Value
-        };
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

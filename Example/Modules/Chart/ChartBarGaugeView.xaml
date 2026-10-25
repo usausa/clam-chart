@@ -4,66 +4,170 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartBarGaugeView"
              x:DataType="{x:Type module:ChartBarGaugeViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartBarGaugeViewModel}"
              shell:ShellProperty.Title="Bar gauge"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Mode"
-             shell:ShellProperty.Function3Text="Sort"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Live"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <ScrollView>
-        <VerticalStackLayout Style="{StaticResource ChartStack}">
-            <Border Style="{StaticResource StatBorder}">
-                <VerticalStackLayout Style="{StaticResource PanelStack}">
-                    <Label Style="{StaticResource PanelTitleLabel}"
-                           Text="店舗別の達成率" />
-                    <clam:ClamBarGaugeView ItemsSource="{Binding Stores}"
-                                           ContentPadding="0"
-                                           DisplayMode="{Binding DisplayMode}"
-                                           SortMode="{Binding SortMode}"
-                                           Thresholds="{Binding AchievementThresholds}" />
-                </VerticalStackLayout>
-            </Border>
-            <Border Style="{StaticResource StatBorder}">
-                <VerticalStackLayout Style="{StaticResource PanelStack}">
-                    <Label Style="{StaticResource PanelTitleLabel}"
-                           Text="ストレージ" />
-                    <clam:ClamBarGaugeView ItemsSource="{Binding Storages}"
-                                           BarThickness="16" ContentPadding="0" DisplayMode="Gradient" LabelPosition="Left"
-                                           Thresholds="{Binding UsageThresholds}"
-                                           ValueColorMode="Text" ValueMode="ValueOfMaximum" />
-                </VerticalStackLayout>
-            </Border>
-            <Border Style="{StaticResource StatBorder}">
-                <VerticalStackLayout Style="{StaticResource PanelStack}">
-                    <Label Style="{StaticResource PanelTitleLabel}"
-                           Text="CPU" />
-                    <clam:ClamBarGaugeView ItemsSource="{Binding Servers}"
-                                           BarThickness="16" ContentPadding="0" DisplayMode="Segmented" ItemSpacing="8"
-                                           LabelPosition="Left"
-                                           Thresholds="{Binding LoadThresholds}" />
-                </VerticalStackLayout>
-            </Border>
-            <Border Style="{StaticResource StatBorder}">
-                <VerticalStackLayout Style="{StaticResource PanelStack}">
-                    <Label Style="{StaticResource PanelTitleLabel}"
-                           Text="月別の売上" />
-                    <clam:ClamBarGaugeView HeightRequest="200"
-                                           Orientation="Vertical"
-                                           ItemsSource="{Binding Months}"
-                                           Color="{AppThemeBinding Light=#3274D9,
-                                                                   Dark=#5794F2}"
-                                           BarThickness="24" ContentPadding="0" ValueMode="Value" />
-                </VerticalStackLayout>
-            </Border>
-        </VerticalStackLayout>
-    </ScrollView>
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Style="{StaticResource ChartStack}">
+                <Border Style="{StaticResource StatBorder}">
+                    <VerticalStackLayout Style="{StaticResource PanelStack}">
+                        <Label Style="{StaticResource PanelTitleLabel}"
+                               Text="店舗別の達成率" />
+                        <clam:ClamBarGaugeView ItemsSource="{Binding Stores}"
+                                               ContentPadding="0"
+                                               DisplayMode="{Binding DisplayMode}"
+                                               SortMode="{Binding SortMode}"
+                                               Thresholds="{Binding AchievementThresholds}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Style="{StaticResource StatBorder}">
+                    <VerticalStackLayout Style="{StaticResource PanelStack}">
+                        <Label Style="{StaticResource PanelTitleLabel}"
+                               Text="ストレージ" />
+                        <clam:ClamBarGaugeView ItemsSource="{Binding Storages}"
+                                               BarThickness="16" ContentPadding="0" DisplayMode="Gradient" LabelPosition="Left"
+                                               Thresholds="{Binding UsageThresholds}"
+                                               ValueColorMode="Text" ValueMode="ValueOfMaximum" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Style="{StaticResource StatBorder}">
+                    <VerticalStackLayout Style="{StaticResource PanelStack}">
+                        <Label Style="{StaticResource PanelTitleLabel}"
+                               Text="CPU" />
+                        <clam:ClamBarGaugeView ItemsSource="{Binding Servers}"
+                                               BarThickness="16" ContentPadding="0" DisplayMode="Segmented" ItemSpacing="8"
+                                               LabelPosition="Left"
+                                               Thresholds="{Binding LoadThresholds}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Style="{StaticResource StatBorder}">
+                    <VerticalStackLayout Style="{StaticResource PanelStack}">
+                        <Label Style="{StaticResource PanelTitleLabel}"
+                               Text="月別の売上" />
+                        <clam:ClamBarGaugeView HeightRequest="200"
+                                               Orientation="Vertical"
+                                               ItemsSource="{Binding Months}"
+                                               Color="{AppThemeBinding Light=#3274D9,
+                                                                       Dark=#5794F2}"
+                                               BarThickness="24" ContentPadding="0" ValueMode="Value" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartBarGaugeViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="表示" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectDisplayModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartBarGaugeMode.Basic}"
+                                    Text="基本">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartBarGaugeMode.Basic}"
+                                                 Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectDisplayModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartBarGaugeMode.Gradient}"
+                                    Text="グラデーション">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartBarGaugeMode.Gradient}"
+                                                 Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectDisplayModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartBarGaugeMode.Segmented}"
+                                    Text="分割">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartBarGaugeMode.Segmented}"
+                                                 Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="並べ替え" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSortCommand}"
+                                    CommandParameter="{x:Static clam:ChartSortMode.None}"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSortMode.None}"
+                                                 Binding="{Binding SortMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSortCommand}"
+                                    CommandParameter="{x:Static clam:ChartSortMode.Descending}"
+                                    Text="降順">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSortMode.Descending}"
+                                                 Binding="{Binding SortMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSortCommand}"
+                                    CommandParameter="{x:Static clam:ChartSortMode.Ascending}"
+                                    Text="昇順">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSortMode.Ascending}"
+                                                 Binding="{Binding SortMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
+    </Grid>
 
 </ContentView>

@@ -5,67 +5,124 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartRangeBarView"
              x:DataType="{x:Type module:ChartRangeBarViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartRangeBarViewModel}"
              shell:ShellProperty.Title="Range bar"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Labels"
-             shell:ShellProperty.Function3Text="Track"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <ScrollView>
-        <Grid Style="{StaticResource StatGrid}"
-              RowDefinitions="320,300">
-            <Border Grid.Row="0"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="週間の気温 (°C)" />
-                    <clam:ClamChartView Grid.Row="1"
-                                        Orientation="Horizontal"
-                                        ContentPadding="0"
-                                        DataLabelsMode="{Binding LabelsMode}"
-                                        ValueAccessors="{x:Static models:DailyTemperature.Accessors}"
-                                        XKey="day">
-                        <clam:ClamChartView.YAxis>
-                            <clam:NumericAxis GridLinesVisible="False" LabelsVisible="False" />
-                        </clam:ClamChartView.YAxis>
-                        <clam:RangeBarSeries ItemsSource="{Binding Week}"
-                                             HighKey="high" LowKey="low" Title="気温"
-                                             TrackVisible="{Binding TrackVisible}"
-                                             ValueFormat="{}{0:0}°" />
-                    </clam:ClamChartView>
-                </Grid>
-            </Border>
-            <Border Grid.Row="1"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="月ごとの気温 (°C)" />
-                    <clam:ClamChartView Grid.Row="1"
-                                        ContentPadding="0" TrackballMode="LongPress"
-                                        ValueAccessors="{x:Static models:DailyTemperature.Accessors}"
-                                        XKey="day">
-                        <clam:RangeBarSeries ItemsSource="{Binding Year}"
-                                             HighKey="high" LowKey="low" Title="最低〜最高"
-                                             TrackVisible="{Binding TrackVisible}"
-                                             ValueFormat="{}{0:0}°" />
-                        <clam:LineSeries ItemsSource="{Binding Year}"
-                                         MarkerMode="None" Title="平均" ValueFormat="{}{0:0.0}°" YKey="average" />
-                    </clam:ClamChartView>
-                </Grid>
-            </Border>
-        </Grid>
-    </ScrollView>
+    <Grid>
+        <ScrollView>
+            <Grid Style="{StaticResource StatGrid}"
+                  RowDefinitions="320,300">
+                <Border Grid.Row="0"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="週間の気温 (°C)" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            Orientation="Horizontal"
+                                            ContentPadding="0"
+                                            DataLabelsMode="{Binding LabelsMode}"
+                                            ValueAccessors="{x:Static models:DailyTemperature.Accessors}"
+                                            XKey="day">
+                            <clam:ClamChartView.YAxis>
+                                <clam:NumericAxis GridLinesVisible="False" LabelsVisible="False" />
+                            </clam:ClamChartView.YAxis>
+                            <clam:RangeBarSeries ItemsSource="{Binding Week}"
+                                                 HighKey="high" LowKey="low" Title="気温"
+                                                 TrackVisible="{Binding TrackVisible}"
+                                                 ValueFormat="{}{0:0}°" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="月ごとの気温 (°C)" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0" TrackballMode="LongPress"
+                                            ValueAccessors="{x:Static models:DailyTemperature.Accessors}"
+                                            XKey="day">
+                            <clam:RangeBarSeries ItemsSource="{Binding Year}"
+                                                 HighKey="high" LowKey="low" Title="最低〜最高"
+                                                 TrackVisible="{Binding TrackVisible}"
+                                                 ValueFormat="{}{0:0}°" />
+                            <clam:LineSeries ItemsSource="{Binding Year}"
+                                             MarkerMode="None" Title="平均" ValueFormat="{}{0:0.0}°" YKey="average" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollView>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartRangeBarViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="データラベル" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartDataLabelsMode.None}"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartDataLabelsMode.None}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartDataLabelsMode.All}"
+                                    Text="全部">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartDataLabelsMode.All}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="表示" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Grid Grid.Column="0"
+                                  ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0"
+                                       Style="{StaticResource SheetSwitchLabel}"
+                                       Text="トラック" />
+                                <Switch Grid.Column="1"
+                                        Style="{StaticResource SheetSwitch}"
+                                        IsToggled="{Binding TrackVisible}" />
+                            </Grid>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
+    </Grid>
 
 </ContentView>

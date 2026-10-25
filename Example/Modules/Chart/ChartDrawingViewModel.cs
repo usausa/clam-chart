@@ -4,13 +4,14 @@ using Example.Models;
 
 public sealed partial class ChartDrawingViewModel : ChartViewModelBase
 {
-    private const int ModeCount = 3;
-
     private const int ColumnCount = 5;
 
     private const int TrendCount = 48;
 
-    private int mode;
+    [ObservableProperty]
+    public partial int ModeIndex { get; set; }
+
+    public IObserveCommand SelectModeCommand { get; }
 
     private int version;
 
@@ -48,16 +49,17 @@ public sealed partial class ChartDrawingViewModel : ChartViewModelBase
 
     public ChartDrawingViewModel()
     {
+        SelectModeCommand = MakeAsyncCommand<int>(SelectModeAsync);
         Randomize();
     }
 
-    public override Task OnNavigatedToAsync(INavigationContext context) => RenderAsync();
-
-    protected override Task OnNotifyFunction2()
+    private Task SelectModeAsync(int index)
     {
-        mode = (mode + 1) % ModeCount;
+        ModeIndex = index;
         return RenderAsync();
     }
+
+    public override Task OnNavigatedToAsync(INavigationContext context) => RenderAsync();
 
     protected override Task OnNotifyFunction3()
     {
@@ -88,8 +90,8 @@ public sealed partial class ChartDrawingViewModel : ChartViewModelBase
         var current = ++version;
         var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
         var scale = (float)DeviceDisplay.Current.MainDisplayInfo.Density;
-        var ring = (ChartRadialBarMode)mode;
-        var bar = (ChartBarGaugeMode)mode;
+        var ring = (ChartRadialBarMode)ModeIndex;
+        var bar = (ChartBarGaugeMode)ModeIndex;
         var (storageValue, cpuValue, activityValues, goalValues, targetValues, columnValues, trendValues) = (storage, cpu, activity, goals, targets, columns, trend);
         var images = await Task.Run(() => new[]
         {

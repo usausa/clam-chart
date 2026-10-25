@@ -4,63 +4,195 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartSparklineView"
              x:DataType="{x:Type module:ChartSparklineViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartSparklineViewModel}"
              shell:ShellProperty.Title="Sparkline"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Kind"
-             shell:ShellProperty.Function3Text="Markers"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Live"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <Grid Style="{StaticResource FillGrid}"
-          RowDefinitions="Auto,*">
-        <Grid Grid.Row="0"
-              Style="{StaticResource RowGrid}"
-              ColumnDefinitions="*,120,64">
-            <Label Grid.Column="0"
-                   Style="{StaticResource ValueLabel}"
-                   Padding="0"
-                   VerticalTextAlignment="Center"
-                   Text="Live" />
-            <clam:ClamSparklineView Grid.Column="1"
-                                    HeightRequest="28"
-                                    Kind="{Binding Kind}"
-                                    LiveIndicatorVisible="True"
-                                    Markers="{Binding Markers}"
-                                    Values="{Binding LiveValues}" />
-            <Label Grid.Column="2"
-                   Style="{StaticResource ValueLabel}"
-                   Padding="0"
-                   HorizontalTextAlignment="End" VerticalTextAlignment="Center"
-                   Text="{Binding LiveText}" />
+    <Grid>
+        <Grid Style="{StaticResource FillGrid}"
+              RowDefinitions="Auto,*">
+            <Grid Grid.Row="0"
+                  Style="{StaticResource RowGrid}"
+                  ColumnDefinitions="*,120,64">
+                <Label Grid.Column="0"
+                       Style="{StaticResource ValueLabel}"
+                       Padding="0"
+                       VerticalTextAlignment="Center"
+                       Text="Live" />
+                <clam:ClamSparklineView Grid.Column="1"
+                                        HeightRequest="28"
+                                        Kind="{Binding Kind}"
+                                        LiveIndicatorVisible="True"
+                                        Markers="{Binding Markers}"
+                                        Values="{Binding LiveValues}" />
+                <Label Grid.Column="2"
+                       Style="{StaticResource ValueLabel}"
+                       Padding="0"
+                       HorizontalTextAlignment="End" VerticalTextAlignment="Center"
+                       Text="{Binding LiveText}" />
+            </Grid>
+            <CollectionView Grid.Row="1"
+                            ItemsSource="{Binding Rows}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="{x:Type module:SparklineRow}">
+                        <Grid Style="{StaticResource RowGrid}"
+                              ColumnDefinitions="*,120,64">
+                            <Label Grid.Column="0"
+                                   VerticalTextAlignment="Center"
+                                   Text="{Binding Name}" />
+                            <clam:ClamSparklineView Grid.Column="1"
+                                                    HeightRequest="28"
+                                                    Kind="{Binding Kind}"
+                                                    Markers="{Binding Markers}"
+                                                    Values="{Binding Values}" />
+                            <Label Grid.Column="2"
+                                   HorizontalTextAlignment="End" VerticalTextAlignment="Center"
+                                   Text="{Binding Last, StringFormat='{0:N1}'}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </Grid>
-        <CollectionView Grid.Row="1"
-                        ItemsSource="{Binding Rows}">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type module:SparklineRow}">
-                    <Grid Style="{StaticResource RowGrid}"
-                          ColumnDefinitions="*,120,64">
-                        <Label Grid.Column="0"
-                               VerticalTextAlignment="Center"
-                               Text="{Binding Name}" />
-                        <clam:ClamSparklineView Grid.Column="1"
-                                                HeightRequest="28"
-                                                Kind="{Binding Kind}"
-                                                Markers="{Binding Markers}"
-                                                Values="{Binding Values}" />
-                        <Label Grid.Column="2"
-                               HorizontalTextAlignment="End" VerticalTextAlignment="Center"
-                               Text="{Binding Last, StringFormat='{0:N1}'}" />
-                    </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartSparklineViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="種類" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.Line}"
+                                    Text="線">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.Line}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.Area}"
+                                    Text="面">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.Area}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.Bar}"
+                                    Text="棒">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.Bar}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.WinLoss}"
+                                    Text="勝敗">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.WinLoss}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="マーカー" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectMarkersCommand}"
+                                    CommandParameter="0"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding MarkersIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectMarkersCommand}"
+                                    CommandParameter="1"
+                                    Text="最後">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding MarkersIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectMarkersCommand}"
+                                    CommandParameter="2"
+                                    Text="両端">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding MarkersIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectMarkersCommand}"
+                                    CommandParameter="3"
+                                    Text="高安">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="3"
+                                                 Binding="{Binding MarkersIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
                 </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

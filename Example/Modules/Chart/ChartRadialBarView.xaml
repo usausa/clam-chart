@@ -4,85 +4,175 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartRadialBarView"
              x:DataType="{x:Type module:ChartRadialBarViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartRadialBarViewModel}"
              shell:ShellProperty.Title="Radial bar"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Mode"
-             shell:ShellProperty.Function3Text="Cap"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Live"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <ScrollView>
-        <Grid Style="{StaticResource StatGrid}"
-              RowDefinitions="240,200,260"
-              ColumnDefinitions="*,*">
-            <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="アクティビティ" />
-                    <clam:ClamRadialBarView Grid.Row="1"
-                                            ItemsSource="{Binding Activities}"
-                                            CapStyle="{Binding CapStyle}"
-                                            ContentPadding="0" LegendValueMode="Percent" LegendVisible="True" OverflowMode="Wrap"
-                                            Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.GrafanaLight},
-                                                                      Dark={x:Static clam:ChartPalettes.GrafanaDark}}"
-                                            SelectionMode="Item" />
-                </Grid>
-            </Border>
-            <Border Grid.Row="1" Grid.Column="0"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="CPU" />
-                    <clam:ClamRadialBarView Grid.Row="1"
-                                            ItemsSource="{Binding Cpu}"
-                                            CapStyle="{Binding CapStyle}"
-                                            ContentPadding="0" DisplayMode="Gradient" StartAngle="250" SweepAngle="220"
-                                            ThresholdMarkersVisible="True"
-                                            Thresholds="{Binding LoadThresholds}" />
-                </Grid>
-            </Border>
-            <Border Grid.Row="1" Grid.Column="1"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="メモリ" />
-                    <clam:ClamRadialBarView Grid.Row="1"
-                                            ItemsSource="{Binding Memory}"
-                                            ContentPadding="0" DisplayMode="Segmented" SegmentCount="24"
-                                            Thresholds="{Binding LoadThresholds}" />
-                </Grid>
-            </Border>
-            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="サーバー" />
-                    <clam:ClamRadialBarView Grid.Row="1"
-                                            ItemsSource="{Binding Servers}"
-                                            CapStyle="{Binding CapStyle}"
-                                            ContentPadding="0"
-                                            DisplayMode="{Binding DisplayMode}"
-                                            LegendValueMode="Percent" LegendVisible="True" SelectionMode="Item" ThresholdMarkersVisible="True"
-                                            Thresholds="{Binding LoadThresholds}" />
-                </Grid>
-            </Border>
-        </Grid>
-    </ScrollView>
+    <Grid>
+        <ScrollView>
+            <Grid Style="{StaticResource StatGrid}"
+                  RowDefinitions="240,200,260"
+                  ColumnDefinitions="*,*">
+                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="アクティビティ" />
+                        <clam:ClamRadialBarView Grid.Row="1"
+                                                ItemsSource="{Binding Activities}"
+                                                CapStyle="{Binding CapStyle}"
+                                                ContentPadding="0" LegendValueMode="Percent" LegendVisible="True" OverflowMode="Wrap"
+                                                Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.GrafanaLight},
+                                                                          Dark={x:Static clam:ChartPalettes.GrafanaDark}}"
+                                                SelectionMode="Item" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="0"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="CPU" />
+                        <clam:ClamRadialBarView Grid.Row="1"
+                                                ItemsSource="{Binding Cpu}"
+                                                CapStyle="{Binding CapStyle}"
+                                                ContentPadding="0" DisplayMode="Gradient" StartAngle="250" SweepAngle="220"
+                                                ThresholdMarkersVisible="True"
+                                                Thresholds="{Binding LoadThresholds}" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="1"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="メモリ" />
+                        <clam:ClamRadialBarView Grid.Row="1"
+                                                ItemsSource="{Binding Memory}"
+                                                ContentPadding="0" DisplayMode="Segmented" SegmentCount="24"
+                                                Thresholds="{Binding LoadThresholds}" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="サーバー" />
+                        <clam:ClamRadialBarView Grid.Row="1"
+                                                ItemsSource="{Binding Servers}"
+                                                CapStyle="{Binding CapStyle}"
+                                                ContentPadding="0"
+                                                DisplayMode="{Binding DisplayMode}"
+                                                LegendValueMode="Percent" LegendVisible="True" SelectionMode="Item" ThresholdMarkersVisible="True"
+                                                Thresholds="{Binding LoadThresholds}" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollView>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartRadialBarViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="表示" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectDisplayModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartRadialBarMode.Basic}"
+                                    Text="基本">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartRadialBarMode.Basic}"
+                                                 Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectDisplayModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartRadialBarMode.Gradient}"
+                                    Text="グラデーション">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartRadialBarMode.Gradient}"
+                                                 Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectDisplayModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartRadialBarMode.Segmented}"
+                                    Text="分割">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartRadialBarMode.Segmented}"
+                                                 Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="端の形" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectCapCommand}"
+                                    CommandParameter="{x:Static clam:ChartCapStyle.Flat}"
+                                    Text="平ら">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartCapStyle.Flat}"
+                                                 Binding="{Binding CapStyle}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectCapCommand}"
+                                    CommandParameter="{x:Static clam:ChartCapStyle.Round}"
+                                    Text="丸">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartCapStyle.Round}"
+                                                 Binding="{Binding CapStyle}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
+    </Grid>
 
 </ContentView>

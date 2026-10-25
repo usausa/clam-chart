@@ -1,8 +1,26 @@
 namespace Example.Modules.Chart;
 
-public abstract class ChartViewModelBase : AppViewModelBase
+public abstract partial class ChartViewModelBase : AppViewModelBase
 {
-    protected override Task OnNotifyBackAsync() => Navigator.ForwardAsync(ViewId.ChartMenu);
+    [ObservableProperty]
+    public partial bool IsSettingOpen { get; set; }
+
+    protected override Task OnNotifyBackAsync()
+    {
+        if (IsSettingOpen)
+        {
+            IsSettingOpen = false;
+            return Task.CompletedTask;
+        }
+
+        return Navigator.ForwardAsync(ViewId.ChartMenu);
+    }
 
     protected override Task OnNotifyFunction1() => OnNotifyBackAsync();
+
+    protected override Task OnNotifyFunction2()
+    {
+        IsSettingOpen = !IsSettingOpen;
+        return Task.CompletedTask;
+    }
 }

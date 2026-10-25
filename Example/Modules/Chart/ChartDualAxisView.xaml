@@ -5,40 +5,104 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartDualAxisView"
              x:DataType="{x:Type module:ChartDualAxisViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartDualAxisViewModel}"
              shell:ShellProperty.Title="Dual axis"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Align"
-             shell:ShellProperty.Function3Text="Fixed"
-             shell:ShellProperty.Function4Text="Soft"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function1Enabled="True"
-             shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
-             shell:ShellProperty.Function4Enabled="True">
+             shell:ShellProperty.Function2Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}">
-        <clam:ClamChartView TrackballMode="LongPress"
-                            ValueAccessors="{x:Static models:WeatherSample.Accessors}"
-                            XKey="time">
-            <clam:ClamChartView.YAxis>
-                <clam:NumericAxis SoftMaximum="{Binding SoftMaximum}"
-                                  SoftMinimum="{Binding SoftMinimum}"
-                                  Title="Temperature °C" />
-            </clam:ClamChartView.YAxis>
-            <clam:ClamChartView.SecondaryYAxis>
-                <clam:NumericAxis Minimum="{Binding HumidityMinimum}"
-                                  Maximum="{Binding HumidityMaximum}"
-                                  TickAlignment="{Binding TickAlignment}"
-                                  Title="Humidity %" />
-            </clam:ClamChartView.SecondaryYAxis>
-            <clam:AreaSeries ItemsSource="{Binding Samples}"
-                             Title="Humidity" ValueFormat="{}{0:N0} %" YAxis="Secondary" YKey="humidity" />
-            <clam:LineSeries ItemsSource="{Binding Samples}"
-                             Title="Temperature" ValueFormat="{}{0:N1} °C" YKey="temperature" />
-        </clam:ClamChartView>
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}">
+            <clam:ClamChartView TrackballMode="LongPress"
+                                ValueAccessors="{x:Static models:WeatherSample.Accessors}"
+                                XKey="time">
+                <clam:ClamChartView.YAxis>
+                    <clam:NumericAxis SoftMaximum="{Binding SoftMaximum}"
+                                      SoftMinimum="{Binding SoftMinimum}"
+                                      Title="Temperature °C" />
+                </clam:ClamChartView.YAxis>
+                <clam:ClamChartView.SecondaryYAxis>
+                    <clam:NumericAxis Minimum="{Binding HumidityMinimum}"
+                                      Maximum="{Binding HumidityMaximum}"
+                                      TickAlignment="{Binding TickAlignment}"
+                                      Title="Humidity %" />
+                </clam:ClamChartView.SecondaryYAxis>
+                <clam:AreaSeries ItemsSource="{Binding Samples}"
+                                 Title="Humidity" ValueFormat="{}{0:N0} %" YAxis="Secondary" YKey="humidity" />
+                <clam:LineSeries ItemsSource="{Binding Samples}"
+                                 Title="Temperature" ValueFormat="{}{0:N1} °C" YKey="temperature" />
+            </clam:ClamChartView>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartDualAxisViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="目盛りの合わせ方" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectAlignmentCommand}"
+                                    CommandParameter="{x:Static clam:ChartTickAlignment.AlignToPrimary}"
+                                    Text="主軸に合わせる">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartTickAlignment.AlignToPrimary}"
+                                                 Binding="{Binding TickAlignment}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectAlignmentCommand}"
+                                    CommandParameter="{x:Static clam:ChartTickAlignment.Independent}"
+                                    Text="独立">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartTickAlignment.Independent}"
+                                                 Binding="{Binding TickAlignment}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="軸の範囲" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Grid Grid.Column="0"
+                                  ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0"
+                                       Style="{StaticResource SheetSwitchLabel}"
+                                       Text="湿度を固定" />
+                                <Switch Grid.Column="1"
+                                        Style="{StaticResource SheetSwitch}"
+                                        IsToggled="{Binding FixedRange}" />
+                            </Grid>
+                            <Grid Grid.Column="1"
+                                  ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0"
+                                       Style="{StaticResource SheetSwitchLabel}"
+                                       Text="ゆとり" />
+                                <Switch Grid.Column="1"
+                                        Style="{StaticResource SheetSwitch}"
+                                        IsToggled="{Binding SoftRange}" />
+                            </Grid>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

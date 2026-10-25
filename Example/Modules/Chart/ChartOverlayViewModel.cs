@@ -68,12 +68,6 @@ public sealed partial class ChartOverlayViewModel : ChartViewModelBase
         base.Dispose(disposing);
     }
 
-    protected override Task OnNotifyFunction2()
-    {
-        IsBusy = !IsBusy;
-        return Task.CompletedTask;
-    }
-
     protected override Task OnNotifyFunction3()
     {
         SnapshotRequested?.Invoke(this, EventArgs.Empty);

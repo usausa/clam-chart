@@ -16,6 +16,11 @@ public sealed partial class ChartTimeSeriesViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial DateTime? Maximum { get; set; }
 
+    [ObservableProperty]
+    public partial int RangeIndex { get; set; }
+
+    public IObserveCommand SelectRangeCommand { get; }
+
     public ChartTimeSeriesViewModel()
     {
         var hours = Days * 24;
@@ -31,25 +36,14 @@ public sealed partial class ChartTimeSeriesViewModel : ChartViewModelBase
         }
 
         Samples = samples;
+        SelectRangeCommand = MakeDelegateCommand<int>(SelectRange);
         ShowRange(TimeSpan.FromDays(1));
     }
 
-    protected override Task OnNotifyFunction2()
+    private void SelectRange(int index)
     {
-        ShowRange(TimeSpan.FromDays(1));
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        ShowRange(TimeSpan.FromDays(7));
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction4()
-    {
-        ShowRange(TimeSpan.FromDays(Days));
-        return Task.CompletedTask;
+        RangeIndex = index;
+        ShowRange(TimeSpan.FromDays(index switch { 0 => 1, 1 => 7, _ => Days }));
     }
 
     private void ShowRange(TimeSpan span)

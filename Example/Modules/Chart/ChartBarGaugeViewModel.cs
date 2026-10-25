@@ -68,8 +68,14 @@ public sealed partial class ChartBarGaugeViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartSortMode SortMode { get; set; }
 
+    public IObserveCommand SelectDisplayModeCommand { get; }
+
+    public IObserveCommand SelectSortCommand { get; }
+
     public ChartBarGaugeViewModel()
     {
+        SelectDisplayModeCommand = MakeDelegateCommand<ChartBarGaugeMode>(x => DisplayMode = x);
+        SelectSortCommand = MakeDelegateCommand<ChartSortMode>(x => SortMode = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)
         {
@@ -87,28 +93,6 @@ public sealed partial class ChartBarGaugeViewModel : ChartViewModelBase
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        DisplayMode = DisplayMode switch
-        {
-            ChartBarGaugeMode.Basic => ChartBarGaugeMode.Gradient,
-            ChartBarGaugeMode.Gradient => ChartBarGaugeMode.Segmented,
-            _ => ChartBarGaugeMode.Basic
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        SortMode = SortMode switch
-        {
-            ChartSortMode.None => ChartSortMode.Descending,
-            ChartSortMode.Descending => ChartSortMode.Ascending,
-            _ => ChartSortMode.None
-        };
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

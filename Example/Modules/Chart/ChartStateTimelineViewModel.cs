@@ -27,26 +27,12 @@ public sealed partial class ChartStateTimelineViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial bool MergeValues { get; set; } = true;
 
+    public IObserveCommand SelectAlignCommand { get; }
+
     public ChartStateTimelineViewModel()
     {
         Generate();
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        AlignValue = AlignValue switch
-        {
-            ChartValueAlignment.Left => ChartValueAlignment.Center,
-            ChartValueAlignment.Center => ChartValueAlignment.Right,
-            _ => ChartValueAlignment.Left
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        MergeValues = !MergeValues;
-        return Task.CompletedTask;
+        SelectAlignCommand = MakeDelegateCommand<ChartValueAlignment>(x => AlignValue = x);
     }
 
     protected override Task OnNotifyFunction4()

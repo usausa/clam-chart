@@ -4,88 +4,223 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartThresholdView"
              x:DataType="{x:Type module:ChartThresholdViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartThresholdViewModel}"
              shell:ShellProperty.Title="Thresholds"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Mode"
-             shell:ShellProperty.Function3Text="Kind"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Live"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <ScrollView>
-        <Grid Style="{StaticResource StatGrid}"
-              RowDefinitions="300,Auto">
-            <Border Grid.Row="0"
-                    Style="{StaticResource StatBorder}">
-                <Grid Style="{StaticResource PanelGrid}"
-                      RowDefinitions="Auto,*">
-                    <Label Grid.Row="0"
-                           Style="{StaticResource PanelTitleLabel}"
-                           Text="CPU 使用率" />
-                    <clam:ClamChartView Grid.Row="1"
-                                        ContentPadding="0"
-                                        Thresholds="{Binding LoadThresholds}"
-                                        ThresholdsMode="{Binding ThresholdsMode}"
-                                        TrackballMode="LongPress">
-                        <clam:ClamChartView.YAxis>
-                            <clam:NumericAxis Minimum="0" Maximum="100" />
-                        </clam:ClamChartView.YAxis>
-                        <clam:ClamChartView.Annotations>
-                            <clam:ChartReferenceBand Axis="X"
-                                                     EndTime="{Binding MaintenanceEnd}"
-                                                     Label="メンテナンス"
-                                                     StartTime="{Binding MaintenanceStart}" />
-                            <clam:ChartReferenceLine Axis="X" Label="デプロイ"
-                                                     Time="{Binding DeployTime}" />
-                            <clam:ChartReferenceLine Value="{Binding Average}"
-                                                     Label="平均" />
-                        </clam:ClamChartView.Annotations>
-                        <clam:LineSeries ItemsSource="{Binding Cpu}"
-                                         IsVisible="{Binding IsLine}"
-                                         ValueFormat="{}{0:N1} %" />
-                        <clam:AreaSeries ItemsSource="{Binding Cpu}"
-                                         IsVisible="{Binding IsArea}"
-                                         ValueFormat="{}{0:N1} %" />
-                        <clam:BarSeries ItemsSource="{Binding Cpu}"
-                                        IsVisible="{Binding IsBar}"
-                                        ValueFormat="{}{0:N1} %" />
-                    </clam:ClamChartView>
-                </Grid>
-            </Border>
-            <Border Grid.Row="1"
-                    Style="{StaticResource StatBorder}">
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Servers}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="{x:Type module:ThresholdRow}">
-                            <Grid Style="{StaticResource RowGrid}"
-                                  ColumnDefinitions="*,120,64">
-                                <Label Grid.Column="0"
-                                       VerticalTextAlignment="Center"
-                                       Text="{Binding Name}" />
-                                <clam:ClamSparklineView Grid.Column="1"
-                                                        HeightRequest="28"
-                                                        EmphasisMode="{Binding Emphasis}"
-                                                        Kind="{Binding Kind}"
-                                                        NormalRangeMaximum="{Binding NormalMaximum}"
-                                                        NormalRangeMinimum="{Binding NormalMinimum}"
-                                                        Thresholds="{Binding Thresholds}"
-                                                        ThresholdsMode="{Binding ThresholdsMode}"
-                                                        Values="{Binding Values}" />
-                                <Label Grid.Column="2"
-                                       HorizontalTextAlignment="End" VerticalTextAlignment="Center"
-                                       Text="{Binding Last, StringFormat='{0:N1}'}" />
-                            </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-            </Border>
-        </Grid>
-    </ScrollView>
+    <Grid>
+        <ScrollView>
+            <Grid Style="{StaticResource StatGrid}"
+                  RowDefinitions="300,Auto">
+                <Border Grid.Row="0"
+                        Style="{StaticResource StatBorder}">
+                    <Grid Style="{StaticResource PanelGrid}"
+                          RowDefinitions="Auto,*">
+                        <Label Grid.Row="0"
+                               Style="{StaticResource PanelTitleLabel}"
+                               Text="CPU 使用率" />
+                        <clam:ClamChartView Grid.Row="1"
+                                            ContentPadding="0"
+                                            Thresholds="{Binding LoadThresholds}"
+                                            ThresholdsMode="{Binding ThresholdsMode}"
+                                            TrackballMode="LongPress">
+                            <clam:ClamChartView.YAxis>
+                                <clam:NumericAxis Minimum="0" Maximum="100" />
+                            </clam:ClamChartView.YAxis>
+                            <clam:ClamChartView.Annotations>
+                                <clam:ChartReferenceBand Axis="X"
+                                                         EndTime="{Binding MaintenanceEnd}"
+                                                         Label="メンテナンス"
+                                                         StartTime="{Binding MaintenanceStart}" />
+                                <clam:ChartReferenceLine Axis="X" Label="デプロイ"
+                                                         Time="{Binding DeployTime}" />
+                                <clam:ChartReferenceLine Value="{Binding Average}"
+                                                         Label="平均" />
+                            </clam:ClamChartView.Annotations>
+                            <clam:LineSeries ItemsSource="{Binding Cpu}"
+                                             IsVisible="{Binding IsLine}"
+                                             ValueFormat="{}{0:N1} %" />
+                            <clam:AreaSeries ItemsSource="{Binding Cpu}"
+                                             IsVisible="{Binding IsArea}"
+                                             ValueFormat="{}{0:N1} %" />
+                            <clam:BarSeries ItemsSource="{Binding Cpu}"
+                                            IsVisible="{Binding IsBar}"
+                                            ValueFormat="{}{0:N1} %" />
+                        </clam:ClamChartView>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1"
+                        Style="{StaticResource StatBorder}">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Servers}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="{x:Type module:ThresholdRow}">
+                                <Grid Style="{StaticResource RowGrid}"
+                                      ColumnDefinitions="*,120,64">
+                                    <Label Grid.Column="0"
+                                           VerticalTextAlignment="Center"
+                                           Text="{Binding Name}" />
+                                    <clam:ClamSparklineView Grid.Column="1"
+                                                            HeightRequest="28"
+                                                            EmphasisMode="{Binding Emphasis}"
+                                                            Kind="{Binding Kind}"
+                                                            NormalRangeMaximum="{Binding NormalMaximum}"
+                                                            NormalRangeMinimum="{Binding NormalMinimum}"
+                                                            Thresholds="{Binding Thresholds}"
+                                                            ThresholdsMode="{Binding ThresholdsMode}"
+                                                            Values="{Binding Values}" />
+                                    <Label Grid.Column="2"
+                                           HorizontalTextAlignment="End" VerticalTextAlignment="Center"
+                                           Text="{Binding Last, StringFormat='{0:N1}'}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+        </ScrollView>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartThresholdViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="しきい値" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="0"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="1"
+                                    Text="線">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="2"
+                                    Text="帯">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="3"
+                                    Text="線と帯">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="3"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="4"
+                                    Text="色分け">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="4"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="種類" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.Line}"
+                                    Text="線">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.Line}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.Area}"
+                                    Text="面">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.Area}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectKindCommand}"
+                                    CommandParameter="{x:Static clam:ChartSparklineKind.Bar}"
+                                    Text="棒">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSparklineKind.Bar}"
+                                                 Binding="{Binding Kind}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
+    </Grid>
 
 </ContentView>

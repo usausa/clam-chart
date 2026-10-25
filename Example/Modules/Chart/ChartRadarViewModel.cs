@@ -28,23 +28,17 @@ public sealed partial class ChartRadarViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartSelectionMode SelectionMode { get; set; } = ChartSelectionMode.Item;
 
+    public IObserveCommand SelectGridShapeCommand { get; }
+
+    public IObserveCommand SelectSelectionCommand { get; }
+
     public ChartRadarViewModel()
     {
         Fill(Premium, PremiumLevels);
         Fill(Standard, StandardLevels);
         Fill(Lite, LiteLevels);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        GridShape = GridShape == ChartRadarGridShape.Polygon ? ChartRadarGridShape.Circle : ChartRadarGridShape.Polygon;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        SelectionMode = SelectionMode == ChartSelectionMode.Item ? ChartSelectionMode.Category : ChartSelectionMode.Item;
-        return Task.CompletedTask;
+        SelectGridShapeCommand = MakeDelegateCommand<ChartRadarGridShape>(x => GridShape = x);
+        SelectSelectionCommand = MakeDelegateCommand<ChartSelectionMode>(x => SelectionMode = x);
     }
 
     protected override Task OnNotifyFunction4()

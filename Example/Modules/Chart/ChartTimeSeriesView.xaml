@@ -5,34 +5,89 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartTimeSeriesView"
              x:DataType="{x:Type module:ChartTimeSeriesViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartTimeSeriesViewModel}"
              shell:ShellProperty.Title="Time series"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="1D"
-             shell:ShellProperty.Function3Text="1W"
-             shell:ShellProperty.Function4Text="1M"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function1Enabled="True"
-             shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
-             shell:ShellProperty.Function4Enabled="True">
+             shell:ShellProperty.Function2Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}">
-        <clam:ClamChartView TrackballMode="LongPress"
-                            ValueAccessors="{x:Static models:WeatherSample.Accessors}"
-                            XKey="time">
-            <clam:ClamChartView.XAxis>
-                <clam:DateTimeAxis Minimum="{Binding Minimum}"
-                                   Maximum="{Binding Maximum}" />
-            </clam:ClamChartView.XAxis>
-            <clam:ClamChartView.YAxis>
-                <clam:NumericAxis IncludeZero="False" />
-            </clam:ClamChartView.YAxis>
-            <clam:AreaSeries ItemsSource="{Binding Samples}"
-                             Title="Temperature" ValueFormat="{}{0:N1} °C" YKey="temperature" />
-        </clam:ClamChartView>
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}">
+            <clam:ClamChartView TrackballMode="LongPress"
+                                ValueAccessors="{x:Static models:WeatherSample.Accessors}"
+                                XKey="time">
+                <clam:ClamChartView.XAxis>
+                    <clam:DateTimeAxis Minimum="{Binding Minimum}"
+                                       Maximum="{Binding Maximum}" />
+                </clam:ClamChartView.XAxis>
+                <clam:ClamChartView.YAxis>
+                    <clam:NumericAxis IncludeZero="False" />
+                </clam:ClamChartView.YAxis>
+                <clam:AreaSeries ItemsSource="{Binding Samples}"
+                                 Title="Temperature" ValueFormat="{}{0:N1} °C" YKey="temperature" />
+            </clam:ClamChartView>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartTimeSeriesViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="期間" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectRangeCommand}"
+                                    CommandParameter="0"
+                                    Text="1 日">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding RangeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectRangeCommand}"
+                                    CommandParameter="1"
+                                    Text="1 週">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding RangeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectRangeCommand}"
+                                    CommandParameter="2"
+                                    Text="1 か月">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding RangeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

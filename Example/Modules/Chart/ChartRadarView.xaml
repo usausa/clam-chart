@@ -5,35 +5,111 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartRadarView"
              x:DataType="{x:Type module:ChartRadarViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartRadarViewModel}"
              shell:ShellProperty.Title="Radar"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Shape"
-             shell:ShellProperty.Function3Text="Select"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}">
-        <clam:ClamRadarChartView Maximum="100"
-                                 GridShape="{Binding GridShape}"
-                                 LegendToggleEnabled="True"
-                                 SelectionMode="{Binding SelectionMode}"
-                                 TrackballMode="Touch"
-                                 ValueAccessors="{x:Static models:SkillScore.Accessors}"
-                                 XKey="skill">
-            <clam:RadarSeries ItemsSource="{Binding Premium}"
-                              Title="プレミアム" YKey="score" />
-            <clam:RadarSeries ItemsSource="{Binding Standard}"
-                              Title="スタンダード" YKey="score" />
-            <clam:RadarSeries ItemsSource="{Binding Lite}"
-                              Title="ライト" YKey="score" />
-        </clam:ClamRadarChartView>
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}">
+            <clam:ClamRadarChartView Maximum="100"
+                                     GridShape="{Binding GridShape}"
+                                     LegendToggleEnabled="True"
+                                     SelectionMode="{Binding SelectionMode}"
+                                     TrackballMode="Touch"
+                                     ValueAccessors="{x:Static models:SkillScore.Accessors}"
+                                     XKey="skill">
+                <clam:RadarSeries ItemsSource="{Binding Premium}"
+                                  Title="プレミアム" YKey="score" />
+                <clam:RadarSeries ItemsSource="{Binding Standard}"
+                                  Title="スタンダード" YKey="score" />
+                <clam:RadarSeries ItemsSource="{Binding Lite}"
+                                  Title="ライト" YKey="score" />
+            </clam:ClamRadarChartView>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartRadarViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="格子の形" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectGridShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartRadarGridShape.Polygon}"
+                                    Text="多角形">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartRadarGridShape.Polygon}"
+                                                 Binding="{Binding GridShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectGridShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartRadarGridShape.Circle}"
+                                    Text="円">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartRadarGridShape.Circle}"
+                                                 Binding="{Binding GridShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="選択" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSelectionCommand}"
+                                    CommandParameter="{x:Static clam:ChartSelectionMode.Item}"
+                                    Text="項目">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSelectionMode.Item}"
+                                                 Binding="{Binding SelectionMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectSelectionCommand}"
+                                    CommandParameter="{x:Static clam:ChartSelectionMode.Category}"
+                                    Text="分類">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartSelectionMode.Category}"
+                                                 Binding="{Binding SelectionMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

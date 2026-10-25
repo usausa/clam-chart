@@ -23,6 +23,38 @@ public sealed partial class ChartDualAxisViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial double? SoftMaximum { get; set; }
 
+    public bool FixedRange
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(FixedRange));
+                HumidityMinimum = value ? 0 : null;
+                HumidityMaximum = value ? 100 : null;
+            }
+        }
+    }
+
+    public bool SoftRange
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(SoftRange));
+                SoftMinimum = value ? 0 : null;
+                SoftMaximum = value ? 30 : null;
+            }
+        }
+    }
+
+    public IObserveCommand SelectAlignmentCommand { get; }
+
     public ChartDualAxisViewModel()
     {
         var start = DateTime.Today.AddHours(DateTime.Now.Hour - Hours);
@@ -40,27 +72,6 @@ public sealed partial class ChartDualAxisViewModel : ChartViewModelBase
         }
 
         Samples = samples;
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        TickAlignment = TickAlignment == ChartTickAlignment.AlignToPrimary ? ChartTickAlignment.Independent : ChartTickAlignment.AlignToPrimary;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        var fixedRange = HumidityMinimum is null;
-        HumidityMinimum = fixedRange ? 0 : null;
-        HumidityMaximum = fixedRange ? 100 : null;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction4()
-    {
-        var soft = SoftMinimum is null;
-        SoftMinimum = soft ? 0 : null;
-        SoftMaximum = soft ? 30 : null;
-        return Task.CompletedTask;
+        SelectAlignmentCommand = MakeDelegateCommand<ChartTickAlignment>(x => TickAlignment = x);
     }
 }

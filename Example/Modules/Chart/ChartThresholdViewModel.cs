@@ -36,6 +36,13 @@ public sealed partial class ChartThresholdViewModel : ChartViewModelBase
     public partial ChartThresholdsMode ThresholdsMode { get; set; } = ChartThresholdsMode.Lines;
 
     [ObservableProperty]
+    public partial int ThresholdIndex { get; set; } = 1;
+
+    public IObserveCommand SelectThresholdCommand { get; }
+
+    public IObserveCommand SelectKindCommand { get; }
+
+    [ObservableProperty]
     public partial ChartSparklineKind Kind { get; set; }
 
     [ObservableProperty]
@@ -74,6 +81,8 @@ public sealed partial class ChartThresholdViewModel : ChartViewModelBase
             timer.Tick += OnTick;
         }
 
+        SelectThresholdCommand = MakeDelegateCommand<int>(SelectThreshold);
+        SelectKindCommand = MakeDelegateCommand<ChartSparklineKind>(x => Kind = x);
         SubscribeKind(x =>
         {
             IsLine = x == ChartSparklineKind.Line;
@@ -96,30 +105,6 @@ public sealed partial class ChartThresholdViewModel : ChartViewModelBase
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        ThresholdsMode = ThresholdsMode switch
-        {
-            ChartThresholdsMode.Lines => ChartThresholdsMode.Bands,
-            ChartThresholdsMode.Bands => ChartThresholdsMode.Lines | ChartThresholdsMode.Bands,
-            ChartThresholdsMode.Lines | ChartThresholdsMode.Bands => ChartThresholdsMode.ColorSeries,
-            ChartThresholdsMode.ColorSeries => ChartThresholdsMode.None,
-            _ => ChartThresholdsMode.Lines
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        Kind = Kind switch
-        {
-            ChartSparklineKind.Line => ChartSparklineKind.Area,
-            ChartSparklineKind.Area => ChartSparklineKind.Bar,
-            _ => ChartSparklineKind.Line
-        };
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()
@@ -157,5 +142,18 @@ public sealed partial class ChartThresholdViewModel : ChartViewModelBase
     private void UpdateAverage()
     {
         Average = Math.Round(Cpu.Average(static x => x.Y), 1);
+    }
+
+    private void SelectThreshold(int index)
+    {
+        ThresholdIndex = index;
+        ThresholdsMode = index switch
+        {
+            1 => ChartThresholdsMode.Lines,
+            2 => ChartThresholdsMode.Bands,
+            3 => ChartThresholdsMode.Lines | ChartThresholdsMode.Bands,
+            4 => ChartThresholdsMode.ColorSeries,
+            _ => ChartThresholdsMode.None
+        };
     }
 }

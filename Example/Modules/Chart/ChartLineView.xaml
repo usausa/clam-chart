@@ -5,70 +5,188 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartLineView"
              x:DataType="{x:Type module:ChartLineViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartLineViewModel}"
              shell:ShellProperty.Title="Line"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Shape"
-             shell:ShellProperty.Function3Text="Trackball"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <ScrollView>
-        <VerticalStackLayout Style="{StaticResource ChartStack}">
-            <Label Style="{StaticResource ValueLabel}"
-                   Text="{Binding Header}" />
-            <clam:ClamChartView HeightRequest="260"
-                                TrackballMode="{Binding TrackballMode}"
-                                TrackballSnapEnabled="{Binding TrackballSnapEnabled}"
-                                TrackedItem="{Binding TrackedSales, Mode=OneWayToSource}"
-                                ValueAccessors="{x:Static models:MonthlySales.Accessors}"
-                                XKey="month">
-                <clam:AreaSeries ItemsSource="{Binding Sales}"
-                                 Interpolation="{Binding Interpolation}"
-                                 Title="Sales" YKey="sales" />
-                <clam:LineSeries ItemsSource="{Binding Sales}"
-                                 DashPattern="4,3"
-                                 Interpolation="{Binding Interpolation}"
-                                 MarkerShape="Diamond" Title="Target" YKey="target" />
-            </clam:ClamChartView>
-            <Grid Style="{StaticResource TableRowGrid}"
-                  ColumnDefinitions="*,*,*">
-                <Label Grid.Column="0"
-                       Style="{StaticResource TableHeaderLabel}"
-                       Text="Month" />
-                <Label Grid.Column="1"
-                       Style="{StaticResource TableHeaderLabel}"
-                       HorizontalTextAlignment="End"
-                       Text="Sales" />
-                <Label Grid.Column="2"
-                       Style="{StaticResource TableHeaderLabel}"
-                       HorizontalTextAlignment="End"
-                       Text="Target" />
-            </Grid>
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Sales}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="{x:Type models:MonthlySales}">
-                        <Grid Style="{StaticResource TableRowGrid}"
-                              ColumnDefinitions="*,*,*">
-                            <Label Grid.Column="0"
-                                   Text="{Binding Month}" />
-                            <Label Grid.Column="1"
-                                   HorizontalTextAlignment="End"
-                                   Text="{Binding Sales, StringFormat='{0:N0}'}" />
-                            <Label Grid.Column="2"
-                                   HorizontalTextAlignment="End"
-                                   Text="{Binding Target, StringFormat='{0:N0}'}" />
-                        </Grid>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Style="{StaticResource ChartStack}">
+                <Label Style="{StaticResource ValueLabel}"
+                       Text="{Binding Header}" />
+                <clam:ClamChartView HeightRequest="260"
+                                    TrackballMode="{Binding TrackballMode}"
+                                    TrackballSnapEnabled="{Binding TrackballSnapEnabled}"
+                                    TrackedItem="{Binding TrackedSales, Mode=OneWayToSource}"
+                                    ValueAccessors="{x:Static models:MonthlySales.Accessors}"
+                                    XKey="month">
+                    <clam:AreaSeries ItemsSource="{Binding Sales}"
+                                     Interpolation="{Binding Interpolation}"
+                                     Title="Sales" YKey="sales" />
+                    <clam:LineSeries ItemsSource="{Binding Sales}"
+                                     DashPattern="4,3"
+                                     Interpolation="{Binding Interpolation}"
+                                     MarkerShape="Diamond" Title="Target" YKey="target" />
+                </clam:ClamChartView>
+                <Grid Style="{StaticResource TableRowGrid}"
+                      ColumnDefinitions="*,*,*">
+                    <Label Grid.Column="0"
+                           Style="{StaticResource TableHeaderLabel}"
+                           Text="Month" />
+                    <Label Grid.Column="1"
+                           Style="{StaticResource TableHeaderLabel}"
+                           HorizontalTextAlignment="End"
+                           Text="Sales" />
+                    <Label Grid.Column="2"
+                           Style="{StaticResource TableHeaderLabel}"
+                           HorizontalTextAlignment="End"
+                           Text="Target" />
+                </Grid>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Sales}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="{x:Type models:MonthlySales}">
+                            <Grid Style="{StaticResource TableRowGrid}"
+                                  ColumnDefinitions="*,*,*">
+                                <Label Grid.Column="0"
+                                       Text="{Binding Month}" />
+                                <Label Grid.Column="1"
+                                       HorizontalTextAlignment="End"
+                                       Text="{Binding Sales, StringFormat='{0:N0}'}" />
+                                <Label Grid.Column="2"
+                                       HorizontalTextAlignment="End"
+                                       Text="{Binding Target, StringFormat='{0:N0}'}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
             </VerticalStackLayout>
-        </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartLineViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="線の形" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectInterpolationCommand}"
+                                    CommandParameter="{x:Static clam:ChartLineInterpolation.Linear}"
+                                    Text="直線">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartLineInterpolation.Linear}"
+                                                 Binding="{Binding Interpolation}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectInterpolationCommand}"
+                                    CommandParameter="{x:Static clam:ChartLineInterpolation.Smooth}"
+                                    Text="なめらか">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartLineInterpolation.Smooth}"
+                                                 Binding="{Binding Interpolation}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectInterpolationCommand}"
+                                    CommandParameter="{x:Static clam:ChartLineInterpolation.Step}"
+                                    Text="階段">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartLineInterpolation.Step}"
+                                                 Binding="{Binding Interpolation}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectInterpolationCommand}"
+                                    CommandParameter="{x:Static clam:ChartLineInterpolation.StepBefore}"
+                                    Text="階段(前)">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartLineInterpolation.StepBefore}"
+                                                 Binding="{Binding Interpolation}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="トラックボール" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectTrackballCommand}"
+                                    CommandParameter="{x:Static clam:ChartTrackballMode.LongPress}"
+                                    Text="長押し">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartTrackballMode.LongPress}"
+                                                 Binding="{Binding TrackballMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectTrackballCommand}"
+                                    CommandParameter="{x:Static clam:ChartTrackballMode.Touch}"
+                                    Text="タッチ">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartTrackballMode.Touch}"
+                                                 Binding="{Binding TrackballMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectTrackballCommand}"
+                                    CommandParameter="{x:Static clam:ChartTrackballMode.None}"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartTrackballMode.None}"
+                                                 Binding="{Binding TrackballMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
+    </Grid>
 
 </ContentView>

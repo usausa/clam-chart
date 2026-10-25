@@ -16,6 +16,8 @@ public sealed partial class ChartRangeBarViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial bool TrackVisible { get; set; } = true;
 
+    public IObserveCommand SelectLabelsCommand { get; }
+
     public ChartRangeBarViewModel()
     {
         foreach (var day in Days)
@@ -27,18 +29,8 @@ public sealed partial class ChartRangeBarViewModel : ChartViewModelBase
         {
             Year.Add(CreateMonth(i));
         }
-    }
 
-    protected override Task OnNotifyFunction2()
-    {
-        LabelsMode = LabelsMode == ChartDataLabelsMode.None ? ChartDataLabelsMode.All : ChartDataLabelsMode.None;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        TrackVisible = !TrackVisible;
-        return Task.CompletedTask;
+        SelectLabelsCommand = MakeDelegateCommand<ChartDataLabelsMode>(x => LabelsMode = x);
     }
 
     protected override Task OnNotifyFunction4()

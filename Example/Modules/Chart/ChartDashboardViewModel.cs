@@ -86,6 +86,13 @@ public sealed partial class ChartDashboardViewModel : ChartViewModelBase
 
     public ChartDashboardViewModel()
     {
+        ToggleThemeCommand = MakeDelegateCommand(static () =>
+        {
+            if (Application.Current is { } application)
+            {
+                application.UserAppTheme = application.RequestedTheme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+            }
+        });
         SalesTrend = [.. SampleData.Walk(12, 11_000_000, 900_000, 7_000_000).Select(static x => Math.Round(x))];
         ErrorTrend = [.. SampleData.Walk(TrendCount, 2.5, 0.6, 0.2)];
         var today = Math.Round(SampleData.Next(5_000, 9_000));
@@ -126,22 +133,14 @@ public sealed partial class ChartDashboardViewModel : ChartViewModelBase
         base.Dispose(disposing);
     }
 
-    protected override Task OnNotifyFunction2()
+    public IObserveCommand ToggleThemeCommand { get; }
+
+    protected override Task OnNotifyFunction3()
     {
         page = (page + 1) % PageCount;
         BusinessVisible = page == 0;
         KitVisible = page == 1;
         MoneyVisible = page == 2;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        if (Application.Current is { } application)
-        {
-            application.UserAppTheme = application.RequestedTheme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
-        }
-
         return Task.CompletedTask;
     }
 

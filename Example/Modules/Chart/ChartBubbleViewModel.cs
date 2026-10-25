@@ -25,8 +25,26 @@ public sealed partial class ChartBubbleViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial bool SizeIncludesZero { get; set; } = true;
 
+    public bool LargeBubbles
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(LargeBubbles));
+                MaxBubbleSize = value ? LargeBubbleSize : SmallBubbleSize;
+            }
+        }
+    }
+        = true;
+
+    public IObserveCommand SelectShapeCommand { get; }
+
     public ChartBubbleViewModel()
     {
+        SelectShapeCommand = MakeDelegateCommand<ChartMarkerShape>(x => MarkerShape = x);
         for (var i = 0; i < CityCount; i++)
         {
             City.Add(CreateCity());
@@ -36,30 +54,6 @@ public sealed partial class ChartBubbleViewModel : ChartViewModelBase
         {
             Suburb.Add(CreateSuburb());
         }
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        MarkerShape = MarkerShape switch
-        {
-            ChartMarkerShape.Circle => ChartMarkerShape.Square,
-            ChartMarkerShape.Square => ChartMarkerShape.Diamond,
-            _ => ChartMarkerShape.Circle
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        if ((MaxBubbleSize > SmallBubbleSize) && SizeIncludesZero)
-        {
-            SizeIncludesZero = false;
-            return Task.CompletedTask;
-        }
-
-        SizeIncludesZero = true;
-        MaxBubbleSize = MaxBubbleSize > SmallBubbleSize ? SmallBubbleSize : LargeBubbleSize;
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

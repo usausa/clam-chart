@@ -41,6 +41,7 @@
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">none</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Components.Maui.Controls" Version="1.50.0" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.110" />
     <PackageReference Include="Microsoft.Maui.Essentials" Version="10.0.110" />
     <PackageReference Include="SkiaSharp" Version="4.153.1" />

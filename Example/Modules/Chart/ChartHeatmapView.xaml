@@ -5,54 +5,111 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartHeatmapView"
              x:DataType="{x:Type module:ChartHeatmapViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartHeatmapViewModel}"
              shell:ShellProperty.Title="Heatmap"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Legend"
-             shell:ShellProperty.Function3Text="Colors"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <Grid Style="{StaticResource StatGrid}"
-          RowDefinitions="*,*">
-        <Border Grid.Row="0"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="曜日と時間帯のアクセス数" />
-                <clam:ClamHeatmapView Grid.Row="1"
-                                      ItemsSource="{Binding Accesses}"
-                                      ColorScale="{Binding ColorScale}"
-                                      ColumnKey="hour" ContentPadding="0"
-                                      LegendPosition="{Binding LegendPosition}"
-                                      RowKey="day" SelectionMode="Item" TrackballMode="Touch"
-                                      ValueAccessors="{x:Static models:AccessCount.Accessors}"
-                                      ValueKey="count" />
-            </Grid>
-        </Border>
-        <Border Grid.Row="1"
-                Style="{StaticResource StatBorder}">
-            <Grid Style="{StaticResource PanelGrid}"
-                  RowDefinitions="Auto,*">
-                <Label Grid.Row="0"
-                       Style="{StaticResource PanelTitleLabel}"
-                       Text="日ごとの活動量" />
-                <clam:ClamHeatmapView Grid.Row="1"
-                                      ItemsSource="{Binding Activities}"
-                                      ColorScale="{Binding ColorScale}"
-                                      ContentPadding="0" LayoutMode="Calendar"
-                                      LegendPosition="{Binding LegendPosition}"
-                                      SelectionMode="Item" TrackballMode="Touch" />
-            </Grid>
-        </Border>
+    <Grid>
+        <Grid Style="{StaticResource StatGrid}"
+              RowDefinitions="*,*">
+            <Border Grid.Row="0"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="曜日と時間帯のアクセス数" />
+                    <clam:ClamHeatmapView Grid.Row="1"
+                                          ItemsSource="{Binding Accesses}"
+                                          ColorScale="{Binding ColorScale}"
+                                          ColumnKey="hour" ContentPadding="0"
+                                          LegendPosition="{Binding LegendPosition}"
+                                          RowKey="day" SelectionMode="Item" TrackballMode="Touch"
+                                          ValueAccessors="{x:Static models:AccessCount.Accessors}"
+                                          ValueKey="count" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="1"
+                    Style="{StaticResource StatBorder}">
+                <Grid Style="{StaticResource PanelGrid}"
+                      RowDefinitions="Auto,*">
+                    <Label Grid.Row="0"
+                           Style="{StaticResource PanelTitleLabel}"
+                           Text="日ごとの活動量" />
+                    <clam:ClamHeatmapView Grid.Row="1"
+                                          ItemsSource="{Binding Activities}"
+                                          ColorScale="{Binding ColorScale}"
+                                          ContentPadding="0" LayoutMode="Calendar"
+                                          LegendPosition="{Binding LegendPosition}"
+                                          SelectionMode="Item" TrackballMode="Touch" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartHeatmapViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="凡例の位置" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLegendCommand}"
+                                    CommandParameter="{x:Static clam:ChartLegendPosition.Bottom}"
+                                    Text="下">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartLegendPosition.Bottom}"
+                                                 Binding="{Binding LegendPosition}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLegendCommand}"
+                                    CommandParameter="{x:Static clam:ChartLegendPosition.Right}"
+                                    Text="右">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartLegendPosition.Right}"
+                                                 Binding="{Binding LegendPosition}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="配色" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Grid Grid.Column="0"
+                                  ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0"
+                                       Style="{StaticResource SheetSwitchLabel}"
+                                       Text="青" />
+                                <Switch Grid.Column="1"
+                                        Style="{StaticResource SheetSwitch}"
+                                        IsToggled="{Binding BlueColorScale}" />
+                            </Grid>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

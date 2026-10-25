@@ -46,6 +46,23 @@ public sealed partial class ChartMonitorViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartLegendMode LegendMode { get; set; } = ChartLegendMode.Table;
 
+    public bool LongRange
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(LongRange));
+                Window = value ? LongWindow : ShortWindow;
+            }
+        }
+    }
+        = true;
+
+    public IObserveCommand SelectLegendCommand { get; }
+
     public ChartMonitorViewModel()
     {
         var now = DateTime.Now;
@@ -57,6 +74,7 @@ public sealed partial class ChartMonitorViewModel : ChartViewModelBase
             Push(previous);
         }
 
+        SelectLegendCommand = MakeDelegateCommand<ChartLegendMode>(x => LegendMode = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)
         {
@@ -74,18 +92,6 @@ public sealed partial class ChartMonitorViewModel : ChartViewModelBase
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        LegendMode = LegendMode == ChartLegendMode.Table ? ChartLegendMode.List : ChartLegendMode.Table;
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        Window = Window == LongWindow ? ShortWindow : LongWindow;
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

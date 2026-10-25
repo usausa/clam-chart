@@ -44,8 +44,14 @@ public sealed partial class ChartRadialBarViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartCapStyle CapStyle { get; set; }
 
+    public IObserveCommand SelectDisplayModeCommand { get; }
+
+    public IObserveCommand SelectCapCommand { get; }
+
     public ChartRadialBarViewModel()
     {
+        SelectDisplayModeCommand = MakeDelegateCommand<ChartRadialBarMode>(x => DisplayMode = x);
+        SelectCapCommand = MakeDelegateCommand<ChartCapStyle>(x => CapStyle = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)
         {
@@ -63,23 +69,6 @@ public sealed partial class ChartRadialBarViewModel : ChartViewModelBase
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        DisplayMode = DisplayMode switch
-        {
-            ChartRadialBarMode.Basic => ChartRadialBarMode.Gradient,
-            ChartRadialBarMode.Gradient => ChartRadialBarMode.Segmented,
-            _ => ChartRadialBarMode.Basic
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        CapStyle = CapStyle == ChartCapStyle.Flat ? ChartCapStyle.Round : ChartCapStyle.Flat;
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

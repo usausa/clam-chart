@@ -21,6 +21,13 @@ public sealed partial class ChartSparklineViewModel : ChartViewModelBase
     public partial ChartSparklineMarkers Markers { get; set; } = ChartSparklineMarkers.Last;
 
     [ObservableProperty]
+    public partial int MarkersIndex { get; set; } = 1;
+
+    public IObserveCommand SelectKindCommand { get; }
+
+    public IObserveCommand SelectMarkersCommand { get; }
+
+    [ObservableProperty]
     public partial string LiveText { get; set; } = String.Empty;
 
     public ChartSparklineViewModel()
@@ -34,6 +41,8 @@ public sealed partial class ChartSparklineViewModel : ChartViewModelBase
             timer.Tick += OnTick;
         }
 
+        SelectKindCommand = MakeDelegateCommand<ChartSparklineKind>(x => Kind = x);
+        SelectMarkersCommand = MakeDelegateCommand<int>(SelectMarkers);
         SubscribeKind(x =>
         {
             foreach (var row in Rows)
@@ -62,30 +71,6 @@ public sealed partial class ChartSparklineViewModel : ChartViewModelBase
         base.Dispose(disposing);
     }
 
-    protected override Task OnNotifyFunction2()
-    {
-        Kind = Kind switch
-        {
-            ChartSparklineKind.Line => ChartSparklineKind.Area,
-            ChartSparklineKind.Area => ChartSparklineKind.Bar,
-            ChartSparklineKind.Bar => ChartSparklineKind.WinLoss,
-            _ => ChartSparklineKind.Line
-        };
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        Markers = Markers switch
-        {
-            ChartSparklineMarkers.Last => ChartSparklineMarkers.First | ChartSparklineMarkers.Last,
-            ChartSparklineMarkers.First | ChartSparklineMarkers.Last => ChartSparklineMarkers.High | ChartSparklineMarkers.Low,
-            ChartSparklineMarkers.High | ChartSparklineMarkers.Low => ChartSparklineMarkers.None,
-            _ => ChartSparklineMarkers.Last
-        };
-        return Task.CompletedTask;
-    }
-
     protected override Task OnNotifyFunction4()
     {
         if (timer is { IsRunning: true })
@@ -111,5 +96,17 @@ public sealed partial class ChartSparklineViewModel : ChartViewModelBase
     private void UpdateLiveText()
     {
         LiveText = $"{LiveValues[^1]:N1}";
+    }
+
+    private void SelectMarkers(int index)
+    {
+        MarkersIndex = index;
+        Markers = index switch
+        {
+            1 => ChartSparklineMarkers.Last,
+            2 => ChartSparklineMarkers.First | ChartSparklineMarkers.Last,
+            3 => ChartSparklineMarkers.High | ChartSparklineMarkers.Low,
+            _ => ChartSparklineMarkers.None
+        };
     }
 }

@@ -5,41 +5,112 @@
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:models="clr-namespace:Example.Models"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartBubbleView"
              x:DataType="{x:Type module:ChartBubbleViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartBubbleViewModel}"
              shell:ShellProperty.Title="Bubble"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Shape"
-             shell:ShellProperty.Function3Text="Size"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}">
-        <clam:ClamChartView SelectionMode="Item" TrackballMode="Touch"
-                            ValueAccessors="{x:Static models:StoreSample.Accessors}"
-                            XKey="sales">
-            <clam:ClamChartView.XAxis>
-                <clam:NumericAxis Title="売上 (万円)" />
-            </clam:ClamChartView.XAxis>
-            <clam:ClamChartView.YAxis>
-                <clam:NumericAxis Title="利益率 (%)" TitleOrientation="Vertical" />
-            </clam:ClamChartView.YAxis>
-            <clam:BubbleSeries ItemsSource="{Binding City}"
-                               MarkerShape="{Binding MarkerShape}"
-                               MaxBubbleSize="{Binding MaxBubbleSize}"
-                               SizeIncludesZero="{Binding SizeIncludesZero}"
-                               SizeKey="visitors" Title="都市部" YKey="margin" />
-            <clam:BubbleSeries ItemsSource="{Binding Suburb}"
-                               MarkerShape="{Binding MarkerShape}"
-                               MaxBubbleSize="{Binding MaxBubbleSize}"
-                               SizeIncludesZero="{Binding SizeIncludesZero}"
-                               SizeKey="visitors" Title="郊外" YKey="margin" />
-        </clam:ClamChartView>
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}">
+            <clam:ClamChartView SelectionMode="Item" TrackballMode="Touch"
+                                ValueAccessors="{x:Static models:StoreSample.Accessors}"
+                                XKey="sales">
+                <clam:ClamChartView.XAxis>
+                    <clam:NumericAxis Title="売上 (万円)" />
+                </clam:ClamChartView.XAxis>
+                <clam:ClamChartView.YAxis>
+                    <clam:NumericAxis Title="利益率 (%)" TitleOrientation="Vertical" />
+                </clam:ClamChartView.YAxis>
+                <clam:BubbleSeries ItemsSource="{Binding City}"
+                                   MarkerShape="{Binding MarkerShape}"
+                                   MaxBubbleSize="{Binding MaxBubbleSize}"
+                                   SizeIncludesZero="{Binding SizeIncludesZero}"
+                                   SizeKey="visitors" Title="都市部" YKey="margin" />
+                <clam:BubbleSeries ItemsSource="{Binding Suburb}"
+                                   MarkerShape="{Binding MarkerShape}"
+                                   MaxBubbleSize="{Binding MaxBubbleSize}"
+                                   SizeIncludesZero="{Binding SizeIncludesZero}"
+                                   SizeKey="visitors" Title="郊外" YKey="margin" />
+            </clam:ClamChartView>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartBubbleViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="マーカーの形" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartMarkerShape.Circle}"
+                                    Text="丸">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartMarkerShape.Circle}"
+                                                 Binding="{Binding MarkerShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartMarkerShape.Square}"
+                                    Text="四角">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartMarkerShape.Square}"
+                                                 Binding="{Binding MarkerShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartMarkerShape.Diamond}"
+                                    Text="ひし形">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartMarkerShape.Diamond}"
+                                                 Binding="{Binding MarkerShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="大きさ" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Grid Grid.Column="0"
+                                  ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0"
+                                       Style="{StaticResource SheetSwitchLabel}"
+                                       Text="大きいバブル" />
+                                <Switch Grid.Column="1"
+                                        Style="{StaticResource SheetSwitch}"
+                                        IsToggled="{Binding LargeBubbles}" />
+                            </Grid>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

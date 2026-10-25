@@ -4,44 +4,148 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartScatterView"
              x:DataType="{x:Type module:ChartScatterViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartScatterViewModel}"
              shell:ShellProperty.Title="Scatter"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Shape"
-             shell:ShellProperty.Function3Text="Color"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}">
-        <clam:ClamChartView SelectionMode="Item"
-                            Thresholds="{Binding LatencyThresholds}"
-                            ThresholdsMode="{Binding ThresholdsMode}"
-                            TrackballMode="Touch">
-            <clam:ClamChartView.XAxis>
-                <clam:NumericAxis Minimum="0" Maximum="100"
-                                  Title="CPU (%)" />
-            </clam:ClamChartView.XAxis>
-            <clam:ClamChartView.YAxis>
-                <clam:NumericAxis Title="応答時間 (ms)" TitleOrientation="Vertical" />
-            </clam:ClamChartView.YAxis>
-            <clam:ClamChartView.Annotations>
-                <clam:ChartReferenceBand Axis="X" End="100" Label="高負荷" Start="80" />
-                <clam:ChartReferenceLine Value="400"
-                                         Label="SLO" />
-            </clam:ClamChartView.Annotations>
-            <clam:ScatterSeries ItemsSource="{Binding Web}"
-                                MarkerShape="{Binding MarkerShape}"
-                                Title="web" />
-            <clam:ScatterSeries ItemsSource="{Binding Api}"
-                                MarkerShape="{Binding MarkerShape}"
-                                Title="api" />
-        </clam:ClamChartView>
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}">
+            <clam:ClamChartView SelectionMode="Item"
+                                Thresholds="{Binding LatencyThresholds}"
+                                ThresholdsMode="{Binding ThresholdsMode}"
+                                TrackballMode="Touch">
+                <clam:ClamChartView.XAxis>
+                    <clam:NumericAxis Minimum="0" Maximum="100"
+                                      Title="CPU (%)" />
+                </clam:ClamChartView.XAxis>
+                <clam:ClamChartView.YAxis>
+                    <clam:NumericAxis Title="応答時間 (ms)" TitleOrientation="Vertical" />
+                </clam:ClamChartView.YAxis>
+                <clam:ClamChartView.Annotations>
+                    <clam:ChartReferenceBand Axis="X" End="100" Label="高負荷" Start="80" />
+                    <clam:ChartReferenceLine Value="400"
+                                             Label="SLO" />
+                </clam:ClamChartView.Annotations>
+                <clam:ScatterSeries ItemsSource="{Binding Web}"
+                                    MarkerShape="{Binding MarkerShape}"
+                                    Title="web" />
+                <clam:ScatterSeries ItemsSource="{Binding Api}"
+                                    MarkerShape="{Binding MarkerShape}"
+                                    Title="api" />
+            </clam:ClamChartView>
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartScatterViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="マーカーの形" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartMarkerShape.Circle}"
+                                    Text="丸">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartMarkerShape.Circle}"
+                                                 Binding="{Binding MarkerShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartMarkerShape.Square}"
+                                    Text="四角">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartMarkerShape.Square}"
+                                                 Binding="{Binding MarkerShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="{x:Static clam:ChartMarkerShape.Diamond}"
+                                    Text="ひし形">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartMarkerShape.Diamond}"
+                                                 Binding="{Binding MarkerShape}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="しきい値" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="0"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="1"
+                                    Text="色分け">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectThresholdCommand}"
+                                    CommandParameter="2"
+                                    Text="色分けと帯">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding ThresholdIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>

@@ -49,6 +49,38 @@ public sealed partial class ChartLiveViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial TimeSpan Window { get; set; } = LongWindow;
 
+    public bool FastSpeed
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(FastSpeed));
+                if (timer is not null)
+                {
+                    timer.Interval = value ? FastInterval : SlowInterval;
+                }
+            }
+        }
+    }
+
+    public bool LongRange
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RaisePropertyChanged(nameof(LongRange));
+                Window = value ? LongWindow : ShortWindow;
+            }
+        }
+    }
+        = true;
+
     public ChartLiveViewModel()
     {
         var now = DateTime.Now;
@@ -75,22 +107,6 @@ public sealed partial class ChartLiveViewModel : ChartViewModelBase
         }
 
         base.Dispose(disposing);
-    }
-
-    protected override Task OnNotifyFunction2()
-    {
-        if (timer is not null)
-        {
-            timer.Interval = timer.Interval == SlowInterval ? FastInterval : SlowInterval;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnNotifyFunction3()
-    {
-        Window = Window == LongWindow ? ShortWindow : LongWindow;
-        return Task.CompletedTask;
     }
 
     protected override Task OnNotifyFunction4()

@@ -4,33 +4,137 @@
              xmlns:s="http://smart/maui"
              xmlns:shell="clr-namespace:Example.Shell"
              xmlns:module="clr-namespace:Example.Modules.Chart"
-             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart"
+             xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls"
              x:Class="Example.Modules.Chart.ChartPieView"
              x:DataType="{x:Type module:ChartPieViewModel}"
              s:BindingContextResolver.Type="{x:Type module:ChartPieViewModel}"
              shell:ShellProperty.Title="Pie"
              shell:ShellProperty.Function1Text="Back"
-             shell:ShellProperty.Function2Text="Shape"
-             shell:ShellProperty.Function3Text="Labels"
+             shell:ShellProperty.Function2Text="Setting"
              shell:ShellProperty.Function4Text="Data"
              shell:ShellProperty.Function1Enabled="True"
              shell:ShellProperty.Function2Enabled="True"
-             shell:ShellProperty.Function3Enabled="True"
              shell:ShellProperty.Function4Enabled="True">
 
-    <Grid Style="{StaticResource ChartGrid}">
-        <clam:ClamPieChartView ItemsSource="{Binding Expenses}"
-                               CenterLabel="合計"
-                               InnerRadius="{Binding InnerRadius}"
-                               LabelContent="LabelAndPercent"
-                               LabelsMode="{Binding LabelsMode}"
-                               LegendToggleEnabled="True" LegendValueMode="Percent" LegendVisible="True" MaxSlices="6"
-                               OthersLabel="その他"
-                               SelectedItem="{Binding SelectedExpense}"
-                               SelectionMode="Item"
-                               StartAngle="{Binding StartAngle}"
-                               SweepAngle="{Binding SweepAngle}"
-                               TouchMode="Interactive" />
+    <Grid>
+        <Grid Style="{StaticResource ChartGrid}">
+            <clam:ClamPieChartView ItemsSource="{Binding Expenses}"
+                                   CenterLabel="合計"
+                                   InnerRadius="{Binding InnerRadius}"
+                                   LabelContent="LabelAndPercent"
+                                   LabelsMode="{Binding LabelsMode}"
+                                   LegendToggleEnabled="True" LegendValueMode="Percent" LegendVisible="True" MaxSlices="6"
+                                   OthersLabel="その他"
+                                   SelectedItem="{Binding SelectedExpense}"
+                                   SelectionMode="Item"
+                                   StartAngle="{Binding StartAngle}"
+                                   SweepAngle="{Binding SweepAngle}"
+                                   TouchMode="Interactive" />
+        </Grid>
+
+        <cmc:BottomSheetView Style="{StaticResource SettingSheet}"
+                             IsOpen="{Binding IsSettingOpen}">
+            <cmc:BottomSheetView.SheetTemplate>
+                <DataTemplate x:DataType="{x:Type module:ChartPieViewModel}">
+                    <VerticalStackLayout Style="{StaticResource SheetStack}">
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="形" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="0"
+                                    Text="ドーナツ">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="0"
+                                                 Binding="{Binding ShapeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="1"
+                                    Text="円">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="1"
+                                                 Binding="{Binding ShapeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    CommandParameter="2"
+                                    Text="半円">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="2"
+                                                 Binding="{Binding ShapeIndex}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="ラベル" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartPieLabelsMode.None}"
+                                    Text="なし">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartPieLabelsMode.None}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartPieLabelsMode.Inside}"
+                                    Text="内側">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartPieLabelsMode.Inside}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectLabelsCommand}"
+                                    CommandParameter="{x:Static clam:ChartPieLabelsMode.Outside}"
+                                    Text="外側">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartPieLabelsMode.Outside}"
+                                                 Binding="{Binding LabelsMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </cmc:BottomSheetView.SheetTemplate>
+        </cmc:BottomSheetView>
     </Grid>
 
 </ContentView>
