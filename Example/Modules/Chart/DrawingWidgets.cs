@@ -28,15 +28,15 @@ internal static class DrawingWidgets
 
     private const float GaugeRatio = 0.3f;
 
-    public static byte[] Storage(double percent, ChartRadialBarMode mode, bool dark, float scale) =>
+    public static byte[] Storage(double percent, ChartRadialBarMode mode, bool dark, float scale, ChartDrawingCache cache) =>
         Render(Square, Square, scale, canvas =>
         {
             var options = new RadialBarDrawOptions { DisplayMode = mode, CapStyle = ChartCapStyle.Round, Thickness = 14, SegmentCount = 24, BarGlow = true, IsDark = dark };
-            var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), [percent], options);
+            var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), [percent], options, cache);
             DrawCenter(canvas, hole, FormatPercent(percent), GetStyle(dark).PrimaryTextColor.ToSKColor());
         });
 
-    public static byte[] Activity(double[] values, ChartRadialBarMode mode, bool dark, float scale) =>
+    public static byte[] Activity(double[] values, ChartRadialBarMode mode, bool dark, float scale, ChartDrawingCache cache) =>
         Render(Square, Square, scale, canvas =>
         {
             var style = GetStyle(dark);
@@ -51,10 +51,10 @@ internal static class DrawingWidgets
                 Colors = [style.CriticalColor.ToSKColor(), style.GoodColor.ToSKColor(), style.Palette[0].ToSKColor()],
                 IsDark = dark
             };
-            ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), values, options);
+            ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), values, options, cache);
         });
 
-    public static byte[] Cpu(double percent, ChartRadialBarMode mode, bool dark, float scale) =>
+    public static byte[] Cpu(double percent, ChartRadialBarMode mode, bool dark, float scale, ChartDrawingCache cache) =>
         Render(Square, HalfHeight, scale, canvas =>
         {
             var style = GetStyle(dark);
@@ -69,11 +69,11 @@ internal static class DrawingWidgets
                 Thresholds = GetThresholds(style),
                 IsDark = dark
             };
-            var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, HalfHeight - Inset), [percent], options);
+            var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, HalfHeight - Inset), [percent], options, cache);
             DrawGauge(canvas, hole, FormatPercent(percent), style.PrimaryTextColor.ToSKColor());
         });
 
-    public static byte[] Columns(double[] values, ChartBarGaugeMode mode, bool dark, float scale) =>
+    public static byte[] Columns(double[] values, ChartBarGaugeMode mode, bool dark, float scale, ChartDrawingCache cache) =>
         Render(Square, Square, scale, canvas =>
         {
             var options = new BarGaugeDrawOptions
@@ -85,15 +85,15 @@ internal static class DrawingWidgets
                 Color = GetStyle(dark).Palette[2].ToSKColor(),
                 IsDark = dark
             };
-            ChartDrawing.DrawBarGauge(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), values, options);
+            ChartDrawing.DrawBarGauge(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), values, options, cache);
         });
 
-    public static byte[] Goals(double[] values, double[] targets, ChartBarGaugeMode mode, bool dark, float scale) =>
+    public static byte[] Goals(double[] values, double[] targets, ChartBarGaugeMode mode, bool dark, float scale, ChartDrawingCache cache) =>
         Render(Wide, GoalsHeight, scale, canvas =>
         {
             var style = GetStyle(dark);
             var options = new BarGaugeDrawOptions { DisplayMode = mode, Spacing = BarSpacing, SegmentWidth = 10, Thresholds = GetThresholds(style), IsDark = dark };
-            ChartDrawing.DrawBarGauge(canvas, new SKRect(0, 0, Wide - ValueWidth, GoalsHeight), values, targets, options);
+            ChartDrawing.DrawBarGauge(canvas, new SKRect(0, 0, Wide - ValueWidth, GoalsHeight), values, targets, options, cache);
             using var typeface = CreateTypeface();
             using var font = CreateFont(typeface, LabelSize);
             using var paint = new SKPaint();
@@ -107,12 +107,12 @@ internal static class DrawingWidgets
             }
         });
 
-    public static byte[] Trend(double[] values, bool dark, float scale) =>
+    public static byte[] Trend(double[] values, bool dark, float scale, ChartDrawingCache cache) =>
         Render(Wide, TrendHeight, scale, canvas =>
         {
             var style = GetStyle(dark);
             var options = new SparklineDrawOptions { Kind = ChartSparklineKind.Area, Color = style.Palette[0].ToSKColor(), Smooth = true };
-            ChartDrawing.DrawSparkline(canvas, new SKRect(0, Inset, Wide - ValueWidth - 8, TrendHeight - Inset), values, options);
+            ChartDrawing.DrawSparkline(canvas, new SKRect(0, Inset, Wide - ValueWidth - 8, TrendHeight - Inset), values, options, cache);
             using var typeface = CreateTypeface();
             using var font = CreateFont(typeface, TrendSize);
             using var paint = new SKPaint();

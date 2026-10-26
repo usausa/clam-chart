@@ -184,10 +184,11 @@ Bind `Minimum` and `Maximum` of a `DateTimeAxis` to switch between a day, a week
 | **Data** | Lists of numbers, chart models or items of any type through typed accessors, collection and item changes, missing values, dense lines thinned for drawing (LTTB) |
 | **Interaction** | Taps, selection that dims the other elements, a long-press or touch trackball with a tooltip that snaps to the points or follows the finger, a crosshair or a tooltip shared by a group of charts, legend toggles for series and pie slices, legend tables sorted by a header tap, haptic feedback, touch pass-through for overlays |
 | **Animation** | Entrance, updates, streaming, selection and legend toggles, a loading shimmer, a pulsing live point and a critical alert, switchable per chart, for the whole app and by the system animation scale |
-| **Widgets** | Edge-to-edge sparklines for cards, overlay styles, a placeholder while loading, images of a chart (`RenderToImage`, `SaveAsPngAsync`), sparklines, radial bars and bar gauges drawn on any canvas and on any thread (`ChartDrawing`) and summaries for screen readers |
+| **Widgets** | Edge-to-edge sparklines for cards, overlay styles, a placeholder while loading, images of a chart (`RenderToImage`, `SaveAsPngAsync`), sparklines, radial bars and bar gauges drawn on any canvas and on any thread (`ChartDrawing`, with a `ChartDrawingCache` for callers that draw in every frame) and summaries for screen readers |
 | **Size** | Full, compact and minimal density chosen from the size; sparklines in lists, gauges and tiles draw without allocations of their own |
 | **Look** | Light, dark and overlay styles, Grafana and shade palettes, thresholds and annotations, transparent background and gaps, data labels and legend tables |
 | **Fonts** | Per character fallback to the `FallbackFonts` typefaces of SkiaExtension and system fonts, emoji sequences included |
+| **Performance** | Judged by the p95 of the draw time staying within 16 ms; fps is not used and no extra margin is added for slower devices |
 
 ## 📖 API
 

@@ -93,14 +93,18 @@ public sealed partial class ChartDrawingViewModel : ChartViewModelBase
         var ring = (ChartRadialBarMode)ModeIndex;
         var bar = (ChartBarGaugeMode)ModeIndex;
         var (storageValue, cpuValue, activityValues, goalValues, targetValues, columnValues, trendValues) = (storage, cpu, activity, goals, targets, columns, trend);
-        var images = await Task.Run(() => new[]
+        var images = await Task.Run(() =>
         {
-            DrawingWidgets.Storage(storageValue, ring, dark, scale),
-            DrawingWidgets.Activity(activityValues, ring, dark, scale),
-            DrawingWidgets.Cpu(cpuValue, ring, dark, scale),
-            DrawingWidgets.Columns(columnValues, bar, dark, scale),
-            DrawingWidgets.Goals(goalValues, targetValues, bar, dark, scale),
-            DrawingWidgets.Trend(trendValues, dark, scale)
+            using var cache = new ChartDrawingCache();
+            return new[]
+            {
+                DrawingWidgets.Storage(storageValue, ring, dark, scale, cache),
+                DrawingWidgets.Activity(activityValues, ring, dark, scale, cache),
+                DrawingWidgets.Cpu(cpuValue, ring, dark, scale, cache),
+                DrawingWidgets.Columns(columnValues, bar, dark, scale, cache),
+                DrawingWidgets.Goals(goalValues, targetValues, bar, dark, scale, cache),
+                DrawingWidgets.Trend(trendValues, dark, scale, cache)
+            };
         });
         if (current != version)
         {

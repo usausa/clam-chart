@@ -1207,6 +1207,7 @@ Draws on any `SKCanvas` without a view, for custom canvases, list cells, widgets
 | `DrawBarGauge(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, ReadOnlySpan<double> targets, in BarGaugeDrawOptions options)` | Also draws a target line at `targets[i]` on each bar; a missing or `NaN` target draws none, and the line stays inside `bounds` |
 
 Rings and bars look the same as the views in `Full` density, glow included. Values outside the range are clamped, and options that make no shape, such as a zero thickness, draw nothing instead of throwing.  
+Each method also has an overload with a `ChartDrawingCache?` after the options (see below), for callers that draw in every frame.  
 
 | `SparklineDrawOptions` | Type | Default | Description |
 |---|---|---|---|
@@ -1250,6 +1251,36 @@ Rings and bars look the same as the views in `Full` density, glow included. Valu
 | `IsDark` | `bool` | `false` | Uses the dark defaults for the palette, the track and the target line |
 
 `ChartDrawingThreshold(double Value, SKColor Color)` is a step of `Thresholds` with its color already chosen: `Value` is a percentage of the range as in `ChartThreshold`, and `Double.NegativeInfinity` makes the base step.  
+
+### ♻️ ChartDrawingCache
+
+Every method above has an overload that takes a `ChartDrawingCache?` as its last argument.  
+The cache holds the `SKPaint`, the `SKPathBuilder` and the blur of the glow between the calls, so a caller that draws in every frame, such as a cell painter of a grid, allocates far less; `null` works exactly like the overload without it.  
+⚠️ A cache is not thread safe and keeps native resources: give each thread its own, hold it as long as the drawings live and `Dispose` it.  
+
+| Call | Without a cache | With a cache |
+|---|---:|---:|
+| `DrawSparkline` `Line` | 256 B | 88 B |
+| `DrawSparkline` `Area` | 344 B | 176 B |
+| `DrawSparkline` `Bar` / `WinLoss` | 88 B | **0 B** |
+| `DrawBarGauge` `Basic` | 88 B | **0 B** |
+| `DrawBarGauge` `Segmented` / `Gradient` | 592 B | 504 B |
+| `DrawRadialBar` `Basic` / `Segmented` (glow included) | 88–280 B | **0 B** |
+| `DrawRadialBar` `Gradient` | 640 B | 552 B |
+
+The rest is the `SKPath` of a line, which `SKPathBuilder.Detach` always makes anew, and the gradients, whose colors follow the values.  
+
+```csharp
+private readonly ChartDrawingCache cache = new();
+
+column.CellPainter = (canvas, context) =>
+{
+    if (context.Value is double[] values)
+    {
+        ChartDrawing.DrawSparkline(canvas, context.Bounds, values, new SparklineDrawOptions(), cache);
+    }
+};
+```
 
 ## 🔧 ClamChartSettings
 

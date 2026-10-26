@@ -13,7 +13,10 @@ public static partial class ChartDrawing
 
     private static readonly SKColor DarkOtherColor = new(0x5C, 0x5B, 0x56);
 
-    public static SKRect DrawRadialBar(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in RadialBarDrawOptions options)
+    public static SKRect DrawRadialBar(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in RadialBarDrawOptions options) =>
+        DrawRadialBar(canvas, bounds, values, options, null);
+
+    public static SKRect DrawRadialBar(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in RadialBarDrawOptions options, ChartDrawingCache? cache)
     {
         var sweepAngle = Math.Min(options.SweepAngle, 360);
         if ((values.Length == 0) || (bounds.Width <= 0) || (bounds.Height <= 0) || !(sweepAngle > 0))
@@ -37,17 +40,18 @@ public static partial class ChartDrawing
         var segmented = options.DisplayMode == ChartRadialBarMode.Segmented;
         var wrap = (options.OverflowMode == ChartOverflowMode.Wrap) && !segmented;
         var ring = new Ring(startAngle, sweepAngle, fit.Radius, fit.Thickness, spacing, options.CapStyle, options.DisplayMode, options.SegmentCount, GetLength(options.SegmentGap), options.Minimum, Double.IsFinite(range) ? range : 0, wrap);
+        SKPaint? owned = null;
         canvas.Save();
         try
         {
             canvas.Translate((float)fit.CenterX, (float)fit.CenterY);
             if (options.BarGlow)
             {
-                DrawGlows(canvas, values, ring, fit, steps.AsSpan(0, stepCount), options);
+                DrawGlows(canvas, values, ring, fit, steps.AsSpan(0, stepCount), options, cache);
             }
 
-            using var paint = new SKPaint();
-            paint.IsAntialias = true;
+            owned = cache is null ? new SKPaint { IsAntialias = true } : null;
+            var paint = owned ?? cache!.RentPaint();
             for (var i = 0; i < values.Length; i++)
             {
                 DrawRing(canvas, ring, i, values[i], steps.AsSpan(0, stepCount), options, paint);
@@ -59,6 +63,7 @@ public static partial class ChartDrawing
         {
             canvas.Restore();
             ReturnSteps(steps);
+            owned?.Dispose();
         }
 
         return GetHole(fit.CenterX, fit.CenterY, ring.GetRadius(values.Length - 1) - (fit.Thickness / 2));
@@ -119,70 +124,79 @@ public static partial class ChartDrawing
         return new SKPoint((float)(x * radius), (float)(y * radius));
     }
 
-    private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, in RingFit fit, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options)
+    private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, in RingFit fit, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options, ChartDrawingCache? cache)
     {
         var segmented = ring.DisplayMode == ChartRadialBarMode.Segmented;
         var gradient = ring.DisplayMode == ChartRadialBarMode.Gradient;
         var round = ring.CapStyle == ChartCapStyle.Round;
-        using var filter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)RadialBarLayout.GetGlowSigma(ring.Thickness));
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
-        paint.Style = SKPaintStyle.Stroke;
-        paint.MaskFilter = filter;
-        paint.StrokeWidth = (float)ring.Thickness;
-        paint.StrokeCap = round && !gradient && !segmented ? SKStrokeCap.Round : SKStrokeCap.Butt;
-        for (var i = 0; i < values.Length; i++)
+        var sigma = (float)RadialBarLayout.GetGlowSigma(ring.Thickness);
+        var ownedFilter = cache is null ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null;
+        var ownedPaint = cache is null ? new SKPaint { IsAntialias = true } : null;
+        try
         {
-            var radius = (float)ring.GetRadius(i);
-            if (radius <= 0)
+            var paint = ownedPaint ?? cache!.RentGlowPaint();
+            paint.Style = SKPaintStyle.Stroke;
+            paint.MaskFilter = ownedFilter ?? cache!.RentBlur(sigma);
+            paint.StrokeWidth = (float)ring.Thickness;
+            paint.StrokeCap = round && !gradient && !segmented ? SKStrokeCap.Round : SKStrokeCap.Butt;
+            for (var i = 0; i < values.Length; i++)
             {
-                continue;
-            }
-
-            var (ratio, percent) = ring.GetRatio(values[i]);
-            var baseColor = GetRingColor(i, options);
-            if (segmented)
-            {
-                DrawSegments(canvas, ring, radius, ratio, baseColor, steps, options, paint, 1, true);
-                continue;
-            }
-
-            if (ratio <= RadialBarRenderer.Tolerance)
-            {
-                continue;
-            }
-
-            var drawn = Math.Min(ratio, 1);
-            if (gradient)
-            {
-                var (colors, positions) = GetRingStops(steps, ratio, baseColor, options.IsDark);
-                using (var shader = RadialBarRenderer.CreateGradient(colors, positions, ring.StartAngle, ring.SweepAngle))
+                var radius = (float)ring.GetRadius(i);
+                if (radius <= 0)
                 {
-                    paint.Shader = shader;
-                    paint.Color = SKColors.Black;
+                    continue;
+                }
+
+                var (ratio, percent) = ring.GetRatio(values[i]);
+                var baseColor = GetRingColor(i, options);
+                if (segmented)
+                {
+                    DrawSegments(canvas, ring, radius, ratio, baseColor, steps, options, paint, 1, true);
+                    continue;
+                }
+
+                if (ratio <= RadialBarRenderer.Tolerance)
+                {
+                    continue;
+                }
+
+                var drawn = Math.Min(ratio, 1);
+                if (gradient)
+                {
+                    var (colors, positions) = GetRingStops(steps, ratio, baseColor, options.IsDark);
+                    using (var shader = RadialBarRenderer.CreateGradient(colors, positions, ring.StartAngle, ring.SweepAngle))
+                    {
+                        paint.Shader = shader;
+                        paint.Color = SKColors.Black;
+                        DrawSweep(canvas, ring, radius, 0, drawn, paint);
+                        paint.Shader = null;
+                    }
+
+                    if (round)
+                    {
+                        var cap = (float)ring.Thickness / 2;
+                        paint.Style = SKPaintStyle.Fill;
+                        paint.Color = colors[0];
+                        canvas.DrawCircle(GetPoint(radius, ring.GetAngle(0)), cap, paint);
+                        paint.Color = RadialBarGradient.GetColorAt(colors, positions, drawn);
+                        canvas.DrawCircle(GetPoint(radius, ring.GetAngle(drawn)), cap, paint);
+                        paint.Style = SKPaintStyle.Stroke;
+                    }
+                }
+                else
+                {
+                    paint.Color = ThresholdSteps.GetColor(steps, percent, baseColor);
                     DrawSweep(canvas, ring, radius, 0, drawn, paint);
-                    paint.Shader = null;
                 }
+            }
 
-                if (round)
-                {
-                    var cap = (float)ring.Thickness / 2;
-                    paint.Style = SKPaintStyle.Fill;
-                    paint.Color = colors[0];
-                    canvas.DrawCircle(GetPoint(radius, ring.GetAngle(0)), cap, paint);
-                    paint.Color = RadialBarGradient.GetColorAt(colors, positions, drawn);
-                    canvas.DrawCircle(GetPoint(radius, ring.GetAngle(drawn)), cap, paint);
-                    paint.Style = SKPaintStyle.Stroke;
-                }
-            }
-            else
-            {
-                paint.Color = ThresholdSteps.GetColor(steps, percent, baseColor);
-                DrawSweep(canvas, ring, radius, 0, drawn, paint);
-            }
+            DrawThresholdMarkers(canvas, ring, fit, steps, options, paint);
         }
-
-        DrawThresholdMarkers(canvas, ring, fit, steps, options, paint);
+        finally
+        {
+            ownedPaint?.Dispose();
+            ownedFilter?.Dispose();
+        }
     }
 
     private static void DrawRing(SKCanvas canvas, in Ring ring, int index, double value, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options, SKPaint paint)

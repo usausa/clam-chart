@@ -25,7 +25,10 @@ public static partial class ChartDrawing
 
     private static readonly SKColor[] DarkPalette = ToColors(ChartPalettes.DefaultDark);
 
-    public static void DrawSparkline(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in SparklineDrawOptions options)
+    public static void DrawSparkline(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in SparklineDrawOptions options) =>
+        DrawSparkline(canvas, bounds, values, options, null);
+
+    public static void DrawSparkline(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in SparklineDrawOptions options, ChartDrawingCache? cache)
     {
         var (first, last, high, low) = Scan(values);
         if ((last < 0) || (bounds.Width <= 0) || (bounds.Height <= 0))
@@ -42,21 +45,28 @@ public static partial class ChartDrawing
         var inset = bars ? 0 : markers != ChartSparklineMarkers.None ? radius : thickness / 2;
         var plot = new SKRect(bounds.Left + inset, bounds.Top + inset, Math.Max(bounds.Left + inset, bounds.Right - inset), Math.Max(bounds.Top + inset, bounds.Bottom - inset));
         var scale = new Scale(plot, minimum, maximum, values.Length, bars);
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
-        if (bars)
+        var owned = cache is null ? new SKPaint { IsAntialias = true } : null;
+        try
         {
-            DrawBars(canvas, values, scale, kind == ChartSparklineKind.WinLoss, options, paint);
-            return;
-        }
+            var paint = owned ?? cache!.RentPaint();
+            if (bars)
+            {
+                DrawBars(canvas, values, scale, kind == ChartSparklineKind.WinLoss, options, paint);
+                return;
+            }
 
-        DrawLine(canvas, values, scale, thickness, options, paint);
-        paint.Style = SKPaintStyle.Fill;
-        paint.Color = options.Color;
-        DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.First) != 0 ? first : -1, radius, paint);
-        DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.Last) != 0 ? last : -1, radius, paint);
-        DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.High) != 0 ? high : -1, radius, paint);
-        DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.Low) != 0 ? low : -1, radius, paint);
+            DrawLine(canvas, values, scale, thickness, options, paint, cache);
+            paint.Style = SKPaintStyle.Fill;
+            paint.Color = options.Color;
+            DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.First) != 0 ? first : -1, radius, paint);
+            DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.Last) != 0 ? last : -1, radius, paint);
+            DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.High) != 0 ? high : -1, radius, paint);
+            DrawMarker(canvas, values, scale, (markers & ChartSparklineMarkers.Low) != 0 ? low : -1, radius, paint);
+        }
+        finally
+        {
+            owned?.Dispose();
+        }
     }
 
     private static (int First, int Last, int High, int Low) Scan(ReadOnlySpan<double> values)
@@ -120,13 +130,14 @@ public static partial class ChartDrawing
         return useMaximum is null ? (minimum, minimum + FlatRange) : (maximum - FlatRange, maximum);
     }
 
-    private static void DrawLine(SKCanvas canvas, ReadOnlySpan<double> values, Scale scale, float thickness, in SparklineDrawOptions options, SKPaint paint)
+    private static void DrawLine(SKCanvas canvas, ReadOnlySpan<double> values, Scale scale, float thickness, in SparklineDrawOptions options, SKPaint paint, ChartDrawingCache? cache)
     {
         var count = values.Length;
         var along = ArrayPool<float>.Shared.Rent(count);
         var across = ArrayPool<float>.Shared.Rent(count);
         var tangents = ArrayPool<float>.Shared.Rent(count);
-        using var builder = new SKPathBuilder();
+        var owned = cache is null ? new SKPathBuilder() : null;
+        var builder = owned ?? cache!.RentBuilder();
         try
         {
             for (var i = 0; i < count; i++)
@@ -165,6 +176,7 @@ public static partial class ChartDrawing
             ArrayPool<float>.Shared.Return(along);
             ArrayPool<float>.Shared.Return(across);
             ArrayPool<float>.Shared.Return(tangents);
+            owned?.Dispose();
         }
     }
 

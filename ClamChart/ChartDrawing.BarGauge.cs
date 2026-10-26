@@ -12,9 +12,15 @@ public static partial class ChartDrawing
     private static readonly SKColor DarkTargetColor = new(0xF0, 0xEF, 0xEC);
 
     public static void DrawBarGauge(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in BarGaugeDrawOptions options) =>
-        DrawBarGauge(canvas, bounds, values, default, options);
+        DrawBarGauge(canvas, bounds, values, default, options, null);
 
-    public static void DrawBarGauge(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, ReadOnlySpan<double> targets, in BarGaugeDrawOptions options)
+    public static void DrawBarGauge(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, in BarGaugeDrawOptions options, ChartDrawingCache? cache) =>
+        DrawBarGauge(canvas, bounds, values, default, options, cache);
+
+    public static void DrawBarGauge(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, ReadOnlySpan<double> targets, in BarGaugeDrawOptions options) =>
+        DrawBarGauge(canvas, bounds, values, targets, options, null);
+
+    public static void DrawBarGauge(SKCanvas canvas, SKRect bounds, ReadOnlySpan<double> values, ReadOnlySpan<double> targets, in BarGaugeDrawOptions options, ChartDrawingCache? cache)
     {
         var count = values.Length;
         var horizontal = options.Orientation == ChartOrientation.Horizontal;
@@ -32,8 +38,8 @@ public static partial class ChartDrawing
         var track = ChartColor.GetTrack(options.TrackColor, options.IsDark);
         var targetColor = options.IsDark ? DarkTargetColor : LightTargetColor;
         var steps = RentSteps(options.Thresholds, out var stepCount);
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
+        var owned = cache is null ? new SKPaint { IsAntialias = true } : null;
+        var paint = owned ?? cache!.RentPaint();
         paint.Style = SKPaintStyle.Fill;
         try
         {
@@ -68,6 +74,7 @@ public static partial class ChartDrawing
         finally
         {
             ReturnSteps(steps);
+            owned?.Dispose();
         }
     }
 
