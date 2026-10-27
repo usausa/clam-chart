@@ -4,7 +4,10 @@ namespace Example;
 
 using Android.App;
 using Android.Content.PM;
+using Android.Content.Res;
+using Android.Graphics.Drawables;
 using Android.OS;
+using Android.Util;
 
 using AndroidX.Activity;
 using AndroidX.Core.View;
@@ -21,17 +24,43 @@ public sealed class MainActivity : MauiAppCompatActivity
 {
     private BackPressedCallback? backPressedCallback;
 
+    private ColorDrawable? windowBackground;
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
 
-        if ((Window is { } window) && (window.DecorView is { } decorView) && (WindowCompat.GetInsetsController(window, decorView) is { } controller))
-        {
-            controller.AppearanceLightStatusBars = true;
-        }
+        UpdateSystemBars();
 
         backPressedCallback = new BackPressedCallback(this);
         OnBackPressedDispatcher.AddCallback(this, backPressedCallback);
+    }
+
+    public override void OnConfigurationChanged(Configuration newConfig)
+    {
+        base.OnConfigurationChanged(newConfig);
+
+        UpdateSystemBars();
+    }
+
+    private void UpdateSystemBars()
+    {
+        if ((Window is not { } window) ||
+            (window.DecorView is not { } decorView) ||
+            (WindowCompat.GetInsetsController(window, decorView) is not { } controller))
+        {
+            return;
+        }
+
+        controller.AppearanceLightStatusBars = (Resources?.Configuration?.UiMode & UiMode.NightMask) != UiMode.NightYes;
+
+        using var value = new TypedValue();
+        if (Theme?.ResolveAttribute(Android.Resource.Attribute.ColorBackground, value, true) ?? false)
+        {
+            windowBackground ??= new ColorDrawable();
+            windowBackground.Color = new Android.Graphics.Color(value.Data);
+            window.SetBackgroundDrawable(windowBackground);
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -40,6 +69,8 @@ public sealed class MainActivity : MauiAppCompatActivity
         {
             backPressedCallback?.Dispose();
             backPressedCallback = null;
+            windowBackground?.Dispose();
+            windowBackground = null;
         }
 
         base.Dispose(disposing);
