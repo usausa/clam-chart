@@ -26,8 +26,6 @@ internal sealed class StatRenderer : IDisposable
 
     private const float GradientEndLightness = 5;
 
-    private const float LightThemeFactor = -0.7f;
-
     private const double BrightTextThreshold = 180;
 
     private const double TransparentThreshold = 0.3;
@@ -49,7 +47,7 @@ internal sealed class StatRenderer : IDisposable
     private readonly SKPaint shaderPaint = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
     private readonly SKPaint maskPaint = new() { IsAntialias = true, Style = SKPaintStyle.Fill, BlendMode = SKBlendMode.DstIn };
     private SKShader? gradient;
-    private (SKColor Color, float Width, float Height, bool Dark) gradientKey;
+    private (SKColor Color, float Width, float Height, float Strength) gradientKey;
     private SKShader? fade;
     private SKRect fadeKey;
     private SKPath? iconPath;
@@ -83,11 +81,11 @@ internal sealed class StatRenderer : IDisposable
     public void Render(SKCanvas canvas, StatLayout layout, StatRenderState state, SparklineCore core, ChartStyle style)
     {
         var accent = (state.Fill ?? state.StateColor ?? state.SeriesColor).ToSKColor();
-        var gradientMode = state.ColorMode == ChartStatColorMode.BackgroundGradient;
-        var ink = GetInk(accent, style.IsDark);
+        var gradientMode = (state.ColorMode == ChartStatColorMode.Background) && (style.FillMode == ChartFillMode.Gradient);
+        var ink = GetInk(accent, state.AccentTextColor.ToSKColor());
         if (gradientMode)
         {
-            DrawGradient(canvas, layout.Bounds, accent, style.IsDark, state.Pulse);
+            DrawGradient(canvas, layout.Bounds, accent, state.GradientStrength, state.Pulse);
         }
         else if ((state.ColorMode == ChartStatColorMode.Background) && (state.StateColor is { } tint))
         {
@@ -133,11 +131,11 @@ internal sealed class StatRenderer : IDisposable
 
     private static SKRect ToRect(ChartRect bounds) => new((float)bounds.X, (float)bounds.Y, (float)bounds.Right, (float)bounds.Bottom);
 
-    private static SKColor GetInk(SKColor color, bool dark)
+    private static SKColor GetInk(SKColor color, SKColor accentText)
     {
         if (color.Alpha < TransparentThreshold * 255)
         {
-            return dark ? LightInk : DarkInk;
+            return accentText;
         }
 
         var brightness = ((color.Red * 299) + (color.Green * 587) + (color.Blue * 114)) / 1000d;
@@ -186,12 +184,12 @@ internal sealed class StatRenderer : IDisposable
         return GetBaseline(bounds, size) - (cap / 2);
     }
 
-    private void DrawGradient(SKCanvas canvas, ChartRect bounds, SKColor color, bool dark, double opacity)
+    private void DrawGradient(SKCanvas canvas, ChartRect bounds, SKColor color, double strength, double opacity)
     {
-        var key = (color, (float)bounds.Width, (float)bounds.Height, dark);
+        var key = (color, (float)bounds.Width, (float)bounds.Height, (float)strength);
         if ((gradient is null) || (gradientKey != key))
         {
-            var factor = dark ? 1 : LightThemeFactor;
+            var factor = (float)strength;
             var start = Shift(color, GradientHueShift, -GradientStartLightness * factor);
             var end = Shift(color, -GradientHueShift, -GradientEndLightness * factor);
             var (from, to) = GetGradientLine(bounds);

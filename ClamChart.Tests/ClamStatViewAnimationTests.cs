@@ -249,14 +249,14 @@ public sealed class ClamStatViewAnimationTests
     {
         canvas.Save();
         canvas.Scale(Scale);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            driver.Frame(Value, i * 0.2);
-            view.Render(canvas, 200, 120);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 1; i <= 4; i++)
+            {
+                driver.Frame(Value, i * 0.2);
+                view.Render(canvas, 200, 120);
+            }
+        });
         canvas.Restore();
         return allocated;
     }

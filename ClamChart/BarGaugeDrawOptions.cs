@@ -16,6 +16,8 @@ public readonly record struct BarGaugeDrawOptions
 
     public ChartBarGaugeMode DisplayMode { get; init; }
 
+    public ChartFillMode FillMode { get; init; }
+
     public float SegmentWidth { get; init; } = 12;
 
     public float SegmentGap { get; init; } = 2;

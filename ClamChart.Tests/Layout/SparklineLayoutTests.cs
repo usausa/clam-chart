@@ -225,7 +225,7 @@ public sealed class SparklineLayoutTests
     private static SparklineLayout Layout(double[] values, SparklineLayoutOptions? options = null, double width = 100, double height = 40)
     {
         var layout = new SparklineLayout();
-        layout.Update(width, height, new Thickness(0), new ChartStyle(), options ?? new SparklineLayoutOptions(), new SparklineValues(values, null));
+        layout.Update(width, height, new Thickness(0), options ?? new SparklineLayoutOptions(), new SparklineValues(values, null));
         return layout;
     }
 }

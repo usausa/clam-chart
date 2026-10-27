@@ -45,6 +45,9 @@ public partial class ClamRadialBarView : ChartViewBase
     public static readonly BindableProperty LegendVisibleProperty = BindableProperty.Create(nameof(LegendVisible), typeof(bool?), typeof(ClamRadialBarView), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendPositionProperty = BindableProperty.Create(nameof(LegendPosition), typeof(ChartLegendPosition), typeof(ClamRadialBarView), ChartLegendPosition.Right, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendValueModeProperty = BindableProperty.Create(nameof(LegendValueMode), typeof(ChartLegendValueMode), typeof(ClamRadialBarView), ChartLegendValueMode.None, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty ValueSelectorProperty = BindableProperty.Create(nameof(ValueSelector), typeof(Func<object, double?>), typeof(ClamRadialBarView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty LabelSelectorProperty = BindableProperty.Create(nameof(LabelSelector), typeof(Func<object, string>), typeof(ClamRadialBarView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ClamRadialBarView), propertyChanged: OnLayoutInputChanged);
 
     private readonly ChartDataSource source;
     private readonly ChartCollectionWatcher thresholdsWatcher;
@@ -240,32 +243,20 @@ public partial class ClamRadialBarView : ChartViewBase
 
     public Func<object, double?>? ValueSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(ValueSelectorProperty);
+        set => SetValue(ValueSelectorProperty, value);
     }
 
     public Func<object, string?>? LabelSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, string?>?)GetValue(LabelSelectorProperty);
+        set => SetValue(LabelSelectorProperty, value);
     }
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     internal RadialBarLayout ChartLayout { get; } = new();
@@ -348,7 +339,7 @@ public partial class ClamRadialBarView : ChartViewBase
     {
         var captured = PrepareTransition();
         var culture = Culture ?? CultureInfo.CurrentCulture;
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, EffectiveContentPadding, EffectiveStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
         CompleteTransition(captured);
     }
 
@@ -376,17 +367,17 @@ public partial class ClamRadialBarView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
         }
 
-        var palette = Palette ?? ChartStyle.Palette;
+        var palette = EffectiveStyle.Palette;
         ReportPaletteOverflow(palette);
         Interpolator.Easing = AnimationEasing;
         CenterCount.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, interaction, CenterCount, countedKey, new RadialBarRenderState(palette, Thresholds, TrackVisible), ChartStyle);
+        painter.Render(canvas, ChartLayout, Interpolator, interaction, CenterCount, countedKey, new RadialBarRenderState(palette, Thresholds, TrackVisible, UnlitColor, GradientShift), EffectiveStyle);
     }
 
     private static bool ValidateFinite(object? value, string name) =>
@@ -439,7 +430,7 @@ public partial class ClamRadialBarView : ChartViewBase
 
     private void OnThresholdsCollectionChanged(NotifyCollectionChangedEventArgs e) => InvalidateLayout();
 
-    private RadialBarRenderer EnsureRenderer() => renderer ??= new RadialBarRenderer(ChartStyle.FontFamily);
+    private RadialBarRenderer EnsureRenderer() => renderer ??= new RadialBarRenderer(EffectiveStyle.FontFamily);
 
     private RadialBarLayoutOptions CreateLayoutOptions(CultureInfo culture)
     {

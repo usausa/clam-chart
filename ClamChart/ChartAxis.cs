@@ -6,6 +6,10 @@ using ClamChart.Rendering;
 public abstract class ChartAxis : Element
 {
     public static readonly BindableProperty IsVisibleProperty = BindableProperty.Create(nameof(IsVisible), typeof(bool?), typeof(ChartAxis), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty LabelFontSizeProperty = BindableProperty.Create(nameof(LabelFontSize), typeof(double), typeof(ChartAxis), 11d, validateValue: static (_, value) => ValidatePositive(value, nameof(LabelFontSize)), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty LineColorProperty = BindableProperty.Create(nameof(LineColor), typeof(Color), typeof(ChartAxis), Color.FromArgb("#C3C2B7"), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty GridLineColorProperty = BindableProperty.Create(nameof(GridLineColor), typeof(Color), typeof(ChartAxis), Color.FromArgb("#E1E0D9"), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty GridLineThicknessProperty = BindableProperty.Create(nameof(GridLineThickness), typeof(double), typeof(ChartAxis), 0d, validateValue: static (_, value) => ChartSeries.ValidateSize(value, nameof(GridLineThickness)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty TitleProperty = BindableProperty.Create(nameof(Title), typeof(string), typeof(ChartAxis), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty TitleOrientationProperty = BindableProperty.Create(nameof(TitleOrientation), typeof(ChartOrientation), typeof(ChartAxis), ChartOrientation.Horizontal, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty LabelsVisibleProperty = BindableProperty.Create(nameof(LabelsVisible), typeof(bool), typeof(ChartAxis), true, propertyChanged: OnLayoutChanged);
@@ -88,6 +92,30 @@ public abstract class ChartAxis : Element
     {
     }
 
+    public double LabelFontSize
+    {
+        get => (double)GetValue(LabelFontSizeProperty);
+        set => SetValue(LabelFontSizeProperty, value);
+    }
+
+    public Color LineColor
+    {
+        get => (Color)GetValue(LineColorProperty);
+        set => SetValue(LineColorProperty, value);
+    }
+
+    public Color GridLineColor
+    {
+        get => (Color)GetValue(GridLineColorProperty);
+        set => SetValue(GridLineColorProperty, value);
+    }
+
+    public double GridLineThickness
+    {
+        get => (double)GetValue(GridLineThicknessProperty);
+        set => SetValue(GridLineThicknessProperty, value);
+    }
+
     internal abstract AxisLayoutOptions CreateOptions(AxisContext context);
 
     internal AxisLayoutOptions CreateCommonOptions(AxisContext context)
@@ -105,7 +133,11 @@ public abstract class ChartAxis : Element
             Position = Position,
             LabelFormat = Format,
             LabelConverter = LabelConverter,
-            GridLinesVisible = GridLinesVisible ?? (context.ValueAxis && visible)
+            GridLinesVisible = GridLinesVisible ?? (context.ValueAxis && visible),
+            LabelFontSize = LabelFontSize,
+            LineColor = LineColor,
+            GridLineColor = GridLineColor,
+            GridLineThickness = GridLineThickness
         };
     }
 

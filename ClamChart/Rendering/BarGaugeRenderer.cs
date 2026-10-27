@@ -80,19 +80,21 @@ internal sealed class BarGaugeRenderer : IDisposable
             var ratio = Double.IsNaN(row.Percent) ? Double.NaN : display.GetRatio(i);
             var bounds = layout.GetTrackBounds(slot);
             var baseColor = row.Color ?? state.BaseColor;
-            switch (layout.DisplayMode)
+            if (layout.DisplayMode == ChartBarGaugeMode.Segmented)
             {
-                case ChartBarGaugeMode.Segmented:
-                    DrawCells(canvas, layout, bounds, ratio, baseColor, state, style, alpha);
-                    break;
-                case ChartBarGaugeMode.Gradient:
-                    DrawTrack(canvas, layout, state, bounds, ratio, ChartColor.Fade(track, alpha));
+                DrawCells(canvas, layout, bounds, ratio, baseColor, state, style, alpha);
+            }
+            else
+            {
+                DrawTrack(canvas, layout, state, bounds, ratio, ChartColor.Fade(track, alpha));
+                if (style.FillMode == ChartFillMode.Gradient)
+                {
                     DrawGradient(canvas, layout, bounds, row, ratio, baseColor, state, style, alpha);
-                    break;
-                default:
-                    DrawTrack(canvas, layout, state, bounds, ratio, ChartColor.Fade(track, alpha));
+                }
+                else
+                {
                     DrawBasic(canvas, layout, bounds, ratio, GetColor(state, row.Percent, baseColor, style), alpha);
-                    break;
+                }
             }
 
             if (state.TargetVisible && Double.IsFinite(row.TargetRatio))

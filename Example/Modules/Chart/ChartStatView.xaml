@@ -27,6 +27,7 @@
                                        AlertAnimationEnabled="True"
                                        ColorMode="{Binding SalesColorMode}"
                                        ContentPadding="12" DeltaCaption="前月比"
+                                       FillMode="{Binding FillMode}"
                                        LayoutMode="{Binding LayoutMode}"
                                        PreviousValue="{Binding LastSales}"
                                        Thresholds="{Binding SalesThresholds}"
@@ -48,7 +49,7 @@
                 <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Cpu}"
-                                       AlertAnimationEnabled="True" ColorMode="BackgroundGradient"
+                                       AlertAnimationEnabled="True" ColorMode="Background" FillMode="Gradient"
                                        LayoutMode="{Binding LayoutMode}"
                                        Thresholds="{Binding CpuThresholds}"
                                        Title="CPU" TrendPlacement="Background"
@@ -58,9 +59,10 @@
                 <Border Grid.Row="2" Grid.Column="0"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Memory}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#A352CC,
                                                               Dark=#B877D9}"
+                                       FillMode="Gradient"
                                        LayoutMode="{Binding LayoutMode}"
                                        Title="メモリ" TrendPlacement="Background"
                                        TrendValues="{Binding MemoryTrend}"
@@ -69,9 +71,10 @@
                 <Border Grid.Row="2" Grid.Column="1"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Power}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#FF780A,
                                                               Dark=#FF9830}"
+                                       FillMode="Gradient"
                                        LayoutMode="{Binding LayoutMode}"
                                        Title="電力" TrendPlacement="Background"
                                        TrendValues="{Binding PowerTrend}"
@@ -212,7 +215,7 @@
                             </Button>
                         </Grid>
                         <Grid Style="{StaticResource SheetGrid}"
-                              ColumnDefinitions="*,*">
+                              ColumnDefinitions="*">
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectColorCommand}"
@@ -227,15 +230,34 @@
                                     </DataTrigger>
                                 </Button.Triggers>
                             </Button>
-                            <Button Grid.Column="1"
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="塗り" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
-                                    Command="{Binding SelectColorCommand}"
-                                    CommandParameter="{x:Static clam:ChartStatColorMode.BackgroundGradient}"
-                                    Text="背景グラデ">
+                                    Command="{Binding SelectFillModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartFillMode.Solid}"
+                                    Text="単色">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
-                                                 Value="{x:Static clam:ChartStatColorMode.BackgroundGradient}"
-                                                 Binding="{Binding SalesColorMode}">
+                                                 Value="{x:Static clam:ChartFillMode.Solid}"
+                                                 Binding="{Binding FillMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectFillModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartFillMode.Gradient}"
+                                    Text="グラデーション">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartFillMode.Gradient}"
+                                                 Binding="{Binding FillMode}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
                                     </DataTrigger>

@@ -150,7 +150,7 @@ internal sealed class RadialBarRenderer : IDisposable
                     continue;
                 }
 
-                if (layout.DisplayMode == ChartRadialBarMode.Gradient)
+                if (style.FillMode == ChartFillMode.Gradient)
                 {
                     DrawGradientBar(canvas, layout, row, radius, ratio, baseColor, state, style, alpha);
                 }
@@ -225,7 +225,7 @@ internal sealed class RadialBarRenderer : IDisposable
         var radius = (float)layout.MarkerRadius;
         paint.StrokeWidth = (float)layout.MarkerWidth;
         paint.StrokeCap = SKStrokeCap.Butt;
-        if (layout.DisplayMode == ChartRadialBarMode.Gradient)
+        if (style.FillMode == ChartFillMode.Gradient)
         {
             paint.Shader = GetGradient(layout, row, baseColor, state, style, out _);
             paint.Color = SKColors.Black.WithAlpha((byte)Math.Round(255 * alpha));
@@ -241,7 +241,7 @@ internal sealed class RadialBarRenderer : IDisposable
     private void DrawGlows(SKCanvas canvas, RadialBarLayout layout, GaugeInterpolator<RadialBarRow> display, PieSelection selection, RadialBarRenderState state, ChartStyle style, double entrance)
     {
         var segmented = layout.DisplayMode == ChartRadialBarMode.Segmented;
-        var gradient = layout.DisplayMode == ChartRadialBarMode.Gradient;
+        var gradient = style.FillMode == ChartFillMode.Gradient;
         var round = layout.CapStyle == ChartCapStyle.Round;
         glowPaint.MaskFilter = GetGlowFilter((float)RadialBarLayout.GetGlowSigma(layout.Thickness));
         glowPaint.StrokeWidth = (float)layout.Thickness;
@@ -368,7 +368,7 @@ internal sealed class RadialBarRenderer : IDisposable
 
         var (colors, positions) = thresholds
             ? RadialBarGradient.GetThresholdStops(CollectionsMarshal.AsSpan(steps), baseColor)
-            : RadialBarGradient.GetColorStops(baseColor, row.Ratio, style.IsDark);
+            : RadialBarGradient.GetColorStops(baseColor, row.Ratio, state.GradientShift);
         stops = new GradientStops(colors, positions);
         gradientStops[key] = stops;
         shader = CreateGradient(colors, positions, layout.StartAngle, layout.SweepAngle);
@@ -386,7 +386,7 @@ internal sealed class RadialBarRenderer : IDisposable
         var count = RadialBarLayout.GetSegmentCount(radius, thickness, layout.SweepAngle, layout.SegmentCount, layout.SegmentGap);
         var sweep = Math.Min(layout.SweepAngle, 360);
         var step = sweep / count;
-        var unlit = GetUnlitColor(style.TrackColor?.ToSKColor(), style.IsDark);
+        var unlit = state.UnlitColor.ToSKColor();
         var paint = glow ? glowPaint : paints.Stroke(SKColors.Black, (float)thickness, SKStrokeCap.Butt, SKStrokeJoin.Miter);
         var oval = GetOval(radius);
         for (var c = 0; c < count; c++)

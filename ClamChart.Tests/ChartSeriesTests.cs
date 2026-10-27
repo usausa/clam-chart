@@ -40,7 +40,6 @@ public sealed class ChartSeriesTests
         // Act & Assert
         Assert.Equal(CartesianSeries.DefaultBarWidthRatio, series.BarWidthRatio);
         Assert.False(series.TrackVisible);
-        Assert.Equal(ChartFillMode.Solid, series.FillMode);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = 0);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = 1.5);
         Assert.Throws<ArgumentOutOfRangeException>(() => series.BarWidthRatio = Double.NaN);
@@ -83,7 +82,7 @@ public sealed class ChartSeriesTests
 
         // Assert
         Assert.False(series.TrackVisible);
-        Assert.Null(series.CornerRadius);
+        Assert.Equal(0d, series.CornerRadius);
         Assert.Equal(ChartSeriesKind.RangeBar, input.Kind);
         Assert.Equal(0.8, input.BarWidthRatio);
         Assert.Equal(32, input.MaxBarWidth);

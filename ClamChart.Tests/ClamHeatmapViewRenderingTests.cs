@@ -62,7 +62,8 @@ public sealed class ClamHeatmapViewRenderingTests
     {
         // Arrange
         using var view = Strip(0, 100);
-        view.ChartStyle = ChartStyles.Dark;
+        view.ApplyStyle(ChartStyles.Dark);
+        view.ColorScale = ChartPalettes.OrangesDark;
 
         // Act
         using var bitmap = view.Paint(300, 100);
@@ -270,9 +271,10 @@ public sealed class ClamHeatmapViewRenderingTests
         canvas.Scale(Scale);
         view.Render(canvas, 300, 120);
         view.Render(canvas, 300, 120);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, 300, 120);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            view.Render(canvas, 300, 120);
+        });
         canvas.Restore();
         return allocated;
     }

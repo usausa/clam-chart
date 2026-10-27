@@ -246,14 +246,17 @@ public sealed class ClamRadarChartViewInputTests
         Render(view, surface.Canvas);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 10; i++)
+        var time = 20;
+        var allocated = ChartAllocation.Measure(() =>
         {
-            view.HandleTouch(1, SKTouchAction.Moved, new Point(layout.CenterX + 60 + i, layout.CenterY + (i % 3)), 20 + i);
-            Render(view, surface.Canvas);
-        }
+            for (var i = 0; i < 10; i++)
+            {
+                view.HandleTouch(1, SKTouchAction.Moved, new Point(layout.CenterX + 60 + i, layout.CenterY + (i % 3)), time + i);
+                Render(view, surface.Canvas);
+            }
 
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            time += 10;
+        });
 
         // Assert
         Assert.Equal(0, allocated);

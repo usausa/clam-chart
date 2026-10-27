@@ -12,33 +12,35 @@ public sealed class ChartDrawingBarGaugeTests
     private static readonly ChartStyle Style = new();
 
     [Theory]
-    [InlineData(ChartBarGaugeMode.Basic)]
-    [InlineData(ChartBarGaugeMode.Gradient)]
-    [InlineData(ChartBarGaugeMode.Segmented)]
-    public void BarsMatchTheView(ChartBarGaugeMode mode)
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Solid)]
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Gradient)]
+    [InlineData(ChartBarGaugeMode.Segmented, ChartFillMode.Solid)]
+    public void BarsMatchTheView(ChartBarGaugeMode mode, ChartFillMode fill)
     {
         // Arrange
         using var view = Gauge(new ChartEntry("A", 85), new ChartEntry("B", 40), new ChartEntry("C", Double.NaN));
         view.DisplayMode = mode;
+        view.FillMode = fill;
         AddThresholds(view.Thresholds);
 
         // Act & Assert
-        AssertSameAsView(view, 300, 48, [85, 40, Double.NaN], default, new BarGaugeDrawOptions { DisplayMode = mode, Thresholds = Thresholds() });
+        AssertSameAsView(view, 300, 48, [85, 40, Double.NaN], default, new BarGaugeDrawOptions { DisplayMode = mode, FillMode = fill, Thresholds = Thresholds() });
     }
 
     [Theory]
-    [InlineData(ChartBarGaugeMode.Basic)]
-    [InlineData(ChartBarGaugeMode.Gradient)]
-    [InlineData(ChartBarGaugeMode.Segmented)]
-    public void ColumnsMatchTheView(ChartBarGaugeMode mode)
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Solid)]
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Gradient)]
+    [InlineData(ChartBarGaugeMode.Segmented, ChartFillMode.Solid)]
+    public void ColumnsMatchTheView(ChartBarGaugeMode mode, ChartFillMode fill)
     {
         // Arrange
         using var view = Gauge(new ChartEntry("A", 70), new ChartEntry("B", 20), new ChartEntry("C", 100));
         view.Orientation = ChartOrientation.Vertical;
         view.DisplayMode = mode;
+        view.FillMode = fill;
 
         // Act & Assert
-        AssertSameAsView(view, 48, 200, [70, 20, 100], default, new BarGaugeDrawOptions { Orientation = ChartOrientation.Vertical, DisplayMode = mode });
+        AssertSameAsView(view, 48, 200, [70, 20, 100], default, new BarGaugeDrawOptions { Orientation = ChartOrientation.Vertical, DisplayMode = mode, FillMode = fill });
     }
 
     [Fact]
@@ -59,10 +61,10 @@ public sealed class ChartDrawingBarGaugeTests
     {
         // Arrange
         using var dark = Gauge(new ChartEntry("A", 60, Target: 80));
-        dark.ChartStyle = ChartStyles.Dark;
+        dark.ApplyStyle(ChartStyles.Dark);
         using var colored = Gauge(new ChartEntry("A", 60));
         colored.Color = Colors.Orange;
-        colored.ChartStyle = new ChartStyle { TrackColor = Colors.Red };
+        colored.ApplyStyle(new ChartStyle { TrackColor = Colors.Red });
         using var hidden = Gauge(new ChartEntry("A", 60));
         hidden.TrackVisible = false;
 

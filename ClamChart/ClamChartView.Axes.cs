@@ -134,7 +134,7 @@ public partial class ClamChartView
         {
             if (series is LineSeries { LiveIndicatorVisible: true } line)
             {
-                extent = Math.Max(extent, (line.MarkerSize ?? ChartStyle.MarkerSize) / 2 * LiveIndicator.ExtentRatio);
+                extent = Math.Max(extent, line.MarkerSize / 2 * LiveIndicator.ExtentRatio);
             }
         }
 

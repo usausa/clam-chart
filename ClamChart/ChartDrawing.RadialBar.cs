@@ -39,7 +39,7 @@ public static partial class ChartDrawing
         var range = options.Maximum - options.Minimum;
         var segmented = options.DisplayMode == ChartRadialBarMode.Segmented;
         var wrap = (options.OverflowMode == ChartOverflowMode.Wrap) && !segmented;
-        var ring = new Ring(startAngle, sweepAngle, fit.Radius, fit.Thickness, spacing, options.CapStyle, options.DisplayMode, options.SegmentCount, GetLength(options.SegmentGap), options.Minimum, Double.IsFinite(range) ? range : 0, wrap);
+        var ring = new Ring(startAngle, sweepAngle, fit.Radius, fit.Thickness, spacing, options.CapStyle, options.DisplayMode, options.FillMode, options.SegmentCount, GetLength(options.SegmentGap), options.Minimum, Double.IsFinite(range) ? range : 0, wrap);
         SKPaint? owned = null;
         canvas.Save();
         try
@@ -82,7 +82,7 @@ public static partial class ChartDrawing
         paint.StrokeWidth = (float)fit.MarkerWidth;
         paint.StrokeCap = SKStrokeCap.Butt;
         paint.StrokeJoin = SKStrokeJoin.Miter;
-        if (ring.DisplayMode == ChartRadialBarMode.Gradient)
+        if (ring.FillMode == ChartFillMode.Gradient)
         {
             var (colors, positions) = RadialBarGradient.GetThresholdStops(steps, baseColor);
             using var shader = RadialBarRenderer.CreateGradient(colors, positions, ring.StartAngle, ring.SweepAngle);
@@ -127,7 +127,7 @@ public static partial class ChartDrawing
     private static void DrawGlows(SKCanvas canvas, ReadOnlySpan<double> values, in Ring ring, in RingFit fit, ReadOnlySpan<ChartDrawingThreshold> steps, in RadialBarDrawOptions options, ChartDrawingCache? cache)
     {
         var segmented = ring.DisplayMode == ChartRadialBarMode.Segmented;
-        var gradient = ring.DisplayMode == ChartRadialBarMode.Gradient;
+        var gradient = ring.FillMode == ChartFillMode.Gradient;
         var round = ring.CapStyle == ChartCapStyle.Round;
         var sigma = (float)RadialBarLayout.GetGlowSigma(ring.Thickness);
         var ownedFilter = cache is null ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null;
@@ -225,7 +225,7 @@ public static partial class ChartDrawing
             return;
         }
 
-        if (ring.DisplayMode == ChartRadialBarMode.Gradient)
+        if (ring.FillMode == ChartFillMode.Gradient)
         {
             DrawGradientRing(canvas, ring, radius, ratio, baseColor, steps, options.IsDark, paint);
         }
@@ -335,7 +335,7 @@ public static partial class ChartDrawing
         canvas.DrawArc(GetOval(radius), (float)(ring.GetAngle(from) - 90), (float)sweep, false, paint);
     }
 
-    private readonly record struct Ring(double StartAngle, double SweepAngle, double Radius, double Thickness, double Spacing, ChartCapStyle CapStyle, ChartRadialBarMode DisplayMode, int SegmentCount, double SegmentGap, double Minimum, double Range, bool Wrap)
+    private readonly record struct Ring(double StartAngle, double SweepAngle, double Radius, double Thickness, double Spacing, ChartCapStyle CapStyle, ChartRadialBarMode DisplayMode, ChartFillMode FillMode, int SegmentCount, double SegmentGap, double Minimum, double Range, bool Wrap)
     {
         public bool IsFullCircle => SweepAngle >= 360;
 

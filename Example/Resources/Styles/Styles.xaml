@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                     xmlns:clam="clr-namespace:ClamChart;assembly=ClamChart" xmlns:cmc="clr-namespace:MauiComponents.Controls;assembly=MauiComponents.Controls">
@@ -411,8 +411,39 @@
     <!-- ================================================================================ -->
 
     <Style TargetType="clam:ChartViewBase"
-           ApplyToDerivedTypes="True">
-        <Setter Property="ChartStyle" Value="{AppThemeBinding Light={x:Static clam:ChartStyles.Light}, Dark={x:Static clam:ChartStyles.Dark}}" />
+           BasedOn="{StaticResource ClamChartTheme}"
+           ApplyToDerivedTypes="True" />
+
+    <Style TargetType="clam:ClamSparklineView"
+           BasedOn="{StaticResource ClamChartSparklineTheme}" />
+
+    <Style TargetType="clam:ClamHeatmapView"
+           BasedOn="{StaticResource ClamChartHeatmapTheme}" />
+
+    <Style TargetType="clam:ClamStatView"
+           BasedOn="{StaticResource ClamChartStatTheme}" />
+
+    <Style TargetType="clam:ClamRadarChartView"
+           BasedOn="{StaticResource ClamChartRadarTheme}" />
+
+    <Style TargetType="clam:ClamStateTimelineView"
+           BasedOn="{StaticResource ClamChartStateTimelineTheme}" />
+
+    <Style TargetType="clam:ClamRadialBarView"
+           BasedOn="{StaticResource ClamChartRadialBarTheme}" />
+
+    <Style x:Key="OverlayChart"
+           TargetType="clam:ClamSparklineView"
+           BasedOn="{StaticResource ClamChartOverlayTheme}" />
+
+    <Style x:Key="OverlayDarkChart"
+           TargetType="clam:ClamChartView"
+           BasedOn="{StaticResource ClamChartOverlayTheme}">
+        <Setter Property="PrimaryTextColor" Value="#F0EFEC" />
+        <Setter Property="SecondaryTextColor" Value="#C3C2B7" />
+        <Setter Property="MutedTextColor" Value="#898781" />
+        <Setter Property="TextHaloColor" Value="#CC000000" />
+        <Setter Property="Palette" Value="{x:Static clam:ChartPalettes.DefaultDark}" />
     </Style>
 
     <Style x:Key="ChartStack"

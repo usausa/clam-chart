@@ -95,7 +95,7 @@ public sealed class ClamStateTimelineViewAnimationTests
             AnimationDriver = new TestAnimationDriver(),
             AnimationEasing = Easing.Linear,
             ContentPadding = new Thickness(0),
-            ChartStyle = new ChartStyle { GridLineColor = Colors.Transparent },
+            SeparatorColor = Colors.Transparent,
             ShowValue = ChartVisibilityMode.Never,
             ValueAccessors = TestStateItem.Accessors,
             StartKey = "start",

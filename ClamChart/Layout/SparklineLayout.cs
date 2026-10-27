@@ -4,6 +4,8 @@ using ClamChart.Rendering;
 
 internal sealed class SparklineLayout
 {
+    public const double DefaultThickness = 2;
+
     public const double SmallHeight = 24;
 
     public const double SmallThickness = 1.5;
@@ -58,12 +60,12 @@ internal sealed class SparklineLayout
 
     public static double GetBase(SparklineScale scale) => Math.Clamp(0, scale.Minimum, scale.Maximum);
 
-    public void Update(double width, double height, Thickness padding, ChartStyle style, SparklineLayoutOptions options, SparklineValues values)
+    public void Update(double width, double height, Thickness padding, SparklineLayoutOptions options, SparklineValues values)
     {
         Bounds = new ChartRect(padding.Left, padding.Top, Math.Max(0, width - padding.HorizontalThickness), Math.Max(0, height - padding.VerticalThickness));
         Kind = options.Kind;
         Count = values.Count;
-        Thickness = (float)(options.Thickness ?? (height < SmallHeight ? SmallThickness : style.LineThickness));
+        Thickness = (float)(options.Thickness ?? (height < SmallHeight ? SmallThickness : DefaultThickness));
         Markers = IsBar ? ChartSparklineMarkers.None : options.Markers;
         MarkerRadius = Thickness * MarkerRatio;
         MarkerKnockout = Thickness * KnockoutRatio;

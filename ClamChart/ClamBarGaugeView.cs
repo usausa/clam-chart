@@ -43,6 +43,9 @@ public partial class ClamBarGaugeView : ChartViewBase
     public static readonly BindableProperty SortModeProperty = BindableProperty.Create(nameof(SortMode), typeof(ChartSortMode), typeof(ClamBarGaugeView), ChartSortMode.None, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty MaxItemsProperty = BindableProperty.Create(nameof(MaxItems), typeof(int?), typeof(ClamBarGaugeView), validateValue: static (_, value) => ValidateMaxItems(value, nameof(MaxItems)), propertyChanged: OnSizeInputChanged);
     public static readonly BindableProperty AutoHeightProperty = BindableProperty.Create(nameof(AutoHeight), typeof(bool), typeof(ClamBarGaugeView), true, propertyChanged: OnAutoHeightChanged);
+    public static readonly BindableProperty ValueSelectorProperty = BindableProperty.Create(nameof(ValueSelector), typeof(Func<object, double?>), typeof(ClamBarGaugeView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty LabelSelectorProperty = BindableProperty.Create(nameof(LabelSelector), typeof(Func<object, string>), typeof(ClamBarGaugeView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ClamBarGaugeView), propertyChanged: OnLayoutInputChanged);
 
     private readonly ChartDataSource source;
     private readonly ChartCollectionWatcher thresholdsWatcher;
@@ -224,32 +227,20 @@ public partial class ClamBarGaugeView : ChartViewBase
 
     public Func<object, double?>? ValueSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(ValueSelectorProperty);
+        set => SetValue(ValueSelectorProperty, value);
     }
 
     public Func<object, string?>? LabelSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, string?>?)GetValue(LabelSelectorProperty);
+        set => SetValue(LabelSelectorProperty, value);
     }
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     internal BarGaugeLayout ChartLayout { get; } = new();
@@ -303,7 +294,7 @@ public partial class ClamBarGaugeView : ChartViewBase
 
         var width = Double.IsFinite(widthConstraint) ? widthConstraint : Width;
         var padding = ContentPadding ?? GetDensityPadding(Density == ChartDensity.Auto ? ResolveWidthDensity(width) : Density);
-        var height = BarGaugeLayout.MeasureHeight(CollectionsMarshal.AsSpan(entries), ChartStyle, LabelPosition, ValueVisible, BarThickness, ItemSpacing, MaxItems, EnsureRenderer().Measurer);
+        var height = BarGaugeLayout.MeasureHeight(CollectionsMarshal.AsSpan(entries), EffectiveStyle, LabelPosition, ValueVisible, BarThickness, ItemSpacing, MaxItems, EnsureRenderer().Measurer);
         return new Size(size.Width, padding.VerticalThickness + height);
     }
 
@@ -361,7 +352,7 @@ public partial class ClamBarGaugeView : ChartViewBase
     {
         var captured = PrepareTransition();
         var culture = Culture ?? CultureInfo.CurrentCulture;
-        ChartLayout.Update(width, height, ResolvePadding(), ChartStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, ResolvePadding(), EffectiveStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
         CompleteTransition(captured);
     }
 
@@ -389,16 +380,16 @@ public partial class ClamBarGaugeView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
         }
 
-        var palette = Palette ?? ChartStyle.Palette;
-        var color = Color ?? (palette.Count > 0 ? palette[0] : ChartStyle.OtherColor);
+        var palette = EffectiveStyle.Palette;
+        var color = Color ?? (palette.Count > 0 ? palette[0] : EffectiveStyle.OtherColor);
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, new BarGaugeRenderState(color, Thresholds, TrackVisible, TargetVisible, ValueColorMode), ChartStyle);
+        painter.Render(canvas, ChartLayout, Interpolator, new BarGaugeRenderState(color, Thresholds, TrackVisible, TargetVisible, ValueColorMode), EffectiveStyle);
     }
 
     private static bool ValidateFinite(object? value, string name) =>
@@ -467,10 +458,10 @@ public partial class ClamBarGaugeView : ChartViewBase
         }
     }
 
-    private BarGaugeRenderer EnsureRenderer() => renderer ??= new BarGaugeRenderer(ChartStyle.FontFamily);
+    private BarGaugeRenderer EnsureRenderer() => renderer ??= new BarGaugeRenderer(EffectiveStyle.FontFamily);
 
     private ChartDensity ResolveWidthDensity(double width) =>
-        DensityResolver.Resolve(width, Double.PositiveInfinity, ChartStyle.CompactSize, ChartStyle.MinimalSize);
+        DensityResolver.Resolve(width, Double.PositiveInfinity, EffectiveStyle.CompactSize, EffectiveStyle.MinimalSize);
 
     private Thickness ResolvePadding() => EffectiveContentPadding;
 

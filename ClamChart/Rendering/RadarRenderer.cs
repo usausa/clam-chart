@@ -8,6 +8,8 @@ using SkiaSharp.Views.Maui;
 
 internal sealed class RadarRenderer : IDisposable
 {
+    private const float VertexMarkerSize = 8;
+
     private const double Tolerance = 1e-9;
 
     private const float SelectedMarkerStart = 0.6f;
@@ -46,7 +48,7 @@ internal sealed class RadarRenderer : IDisposable
         DrawGrid(canvas, style);
         ClearLevels(canvas, layout, display);
         DrawAxisLabels(canvas, layout, interaction.CategorySelection ? selected : -1, style);
-        DrawSeries(canvas, display, series, colors, new RadarSelection(previous, current, progress, style.DimmedOpacity), style);
+        DrawSeries(canvas, display, series, colors, new RadarSelection(previous, current, progress, style.DimmedOpacity));
         DrawLevels(canvas, layout, display, style);
         DrawTrackedAxis(canvas, layout, interaction, style);
         DrawMarkers(canvas, layout, display, series, colors, interaction, selected, (float)progress, style);
@@ -276,7 +278,7 @@ internal sealed class RadarRenderer : IDisposable
         }
     }
 
-    private void DrawSeries(SKCanvas canvas, RadarInterpolator display, IReadOnlyList<RadarSeries> series, IReadOnlyList<SKColor> colors, RadarSelection selection, ChartStyle style)
+    private void DrawSeries(SKCanvas canvas, RadarInterpolator display, IReadOnlyList<RadarSeries> series, IReadOnlyList<SKColor> colors, RadarSelection selection)
     {
         var entrance = display.EntranceAlpha;
         var clip = revealPath;
@@ -298,7 +300,7 @@ internal sealed class RadarRenderer : IDisposable
         for (var s = 0; (s < paths.Count) && (s < series.Count); s++)
         {
             var alpha = display.GetOpacity(s) * entrance * selection.Alpha(s);
-            var thickness = (float)(series[s].Thickness ?? style.LineThickness);
+            var thickness = (float)series[s].Thickness;
             if ((paths[s] is { } path) && (alpha > 0) && (thickness > 0))
             {
                 canvas.DrawPath(path, paints.Stroke(ChartColor.Fade(colors[s], alpha), thickness));
@@ -326,7 +328,7 @@ internal sealed class RadarRenderer : IDisposable
     private void DrawMarkers(SKCanvas canvas, RadarLayout layout, RadarInterpolator display, IReadOnlyList<RadarSeries> series, IReadOnlyList<SKColor> colors, RadarInteraction interaction, int selected, float progress, ChartStyle style)
     {
         var overlay = display.OverlayAlpha * display.EntranceAlpha;
-        var radius = (float)style.MarkerSize / 2;
+        var radius = VertexMarkerSize / 2;
         var knockout = (float)style.MarkerKnockout;
         if ((overlay <= 0) || (radius <= 0))
         {

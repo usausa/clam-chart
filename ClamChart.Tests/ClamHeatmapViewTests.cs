@@ -15,7 +15,7 @@ public sealed class ClamHeatmapViewTests
         Assert.Equal(ChartHeatmapLayoutMode.Matrix, view.LayoutMode);
         Assert.Null(view.Minimum);
         Assert.Null(view.Maximum);
-        Assert.Null(view.ColorScale);
+        Assert.Same(ChartPalettes.OrangesLight, view.ColorScale);
         Assert.Equal(1, view.CellGap);
         Assert.Null(view.LegendVisible);
         Assert.Equal(ChartLegendPosition.Bottom, view.LegendPosition);
@@ -38,7 +38,6 @@ public sealed class ClamHeatmapViewTests
         Assert.Throws<ArgumentOutOfRangeException>(() => view.Minimum = Double.NaN);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.ColorScale = [Colors.Red]);
         view.ColorScale = [Colors.White, Colors.Red];
-        view.ColorScale = null;
         view.CellGap = 0;
         Assert.Equal(0, view.CellGap);
     }

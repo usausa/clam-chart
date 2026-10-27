@@ -26,6 +26,8 @@ public readonly record struct RadialBarDrawOptions
 
     public ChartRadialBarMode DisplayMode { get; init; }
 
+    public ChartFillMode FillMode { get; init; }
+
     public int SegmentCount { get; init; } = 20;
 
     public float SegmentGap { get; init; } = 2;

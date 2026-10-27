@@ -46,6 +46,30 @@ public static class ChartPalettes
         Color.FromArgb("#B877D9")
     ]);
 
+    public static IReadOnlyList<Color> MaterialLight { get; } = Array.AsReadOnly<Color>(
+    [
+        Color.FromArgb("#2196F3"),
+        Color.FromArgb("#4CAF50"),
+        Color.FromArgb("#FFB300"),
+        Color.FromArgb("#E91E63"),
+        Color.FromArgb("#00BCD4"),
+        Color.FromArgb("#673AB7"),
+        Color.FromArgb("#FF5722"),
+        Color.FromArgb("#009688")
+    ]);
+
+    public static IReadOnlyList<Color> MaterialDark { get; } = Array.AsReadOnly<Color>(
+    [
+        Color.FromArgb("#64B5F6"),
+        Color.FromArgb("#81C784"),
+        Color.FromArgb("#FFD54F"),
+        Color.FromArgb("#F06292"),
+        Color.FromArgb("#4DD0E1"),
+        Color.FromArgb("#9575CD"),
+        Color.FromArgb("#FF8A65"),
+        Color.FromArgb("#4DB6AC")
+    ]);
+
     public static IReadOnlyList<Color> RedShadesLight { get; } = Array.AsReadOnly<Color>(
     [
         Color.FromArgb("#E02F44"),

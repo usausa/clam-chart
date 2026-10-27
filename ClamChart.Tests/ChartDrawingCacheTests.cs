@@ -24,11 +24,11 @@ public sealed class ChartDrawingCacheTests
         ["BarGauge"] = static (canvas, cache) => ChartDrawing.DrawBarGauge(canvas, Bounds, Gauges, new BarGaugeDrawOptions { Thresholds = Thresholds }, cache),
         ["BarGaugeTarget"] = static (canvas, cache) => ChartDrawing.DrawBarGauge(canvas, Bounds, Gauges, [50, 50, 50], new BarGaugeDrawOptions { Orientation = ChartOrientation.Vertical }, cache),
         ["BarGaugeSegmented"] = static (canvas, cache) => ChartDrawing.DrawBarGauge(canvas, Bounds, Gauges, new BarGaugeDrawOptions { DisplayMode = ChartBarGaugeMode.Segmented }, cache),
-        ["BarGaugeGradient"] = static (canvas, cache) => ChartDrawing.DrawBarGauge(canvas, Bounds, Gauges, new BarGaugeDrawOptions { DisplayMode = ChartBarGaugeMode.Gradient, Thresholds = Thresholds }, cache),
+        ["BarGaugeGradient"] = static (canvas, cache) => ChartDrawing.DrawBarGauge(canvas, Bounds, Gauges, new BarGaugeDrawOptions { FillMode = ChartFillMode.Gradient, Thresholds = Thresholds }, cache),
         ["RadialBar"] = static (canvas, cache) => ChartDrawing.DrawRadialBar(canvas, Bounds, Gauges, new RadialBarDrawOptions { CapStyle = ChartCapStyle.Round }, cache),
         ["RadialBarGlow"] = static (canvas, cache) => ChartDrawing.DrawRadialBar(canvas, Bounds, Gauges, new RadialBarDrawOptions { BarGlow = true, CapStyle = ChartCapStyle.Round }, cache),
         ["RadialBarSegmented"] = static (canvas, cache) => ChartDrawing.DrawRadialBar(canvas, Bounds, Gauges, new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Segmented, BarGlow = true }, cache),
-        ["RadialBarGradient"] = static (canvas, cache) => ChartDrawing.DrawRadialBar(canvas, Bounds, Gauges, new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Gradient, BarGlow = true, Thresholds = Thresholds, ThresholdMarkersVisible = true }, cache)
+        ["RadialBarGradient"] = static (canvas, cache) => ChartDrawing.DrawRadialBar(canvas, Bounds, Gauges, new RadialBarDrawOptions { FillMode = ChartFillMode.Gradient, BarGlow = true, Thresholds = Thresholds, ThresholdMarkersVisible = true }, cache)
     };
 
     private static SKRect Bounds => new(10, 10, Size - 10, Size - 10);
@@ -142,8 +142,6 @@ public sealed class ChartDrawingCacheTests
     {
         scenario(canvas, cache);
         scenario(canvas, cache);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        scenario(canvas, cache);
-        return GC.GetAllocatedBytesForCurrentThread() - before;
+        return ChartAllocation.Measure(() => scenario(canvas, cache));
     }
 }

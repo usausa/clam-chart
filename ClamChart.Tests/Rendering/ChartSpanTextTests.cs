@@ -70,9 +70,10 @@ public sealed class ChartSpanTextTests
         Draw(spans, painter, canvas);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        Draw(spans, painter, canvas);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            Draw(spans, painter, canvas);
+        });
 
         // Assert
         Assert.Equal(0, allocated);

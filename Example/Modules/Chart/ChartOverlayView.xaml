@@ -27,10 +27,8 @@
                         <TapGestureRecognizer Tapped="OnCardTapped" />
                     </Border.GestureRecognizers>
                     <Grid>
-                        <clam:ClamSparklineView AutomationProperties.IsInAccessibleTree="False"
-                                                ChartStyle="{AppThemeBinding Light={x:Static clam:ChartStyles.OverlayLight},
-                                                                             Dark={x:Static clam:ChartStyles.OverlayDark}}"
-                                                ContentPadding="0,56,0,0" EdgeToEdge="True"
+                        <clam:ClamSparklineView Style="{StaticResource OverlayChart}"
+                                                AutomationProperties.IsInAccessibleTree="False" ContentPadding="0,56,0,0" EdgeToEdge="True"
                                                 IsBusy="{Binding IsBusy}"
                                                 Kind="Area" Markers="None"
                                                 Values="{Binding Trend}" />
@@ -52,7 +50,7 @@
                         </LinearGradientBrush>
                     </Border.Background>
                     <clam:ClamChartView x:Name="OverlayChart"
-                                        ChartStyle="{x:Static clam:ChartStyles.OverlayDark}"
+                                        Style="{StaticResource OverlayDarkChart}"
                                         IsBusy="{Binding IsBusy}">
                         <clam:ClamChartView.XAxis>
                             <clam:NumericAxis LabelsVisible="False" NiceRange="False" />

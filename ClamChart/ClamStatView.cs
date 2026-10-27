@@ -34,6 +34,7 @@ public partial class ClamStatView : ChartViewBase
     public static readonly BindableProperty FillProperty = BindableProperty.Create(nameof(Fill), typeof(Color), typeof(ClamStatView), propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty LayoutModeProperty = BindableProperty.Create(nameof(LayoutMode), typeof(ChartStatLayoutMode), typeof(ClamStatView), ChartStatLayoutMode.Auto, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty AlertAnimationEnabledProperty = BindableProperty.Create(nameof(AlertAnimationEnabled), typeof(bool), typeof(ClamStatView), false, propertyChanged: OnRenderInputChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ClamStatView), propertyChanged: OnLayoutInputChanged);
 
     private const double TrendThickness = 1;
 
@@ -180,12 +181,8 @@ public partial class ClamStatView : ChartViewBase
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     internal StatLayout ChartLayout { get; } = new();
@@ -246,7 +243,7 @@ public partial class ClamStatView : ChartViewBase
         var colorMode = ColorMode;
         formatting = new ChartValueFormatting(ValueFormatter, ValueConverter, valueFormat, culture);
         var state = ThresholdResolver.Resolve(Thresholds, value);
-        stateColor = ThresholdResolver.GetColor(state, ChartStyle);
+        stateColor = ThresholdResolver.GetColor(state, EffectiveStyle);
         critical = finite && (state?.Level == ChartThresholdLevel.Critical);
         var options = summaryOptions = new StatLayoutOptions
         {
@@ -263,10 +260,10 @@ public partial class ClamStatView : ChartViewBase
             TrendPlacement = TrendPlacement,
             HasTrend = trend.Values.HasFinite()
         };
-        ChartLayout.Update(width, height, ResolvePadding(colorMode), ChartStyle, options, EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, ResolvePadding(colorMode), EffectiveStyle, options, EnsureRenderer().Measurer);
 
         var bounds = ChartLayout.TrendBounds;
-        trend.UpdateLayout(width, height, new Thickness(bounds.X, bounds.Y, Math.Max(0, width - bounds.Right), Math.Max(0, height - bounds.Bottom)), ChartStyle, new SparklineLayoutOptions { Kind = TrendKind, Thickness = TrendThickness, Markers = ChartSparklineMarkers.None });
+        trend.UpdateLayout(width, height, new Thickness(bounds.X, bounds.Y, Math.Max(0, width - bounds.Right), Math.Max(0, height - bounds.Bottom)), new SparklineLayoutOptions { Kind = TrendKind, Thickness = TrendThickness, Markers = ChartSparklineMarkers.None });
         var length = ResolveAnimationLength(AnimationDuration);
         trend.CompleteTransition(captured, ResolveTrendEntrance(), length);
         TryStartEntrance();
@@ -297,12 +294,12 @@ public partial class ClamStatView : ChartViewBase
     internal override void Render(SKCanvas canvas, float width, float height)
     {
         var painter = EnsureRenderer();
-        var palette = Palette ?? ChartStyle.Palette;
+        var palette = EffectiveStyle.Palette;
         CountUp.Easing = AnimationEasing;
         trend.Interpolator.Easing = AnimationEasing;
         var pulse = AlertAnimationEnabled && critical ? AlertPulse.GetOpacity(EffectPhase) : 1;
-        var state = new StatRenderState(ColorMode, stateColor, Fill, palette.Count > 0 ? palette[0] : ChartStyle.OtherColor, CountUp, formatting, !Double.IsFinite(Value), pulse);
-        painter.Render(canvas, ChartLayout, state, trend, ChartStyle);
+        var state = new StatRenderState(ColorMode, stateColor, Fill, palette.Count > 0 ? palette[0] : EffectiveStyle.OtherColor, CountUp, formatting, !Double.IsFinite(Value), AccentTextColor, GradientStrength, pulse);
+        painter.Render(canvas, ChartLayout, state, trend, EffectiveStyle);
     }
 
     private static bool ValidateFontSize(object? value, string name) =>
@@ -347,7 +344,7 @@ public partial class ClamStatView : ChartViewBase
 
     private void OnThresholdsCollectionChanged(NotifyCollectionChangedEventArgs e) => InvalidateLayout();
 
-    private StatRenderer EnsureRenderer() => renderer ??= new StatRenderer(ChartStyle.FontFamily);
+    private StatRenderer EnsureRenderer() => renderer ??= new StatRenderer(EffectiveStyle.FontFamily);
 
     private Thickness ResolvePadding(ChartStatColorMode colorMode) =>
         ContentPadding ?? (colorMode == ChartStatColorMode.None ? EffectiveContentPadding : new Thickness(StatLayout.CardPadding));

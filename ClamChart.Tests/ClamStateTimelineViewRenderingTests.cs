@@ -118,13 +118,13 @@ public sealed class ClamStateTimelineViewRenderingTests
         Render(view, surface.Canvas);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            Render(view, surface.Canvas);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 0; i < 4; i++)
+            {
+                Render(view, surface.Canvas);
+            }
+        });
 
         // Assert
         Assert.Equal(0, allocated);
@@ -137,7 +137,7 @@ public sealed class ClamStateTimelineViewRenderingTests
             AnimationDriver = new TestAnimationDriver(),
             EntranceAnimation = ChartEntranceAnimation.None,
             ContentPadding = new Thickness(0),
-            ChartStyle = new ChartStyle { GridLineColor = Colors.Transparent },
+            SeparatorColor = Colors.Transparent,
             ValueAccessors = TestStateItem.Accessors,
             RowKey = "server",
             StartKey = "start",

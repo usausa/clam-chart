@@ -4,12 +4,12 @@ using ClamChart.Layout;
 
 public sealed class RadarSeries : ChartSeries
 {
-    public static readonly BindableProperty ThicknessProperty = BindableProperty.Create(nameof(Thickness), typeof(double?), typeof(RadarSeries), validateValue: static (_, value) => ValidateSize(value, nameof(Thickness)), propertyChanged: OnRenderChanged);
+    public static readonly BindableProperty ThicknessProperty = BindableProperty.Create(nameof(Thickness), typeof(double), typeof(RadarSeries), 2d, validateValue: static (_, value) => ValidateSize(value, nameof(Thickness)), propertyChanged: OnRenderChanged);
     public static readonly BindableProperty FillOpacityProperty = BindableProperty.Create(nameof(FillOpacity), typeof(double), typeof(RadarSeries), 0.15, validateValue: static (_, value) => ValidateOpacity(value, nameof(FillOpacity)), propertyChanged: OnRenderChanged);
 
-    public double? Thickness
+    public double Thickness
     {
-        get => (double?)GetValue(ThicknessProperty);
+        get => (double)GetValue(ThicknessProperty);
         set => SetValue(ThicknessProperty, value);
     }
 

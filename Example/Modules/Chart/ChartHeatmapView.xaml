@@ -29,7 +29,6 @@
                            Text="曜日と時間帯のアクセス数" />
                     <clam:ClamHeatmapView Grid.Row="1"
                                           ItemsSource="{Binding Accesses}"
-                                          ColorScale="{Binding ColorScale}"
                                           ColumnKey="hour" ContentPadding="0"
                                           LegendPosition="{Binding LegendPosition}"
                                           RowKey="day" SelectionMode="Item" TrackballMode="Touch"
@@ -46,7 +45,7 @@
                            Text="日ごとの活動量" />
                     <clam:ClamHeatmapView Grid.Row="1"
                                           ItemsSource="{Binding Activities}"
-                                          ColorScale="{Binding ColorScale}"
+                                          ColorScale="{x:Static models:AppPalettes.BlueScale}"
                                           ContentPadding="0" LayoutMode="Calendar"
                                           LegendPosition="{Binding LegendPosition}"
                                           SelectionMode="Item" TrackballMode="Touch" />
@@ -91,20 +90,6 @@
                                     </DataTrigger>
                                 </Button.Triggers>
                             </Button>
-                        </Grid>
-                        <Label Style="{StaticResource SheetTitle}"
-                               Text="配色" />
-                        <Grid Style="{StaticResource SheetGrid}"
-                              ColumnDefinitions="*,*">
-                            <Grid Grid.Column="0"
-                                  ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0"
-                                       Style="{StaticResource SheetSwitchLabel}"
-                                       Text="青" />
-                                <Switch Grid.Column="1"
-                                        Style="{StaticResource SheetSwitch}"
-                                        IsToggled="{Binding BlueColorScale}" />
-                            </Grid>
                         </Grid>
                     </VerticalStackLayout>
                 </DataTemplate>

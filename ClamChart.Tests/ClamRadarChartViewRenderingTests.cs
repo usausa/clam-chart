@@ -265,9 +265,10 @@ public sealed class ClamRadarChartViewRenderingTests
         canvas.Scale(Scale);
         view.Render(canvas, 300, 300);
         view.Render(canvas, 300, 300);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, 300, 300);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            view.Render(canvas, 300, 300);
+        });
         canvas.Restore();
         return allocated;
     }

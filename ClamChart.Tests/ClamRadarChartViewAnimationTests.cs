@@ -229,18 +229,18 @@ public sealed class ClamRadarChartViewAnimationTests
         canvas.Save();
         canvas.Scale(Scale);
         view.Render(canvas, 300, 300);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            if (moving)
+            for (var i = 1; i <= 4; i++)
             {
-                driver.Frame(Data, i * 0.2);
+                if (moving)
+                {
+                    driver.Frame(Data, i * 0.2);
+                }
+
+                view.Render(canvas, 300, 300);
             }
-
-            view.Render(canvas, 300, 300);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        });
         canvas.Restore();
         return allocated;
     }

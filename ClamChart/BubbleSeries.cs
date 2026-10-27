@@ -13,6 +13,7 @@ public sealed class BubbleSeries : ScatterSeries
     public static readonly BindableProperty MinBubbleSizeProperty = BindableProperty.Create(nameof(MinBubbleSize), typeof(double), typeof(BubbleSeries), DefaultMinBubbleSize, validateValue: static (_, value) => ValidateSize(value, nameof(MinBubbleSize)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty MaxBubbleSizeProperty = BindableProperty.Create(nameof(MaxBubbleSize), typeof(double), typeof(BubbleSeries), DefaultMaxBubbleSize, validateValue: static (_, value) => ValidateSize(value, nameof(MaxBubbleSize)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty SizeIncludesZeroProperty = BindableProperty.Create(nameof(SizeIncludesZero), typeof(bool), typeof(BubbleSeries), true, propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty SizeSelectorProperty = BindableProperty.Create(nameof(SizeSelector), typeof(Func<object, double?>), typeof(BubbleSeries), propertyChanged: OnDataChanged);
 
     public string? SizeKey
     {
@@ -40,12 +41,8 @@ public sealed class BubbleSeries : ScatterSeries
 
     public Func<object, double?>? SizeSelector
     {
-        get;
-        set
-        {
-            field = value;
-            Owner?.InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(SizeSelectorProperty);
+        set => SetValue(SizeSelectorProperty, value);
     }
 
     internal override CartesianSeries CreateLayoutSeries() =>

@@ -28,22 +28,14 @@ public sealed partial class ChartPaletteViewModel : ChartViewModelBase
     ];
 
     [ObservableProperty]
-    public partial IReadOnlyList<Color>? Palette { get; set; } = AppPalettes.Material;
+    public partial ChartFillMode FillMode { get; set; }
 
-    public bool MaterialPalette
+    public IObserveCommand SelectFillModeCommand { get; }
+
+    public ChartPaletteViewModel()
     {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                RaisePropertyChanged(nameof(MaterialPalette));
-                Palette = value ? AppPalettes.Material : null;
-            }
-        }
+        SelectFillModeCommand = MakeDelegateCommand<ChartFillMode>(x => FillMode = x);
     }
-        = true;
 
     private static ServiceLoad[] CreateMonths()
     {

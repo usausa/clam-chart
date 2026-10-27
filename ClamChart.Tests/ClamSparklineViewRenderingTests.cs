@@ -277,7 +277,8 @@ public sealed class ClamSparklineViewRenderingTests
         dark.Markers = ChartSparklineMarkers.None;
         dark.Thickness = 3;
         dark.EmphasisMode = ChartSparklineEmphasis.Last;
-        dark.ChartStyle = ChartStyles.Dark;
+        dark.ApplyStyle(ChartStyles.Dark);
+        dark.EmphasisDimmedOpacity = ChartStyles.Dark.EmphasisDimmedOpacity;
 
         // Act
         using var lineBitmap = line.Paint(100, 40);
@@ -467,9 +468,7 @@ public sealed class ClamSparklineViewRenderingTests
         using var builder = new SKPathBuilder();
         Build(builder);
         Build(builder);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        Build(builder);
-        return GC.GetAllocatedBytesForCurrentThread() - before;
+        return ChartAllocation.Measure(() => Build(builder));
 
         static void Build(SKPathBuilder builder)
         {
@@ -485,9 +484,7 @@ public sealed class ClamSparklineViewRenderingTests
         canvas.Scale(Scale);
         view.Render(canvas, 120, 28);
         view.Render(canvas, 120, 28);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, 120, 28);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() => view.Render(canvas, 120, 28));
         canvas.Restore();
         return allocated;
     }

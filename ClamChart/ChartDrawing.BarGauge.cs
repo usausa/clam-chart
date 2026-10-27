@@ -50,19 +50,21 @@ public static partial class ChartDrawing
                     ? new SKRect(bounds.Left, bounds.Top + offset, bounds.Right, bounds.Top + offset + size)
                     : new SKRect(bounds.Left + offset, bounds.Top, bounds.Left + offset + size, bounds.Bottom);
                 var (ratio, percent) = gauge.GetRatio(values[i]);
-                switch (options.DisplayMode)
+                if (options.DisplayMode == ChartBarGaugeMode.Segmented)
                 {
-                    case ChartBarGaugeMode.Segmented:
-                        DrawCells(canvas, gauge, bar, ratio, baseColor, steps.AsSpan(0, stepCount), options, paint);
-                        break;
-                    case ChartBarGaugeMode.Gradient:
-                        DrawTrack(canvas, gauge, bar, ratio, options.TrackVisible ? track : SKColors.Transparent, paint);
+                    DrawCells(canvas, gauge, bar, ratio, baseColor, steps.AsSpan(0, stepCount), options, paint);
+                }
+                else
+                {
+                    DrawTrack(canvas, gauge, bar, ratio, options.TrackVisible ? track : SKColors.Transparent, paint);
+                    if (options.FillMode == ChartFillMode.Gradient)
+                    {
                         DrawGradientBar(canvas, gauge, bar, ratio, percent, baseColor, steps.AsSpan(0, stepCount), paint);
-                        break;
-                    default:
-                        DrawTrack(canvas, gauge, bar, ratio, options.TrackVisible ? track : SKColors.Transparent, paint);
+                    }
+                    else
+                    {
                         DrawBasicBar(canvas, gauge, bar, ratio, ThresholdSteps.GetColor(steps.AsSpan(0, stepCount), percent, baseColor), paint);
-                        break;
+                    }
                 }
 
                 if ((i < targets.Length) && Double.IsFinite(targets[i]) && (gauge.Range > 0))

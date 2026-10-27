@@ -14,31 +14,12 @@ public sealed partial class ChartHeatmapViewModel : ChartViewModelBase
 
     private static readonly string[] Days = ["月", "火", "水", "木", "金", "土", "日"];
 
-    private static readonly IReadOnlyList<Color> BlueScale = [Color.FromArgb("#1A3274D9"), Color.FromArgb("#3274D9")];
-
     public ObservableCollection<AccessCount> Accesses { get; } = [];
 
     public ObservableCollection<ChartTimePoint> Activities { get; } = [];
 
     [ObservableProperty]
     public partial ChartLegendPosition LegendPosition { get; set; } = ChartLegendPosition.Bottom;
-
-    [ObservableProperty]
-    public partial IReadOnlyList<Color>? ColorScale { get; set; }
-
-    public bool BlueColorScale
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                RaisePropertyChanged(nameof(BlueColorScale));
-                ColorScale = value ? BlueScale : null;
-            }
-        }
-    }
 
     public IObserveCommand SelectLegendCommand { get; }
 

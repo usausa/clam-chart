@@ -26,6 +26,7 @@
                         <clam:ClamBarGaugeView ItemsSource="{Binding Stores}"
                                                ContentPadding="0"
                                                DisplayMode="{Binding DisplayMode}"
+                                               FillMode="{Binding FillMode}"
                                                SortMode="{Binding SortMode}"
                                                Thresholds="{Binding AchievementThresholds}" />
                     </VerticalStackLayout>
@@ -35,7 +36,7 @@
                         <Label Style="{StaticResource PanelTitleLabel}"
                                Text="ストレージ" />
                         <clam:ClamBarGaugeView ItemsSource="{Binding Storages}"
-                                               BarThickness="16" ContentPadding="0" DisplayMode="Gradient" LabelPosition="Left"
+                                               BarThickness="16" ContentPadding="0" FillMode="Gradient" LabelPosition="Left"
                                                Thresholds="{Binding UsageThresholds}"
                                                ValueColorMode="Text" ValueMode="ValueOfMaximum" />
                     </VerticalStackLayout>
@@ -73,7 +74,7 @@
                         <Label Style="{StaticResource SheetTitle}"
                                Text="表示" />
                         <Grid Style="{StaticResource SheetGrid}"
-                              ColumnDefinitions="*,*,*">
+                              ColumnDefinitions="*,*">
                             <Button Grid.Column="0"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectDisplayModeCommand}"
@@ -91,26 +92,45 @@
                             <Button Grid.Column="1"
                                     Style="{StaticResource SheetButton}"
                                     Command="{Binding SelectDisplayModeCommand}"
-                                    CommandParameter="{x:Static clam:ChartBarGaugeMode.Gradient}"
-                                    Text="グラデーション">
-                                <Button.Triggers>
-                                    <DataTrigger TargetType="Button"
-                                                 Value="{x:Static clam:ChartBarGaugeMode.Gradient}"
-                                                 Binding="{Binding DisplayMode}">
-                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
-                                        <Setter Property="TextColor" Value="White" />
-                                    </DataTrigger>
-                                </Button.Triggers>
-                            </Button>
-                            <Button Grid.Column="2"
-                                    Style="{StaticResource SheetButton}"
-                                    Command="{Binding SelectDisplayModeCommand}"
                                     CommandParameter="{x:Static clam:ChartBarGaugeMode.Segmented}"
                                     Text="分割">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button"
                                                  Value="{x:Static clam:ChartBarGaugeMode.Segmented}"
                                                  Binding="{Binding DisplayMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                        <Label Style="{StaticResource SheetTitle}"
+                               Text="塗り" />
+                        <Grid Style="{StaticResource SheetGrid}"
+                              ColumnDefinitions="*,*">
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectFillModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartFillMode.Solid}"
+                                    Text="単色">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartFillMode.Solid}"
+                                                 Binding="{Binding FillMode}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SheetButton}"
+                                    Command="{Binding SelectFillModeCommand}"
+                                    CommandParameter="{x:Static clam:ChartFillMode.Gradient}"
+                                    Text="グラデーション">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Value="{x:Static clam:ChartFillMode.Gradient}"
+                                                 Binding="{Binding FillMode}">
                                         <Setter Property="BackgroundColor" Value="{StaticResource BlueDefault}" />
                                         <Setter Property="TextColor" Value="White" />
                                     </DataTrigger>

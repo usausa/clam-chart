@@ -23,7 +23,7 @@ internal static class ChartColor
         return (luminance + 0.05) / (DarkTextLuminance + 0.05) >= 1.05 / (luminance + 0.05) ? DarkText : SKColors.White;
     }
 
-    public static SKColor GetTrack(ChartStyle style) => GetTrack(style.TrackColor?.ToSKColor(), style.IsDark);
+    public static SKColor GetTrack(ChartStyle style) => style.TrackColor.ToSKColor();
 
     public static SKColor GetTrack(SKColor? color, bool dark) =>
         color ?? (dark ? new SKColor(255, 255, 255, TrackAlpha) : new SKColor(0, 0, 0, TrackAlpha));

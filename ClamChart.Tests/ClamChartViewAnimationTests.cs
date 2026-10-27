@@ -499,18 +499,18 @@ public sealed class ClamChartViewAnimationTests
     {
         canvas.Save();
         canvas.Scale(Scale);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            if (moving)
+            for (var i = 1; i <= 4; i++)
             {
-                driver.Frame(Data, i * 0.2);
+                if (moving)
+                {
+                    driver.Frame(Data, i * 0.2);
+                }
+
+                view.Render(canvas, 360, 240);
             }
-
-            view.Render(canvas, 360, 240);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        });
         canvas.Restore();
         return allocated;
     }

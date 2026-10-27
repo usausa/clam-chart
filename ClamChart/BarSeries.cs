@@ -4,23 +4,22 @@ using ClamChart.Layout;
 
 public sealed class BarSeries : ChartSeries
 {
-    public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(nameof(CornerRadius), typeof(double?), typeof(BarSeries), validateValue: static (_, value) => ValidateSize(value, nameof(CornerRadius)), propertyChanged: OnRenderChanged);
-    public static readonly BindableProperty MaxBarWidthProperty = BindableProperty.Create(nameof(MaxBarWidth), typeof(double?), typeof(BarSeries), validateValue: static (_, value) => ChartAxis.ValidatePositive(value, nameof(MaxBarWidth)), propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(nameof(CornerRadius), typeof(double), typeof(BarSeries), 0d, validateValue: static (_, value) => ValidateSize(value, nameof(CornerRadius)), propertyChanged: OnRenderChanged);
+    public static readonly BindableProperty MaxBarWidthProperty = BindableProperty.Create(nameof(MaxBarWidth), typeof(double), typeof(BarSeries), 24d, validateValue: static (_, value) => ChartAxis.ValidatePositive(value, nameof(MaxBarWidth)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty BarWidthRatioProperty = BindableProperty.Create(nameof(BarWidthRatio), typeof(double), typeof(BarSeries), CartesianSeries.DefaultBarWidthRatio, validateValue: static (_, value) => ValidateRatio(value, nameof(BarWidthRatio)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty StackGroupProperty = BindableProperty.Create(nameof(StackGroup), typeof(string), typeof(BarSeries), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty NegativeColorProperty = BindableProperty.Create(nameof(NegativeColor), typeof(Color), typeof(BarSeries), propertyChanged: OnRenderChanged);
     public static readonly BindableProperty TrackVisibleProperty = BindableProperty.Create(nameof(TrackVisible), typeof(bool), typeof(BarSeries), false, propertyChanged: OnRenderChanged);
-    public static readonly BindableProperty FillModeProperty = BindableProperty.Create(nameof(FillMode), typeof(ChartFillMode), typeof(BarSeries), ChartFillMode.Solid, propertyChanged: OnRenderChanged);
 
-    public double? CornerRadius
+    public double CornerRadius
     {
-        get => (double?)GetValue(CornerRadiusProperty);
+        get => (double)GetValue(CornerRadiusProperty);
         set => SetValue(CornerRadiusProperty, value);
     }
 
-    public double? MaxBarWidth
+    public double MaxBarWidth
     {
-        get => (double?)GetValue(MaxBarWidthProperty);
+        get => (double)GetValue(MaxBarWidthProperty);
         set => SetValue(MaxBarWidthProperty, value);
     }
 
@@ -46,12 +45,6 @@ public sealed class BarSeries : ChartSeries
     {
         get => (bool)GetValue(TrackVisibleProperty);
         set => SetValue(TrackVisibleProperty, value);
-    }
-
-    public ChartFillMode FillMode
-    {
-        get => (ChartFillMode)GetValue(FillModeProperty);
-        set => SetValue(FillModeProperty, value);
     }
 
     internal override ChartSeriesKind Kind => ChartSeriesKind.Bar;

@@ -108,7 +108,7 @@
                                                     Maximum="10000"
                                                     BarGlow="True" CapStyle="Round" CenterLabel="歩"
                                                     CenterText="{Binding StepText}"
-                                                    ContentPadding="0" DisplayMode="Gradient" />
+                                                    ContentPadding="0" FillMode="Gradient" />
                         </Grid>
                     </Border>
                     <Border Grid.Row="0" Grid.Column="1"
@@ -162,9 +162,10 @@
                     <Border Grid.Row="0"
                             Style="{StaticResource StatBorder}">
                         <clam:ClamStatView Value="{Binding Balance}"
-                                           ColorMode="BackgroundGradient" DeltaCaption="30 日前比"
+                                           ColorMode="Background" DeltaCaption="30 日前比"
                                            Fill="{AppThemeBinding Light=#A352CC,
                                                                   Dark=#B877D9}"
+                                           FillMode="Gradient"
                                            PreviousValue="{Binding LastBalance}"
                                            Title="残高" TrendPlacement="Background"
                                            TrendValues="{Binding BalanceTrend}"
@@ -178,14 +179,14 @@
                                    Style="{StaticResource PanelTitleLabel}"
                                    Text="残高の推移" />
                             <clam:ClamChartView Grid.Row="1"
-                                                ContentPadding="0" TrackballMode="LongPress">
+                                                ContentPadding="0" FillMode="Gradient" TrackballMode="LongPress">
                                 <clam:ClamChartView.YAxis>
                                     <clam:NumericAxis IncludeZero="False" />
                                 </clam:ClamChartView.YAxis>
                                 <clam:AreaSeries ItemsSource="{Binding Balances}"
                                                  Color="{AppThemeBinding Light=#A352CC,
                                                                          Dark=#B877D9}"
-                                                 FillMode="Gradient" MarkerMode="None" Title="残高" ValueFormat="{}{0:N0} 円" />
+                                                 MarkerMode="None" Title="残高" ValueFormat="{}{0:N0} 円" />
                             </clam:ClamChartView>
                         </Grid>
                     </Border>
@@ -197,12 +198,12 @@
                                    Style="{StaticResource PanelTitleLabel}"
                                    Text="週ごとの支出" />
                             <clam:ClamChartView Grid.Row="1"
-                                                ContentPadding="0" DataLabelsMode="All">
+                                                ContentPadding="0" DataLabelsMode="All" FillMode="Gradient">
                                 <clam:ClamChartView.YAxis>
                                     <clam:NumericAxis GridLinesVisible="False" LabelsVisible="False" />
                                 </clam:ClamChartView.YAxis>
                                 <clam:BarSeries ItemsSource="{Binding Weeks}"
-                                                FillMode="Gradient" Title="支出" TrackVisible="True" ValueFormat="{}{0:N0} 円" />
+                                                Title="支出" TrackVisible="True" ValueFormat="{}{0:N0} 円" />
                             </clam:ClamChartView>
                         </Grid>
                     </Border>

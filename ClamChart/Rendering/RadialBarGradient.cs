@@ -50,9 +50,13 @@ internal static class RadialBarGradient
         return (colors[..count].ToArray(), positions[..count].ToArray());
     }
 
-    public static (SKColor[] Colors, float[] Positions) GetColorStops(SKColor color, double ratio, bool dark)
+    public static (SKColor[] Colors, float[] Positions) GetColorStops(SKColor color, double ratio, bool dark) =>
+        GetColorStops(color, ratio, dark ? -DarkDarken : LightDarken);
+
+    public static (SKColor[] Colors, float[] Positions) GetColorStops(SKColor color, double ratio, double shift)
     {
-        var darker = Shift(color, -Spin, 0, dark ? -DarkDarken : -LightDarken);
+        var dark = shift < 0;
+        var darker = Shift(color, -Spin, 0, -(float)Math.Abs(shift));
         var lighter = Shift(AddBrightness(Shift(color, Spin, Saturate, 0), Brighten), 0, 0, Lighten);
         var value = (float)Math.Clamp(ratio, 0, 1);
         var start = dark ? ChartColor.Lerp(darker, lighter, 1 - value) : lighter;

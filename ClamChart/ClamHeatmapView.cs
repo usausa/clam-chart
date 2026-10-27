@@ -22,12 +22,15 @@ public partial class ClamHeatmapView : ChartViewBase
     public static readonly BindableProperty LayoutModeProperty = BindableProperty.Create(nameof(LayoutMode), typeof(ChartHeatmapLayoutMode), typeof(ClamHeatmapView), ChartHeatmapLayoutMode.Matrix, propertyChanged: OnDataPropertyChanged);
     public static readonly BindableProperty MinimumProperty = BindableProperty.Create(nameof(Minimum), typeof(double?), typeof(ClamHeatmapView), validateValue: static (_, value) => ChartAxis.ValidateFinite(value, nameof(Minimum)), propertyChanged: OnBoundsChanged);
     public static readonly BindableProperty MaximumProperty = BindableProperty.Create(nameof(Maximum), typeof(double?), typeof(ClamHeatmapView), validateValue: static (_, value) => ChartAxis.ValidateFinite(value, nameof(Maximum)), propertyChanged: OnBoundsChanged);
-    public static readonly BindableProperty ColorScaleProperty = BindableProperty.Create(nameof(ColorScale), typeof(IReadOnlyList<Color>), typeof(ClamHeatmapView), validateValue: static (_, value) => ValidateColorScale(value, nameof(ColorScale)), propertyChanged: OnRenderInputChanged);
+    public static readonly BindableProperty ColorScaleProperty = BindableProperty.Create(nameof(ColorScale), typeof(IReadOnlyList<Color>), typeof(ClamHeatmapView), ChartPalettes.OrangesLight, validateValue: static (_, value) => ValidateColorScale(value, nameof(ColorScale)), propertyChanged: OnStyleRenderChanged);
     public static readonly BindableProperty CellGapProperty = BindableProperty.Create(nameof(CellGap), typeof(double), typeof(ClamHeatmapView), 1d, validateValue: static (_, value) => ChartSeries.ValidateSize(value, nameof(CellGap)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendVisibleProperty = BindableProperty.Create(nameof(LegendVisible), typeof(bool?), typeof(ClamHeatmapView), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LegendPositionProperty = BindableProperty.Create(nameof(LegendPosition), typeof(ChartLegendPosition), typeof(ClamHeatmapView), ChartLegendPosition.Bottom, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty ValueFormatProperty = BindableProperty.Create(nameof(ValueFormat), typeof(string), typeof(ClamHeatmapView), propertyChanged: OnValueFormatChanged);
     public static readonly BindableProperty ValueConverterProperty = BindableProperty.Create(nameof(ValueConverter), typeof(IValueConverter), typeof(ClamHeatmapView), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty RowSelectorProperty = BindableProperty.Create(nameof(RowSelector), typeof(Func<object, string>), typeof(ClamHeatmapView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty ValueSelectorProperty = BindableProperty.Create(nameof(ValueSelector), typeof(Func<object, double?>), typeof(ClamHeatmapView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ClamHeatmapView), propertyChanged: OnLayoutInputChanged);
 
     private readonly ChartDataSource source;
     private readonly HeatmapInteraction interaction = new();
@@ -98,9 +101,9 @@ public partial class ClamHeatmapView : ChartViewBase
         set => SetValue(MaximumProperty, value);
     }
 
-    public IReadOnlyList<Color>? ColorScale
+    public IReadOnlyList<Color> ColorScale
     {
-        get => (IReadOnlyList<Color>?)GetValue(ColorScaleProperty);
+        get => (IReadOnlyList<Color>)GetValue(ColorScaleProperty);
         set => SetValue(ColorScaleProperty, value);
     }
 
@@ -136,32 +139,20 @@ public partial class ClamHeatmapView : ChartViewBase
 
     public Func<object, string?>? RowSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, string?>?)GetValue(RowSelectorProperty);
+        set => SetValue(RowSelectorProperty, value);
     }
 
     public Func<object, double?>? ValueSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(ValueSelectorProperty);
+        set => SetValue(ValueSelectorProperty, value);
     }
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     internal HeatmapLayout ChartLayout { get; } = new();
@@ -240,7 +231,7 @@ public partial class ClamHeatmapView : ChartViewBase
     {
         var captured = PrepareTransition();
         var culture = Culture ?? CultureInfo.CurrentCulture;
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, CreateLayoutOptions(culture), snapshot, EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, EffectiveContentPadding, EffectiveStyle, culture, CreateLayoutOptions(culture), snapshot, EnsureRenderer().Measurer);
         ReportProblems();
         CompleteTransition(captured);
         RefreshTracking();
@@ -253,7 +244,7 @@ public partial class ClamHeatmapView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
@@ -261,7 +252,7 @@ public partial class ClamHeatmapView : ChartViewBase
 
         interaction.TooltipVisible = TooltipVisible;
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, ColorScale ?? ChartStyle.HeatmapColorScale, interaction, ChartStyle, width, height);
+        painter.Render(canvas, ChartLayout, Interpolator, EffectiveStyle.HeatmapColorScale, interaction, EffectiveStyle, width, height);
     }
 
     internal override string? CreateAutomationSummary(ChartSummaryText text)
@@ -332,7 +323,7 @@ public partial class ClamHeatmapView : ChartViewBase
         view.InvalidateLayout();
     }
 
-    private HeatmapRenderer EnsureRenderer() => renderer ??= new HeatmapRenderer(ChartStyle.FontFamily);
+    private HeatmapRenderer EnsureRenderer() => renderer ??= new HeatmapRenderer(EffectiveStyle.FontFamily);
 
     private HeatmapLayoutOptions CreateLayoutOptions(CultureInfo culture)
     {

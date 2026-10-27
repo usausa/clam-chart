@@ -23,7 +23,7 @@
                 <Border Grid.Row="0"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Cpu}"
-                                       AlertAnimationEnabled="True" ColorMode="BackgroundGradient"
+                                       AlertAnimationEnabled="True" ColorMode="Background" FillMode="Gradient"
                                        Thresholds="{Binding CpuThresholds}"
                                        Title="CPU" TrendPlacement="Background"
                                        TrendValues="{Binding CpuTrend}"
@@ -32,20 +32,20 @@
                 <Border Grid.Row="1"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Memory}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#3274D9,
                                                               Dark=#5794F2}"
-                                       Title="メモリ" TrendPlacement="Background"
+                                       FillMode="Gradient" Title="メモリ" TrendPlacement="Background"
                                        TrendValues="{Binding MemoryTrend}"
                                        Unit="MB" ValueFormat="N0" />
                 </Border>
                 <Border Grid.Row="2"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Connections}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#A352CC,
                                                               Dark=#B877D9}"
-                                       Title="接続数" TrendPlacement="Background"
+                                       FillMode="Gradient" Title="接続数" TrendPlacement="Background"
                                        TrendValues="{Binding ConnectionTrend}"
                                        ValueFormat="N0" />
                 </Border>

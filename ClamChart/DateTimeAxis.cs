@@ -10,6 +10,7 @@ public sealed class DateTimeAxis : ChartAxis
     public static readonly BindableProperty IntervalTypeProperty = BindableProperty.Create(nameof(IntervalType), typeof(ChartDateTimeIntervalType), typeof(DateTimeAxis), ChartDateTimeIntervalType.Auto, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty IntervalProperty = BindableProperty.Create(nameof(Interval), typeof(double?), typeof(DateTimeAxis), validateValue: static (_, value) => ValidatePositive(value, nameof(Interval)), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty WindowSizeProperty = BindableProperty.Create(nameof(WindowSize), typeof(TimeSpan?), typeof(DateTimeAxis), validateValue: static (_, value) => ValidateWindowSize(value, nameof(WindowSize)), propertyChanged: OnBoundsChanged);
+    public static readonly BindableProperty LabelFormatterProperty = BindableProperty.Create(nameof(LabelFormatter), typeof(Func<DateTime, string>), typeof(DateTimeAxis), propertyChanged: OnLabelFormatterChanged);
 
     private Func<double, string>? tickFormatter;
 
@@ -45,13 +46,8 @@ public sealed class DateTimeAxis : ChartAxis
 
     public Func<DateTime, string>? LabelFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            tickFormatter = value is null ? null : ticks => value(ChartDateTime.FromTicks(ticks));
-            Owner?.InvalidateLayout();
-        }
+        get => (Func<DateTime, string>?)GetValue(LabelFormatterProperty);
+        set => SetValue(LabelFormatterProperty, value);
     }
 
     internal override ChartAxisKind Kind => ChartAxisKind.DateTime;
@@ -73,4 +69,12 @@ public sealed class DateTimeAxis : ChartAxis
 
     private static void OnBoundsChanged(BindableObject bindable, object oldValue, object newValue) =>
         ((ChartAxis)bindable).ResetBounds();
+
+    private static void OnLabelFormatterChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var axis = (DateTimeAxis)bindable;
+        var formatter = (Func<DateTime, string>?)newValue;
+        axis.tickFormatter = formatter is null ? null : ticks => formatter(ChartDateTime.FromTicks(ticks));
+        axis.Owner?.InvalidateLayout();
+    }
 }

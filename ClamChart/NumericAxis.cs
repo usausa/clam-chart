@@ -12,6 +12,7 @@ public sealed class NumericAxis : ChartAxis
     public static readonly BindableProperty IncludeZeroProperty = BindableProperty.Create(nameof(IncludeZero), typeof(bool?), typeof(NumericAxis), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty NiceRangeProperty = BindableProperty.Create(nameof(NiceRange), typeof(bool), typeof(NumericAxis), true, propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty TickAlignmentProperty = BindableProperty.Create(nameof(TickAlignment), typeof(ChartTickAlignment), typeof(NumericAxis), ChartTickAlignment.AlignToPrimary, propertyChanged: OnLayoutChanged);
+    public static readonly BindableProperty LabelFormatterProperty = BindableProperty.Create(nameof(LabelFormatter), typeof(Func<double, string>), typeof(NumericAxis), propertyChanged: OnLayoutChanged);
 
     public double? Minimum
     {
@@ -63,12 +64,8 @@ public sealed class NumericAxis : ChartAxis
 
     public Func<double, string>? LabelFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            Owner?.InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(LabelFormatterProperty);
+        set => SetValue(LabelFormatterProperty, value);
     }
 
     internal override ChartAxisKind Kind => ChartAxisKind.Numeric;

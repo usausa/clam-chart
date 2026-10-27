@@ -15,6 +15,7 @@ public partial class ClamChartView
     public static readonly BindableProperty TrackedItemProperty = BindableProperty.Create(nameof(TrackedItem), typeof(object), typeof(ClamChartView), defaultBindingMode: BindingMode.OneWayToSource);
     public static readonly BindableProperty TrackedIndexProperty = BindableProperty.Create(nameof(TrackedIndex), typeof(int), typeof(ClamChartView), -1, BindingMode.OneWayToSource);
     public static readonly BindableProperty TrackingChangedCommandProperty = BindableProperty.Create(nameof(TrackingChangedCommand), typeof(ICommand), typeof(ClamChartView));
+    public static readonly BindableProperty TooltipFormatterProperty = BindableProperty.Create(nameof(TooltipFormatter), typeof(Func<ChartTrackingInfo, string>), typeof(ClamChartView), propertyChanged: OnTooltipFormatterChanged);
 
     private readonly Dictionary<long, string> trackingTexts = [];
     private readonly Dictionary<double, string> trackingHeaders = [];
@@ -63,14 +64,8 @@ public partial class ClamChartView
 
     public Func<ChartTrackingInfo, string>? TooltipFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            trackingTexts.Clear();
-            UpdateTrackingTexts();
-            InvalidateRender();
-        }
+        get => (Func<ChartTrackingInfo, string>?)GetValue(TooltipFormatterProperty);
+        set => SetValue(TooltipFormatterProperty, value);
     }
 
     internal override ChartTrackballMode InputTrackballMode => EffectiveDensity == ChartDensity.Minimal ? ChartTrackballMode.None : TrackballMode;
@@ -140,6 +135,14 @@ public partial class ClamChartView
     private static void OnTooltipVisibleChanged(BindableObject bindable, object oldValue, object newValue)
     {
         var view = (ClamChartView)bindable;
+        view.UpdateTrackingTexts();
+        view.InvalidateRender();
+    }
+
+    private static void OnTooltipFormatterChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (ClamChartView)bindable;
+        view.trackingTexts.Clear();
         view.UpdateTrackingTexts();
         view.InvalidateRender();
     }

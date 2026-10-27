@@ -40,7 +40,7 @@ public sealed class ClamBarGaugeViewRenderingTests
         using var hidden = Gauge(new ChartEntry("A", 50));
         hidden.TrackVisible = false;
         using var colored = Gauge(new ChartEntry("A", 50));
-        colored.ChartStyle = new ChartStyle { TrackColor = Colors.Red };
+        colored.ApplyStyle(new ChartStyle { TrackColor = Colors.Red });
 
         // Act
         using var first = hidden.Paint(300, 8);
@@ -57,7 +57,7 @@ public sealed class ClamBarGaugeViewRenderingTests
     {
         // Arrange
         using var view = Gauge(new ChartEntry("A", 90));
-        view.DisplayMode = ChartBarGaugeMode.Gradient;
+        view.FillMode = ChartFillMode.Gradient;
         view.Thresholds.Add(new ChartThreshold { Level = ChartThresholdLevel.Good });
         view.Thresholds.Add(new ChartThreshold { Value = 60, Level = ChartThresholdLevel.Warning });
 
@@ -210,10 +210,10 @@ public sealed class ClamBarGaugeViewRenderingTests
     }
 
     [Theory]
-    [InlineData(ChartBarGaugeMode.Basic)]
-    [InlineData(ChartBarGaugeMode.Gradient)]
-    [InlineData(ChartBarGaugeMode.Segmented)]
-    public void FramesDoNotAllocate(ChartBarGaugeMode mode)
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Solid)]
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Gradient)]
+    [InlineData(ChartBarGaugeMode.Segmented, ChartFillMode.Solid)]
+    public void FramesDoNotAllocate(ChartBarGaugeMode mode, ChartFillMode fill)
     {
         // Arrange
         using var view = new TestClamBarGaugeView
@@ -222,6 +222,7 @@ public sealed class ClamBarGaugeViewRenderingTests
             ItemsSource = new List<ChartEntry> { new("Tokyo", 82, Target: 90), new("Osaka", 58), new("Nagoya", 31, Maximum: 50) },
             EntranceAnimation = ChartEntranceAnimation.None,
             DisplayMode = mode,
+            FillMode = fill,
             LabelPosition = ChartBarGaugeLabelPosition.Left,
             ValueMode = ChartBarGaugeValueMode.ValueOfMaximum
         };
@@ -234,13 +235,13 @@ public sealed class ClamBarGaugeViewRenderingTests
         view.Render(canvas, 360, 120);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            view.Render(canvas, 360, 120);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 0; i < 4; i++)
+            {
+                view.Render(canvas, 360, 120);
+            }
+        });
 
         // Assert
         Assert.Equal(0, allocated);

@@ -91,35 +91,37 @@ FallbackFonts.Typefaces = [SKTypeface.FromStream(await FileSystem.OpenAppPackage
 
 | Part | Properties |
 |---|---|
-| Theme | `ChartStyle` with the `ChartStyles.Light` and `ChartStyles.Dark` presets, `OverlayLight` and `OverlayDark` for photos and maps, or a style of your own made with `with` |
-| Colors | `Palette` of eight colors in a fixed order, the Grafana palettes and shades of one hue, `Color` of a series, `ColorKey` of a slice |
+| Theme | Bindable properties on the views, the axes and the series, themed with a MAUI `Style`; the `ClamChartThemes` dictionary carries the light and dark values, with an overlay theme for photos and maps. `FillMode` switches every fill between one color and a gradient |
+| Colors | `Palette` of eight colors in a fixed order, the Material, Grafana and single-hue palettes, `Color` of a series, `ColorKey` of a slice |
 | Lines | `Thickness`, `Interpolation` (`Linear`, `Smooth`, `Step`, `StepBefore`), `DashPattern`, `MarkerMode`, `MarkerShape`, `GlowRadius`, `LiveIndicatorVisible` for a pulsing last point |
-| Areas | `FillOpacity`, `FillMode` with a gradient, `BaselineValue`, `StackGroup` |
-| Bars | `CornerRadius`, `MaxBarWidth`, `BarWidthRatio`, `NegativeColor`, `StackGroup`, `FillMode` with a gradient, `TrackVisible` for a progress track, `Orientation` for horizontal bars, `RangeBarSeries` from a low to a high value |
+| Areas | `FillOpacity`, `BaselineValue`, `StackGroup` |
+| Bars | `CornerRadius`, `MaxBarWidth`, `BarWidthRatio`, `NegativeColor`, `StackGroup`, `TrackVisible` for a progress track, `Orientation` for horizontal bars, `RangeBarSeries` from a low to a high value |
 | Points | `ScatterSeries` with `MarkerShape` and `FillOpacity`, `BubbleSeries` sized by a value between `MinBubbleSize` and `MaxBubbleSize`, from 0 or from the smallest value (`SizeIncludesZero`) |
-| Pies | `InnerRadius`, `StartAngle` and `SweepAngle` for half donuts, `SliceGap`, `MaxSlices` with a merged slice, labels inside or outside with leader lines, and the center value |
+| Pies | `InnerRadius`, `StartAngle` and `SweepAngle` for half donuts, `SegmentGap`, `MaxSlices` with a merged slice, labels inside or outside with leader lines, and the center value |
 | Radars | `ClamRadarChartView` with `GridShape` (polygon or circle), `LevelCount`, `Minimum` and `Maximum`, and `RadarSeries` with `Thickness` and `FillOpacity` |
 | Heatmaps | `ClamHeatmapView` as a matrix or a calendar, the Grafana Oranges scale or a `ColorScale` of your own, `CellGap` and a color scale legend |
 | State timelines | `ClamStateTimelineView` with Grafana value mappings (`ValueMappings`) and `Thresholds`, and the panel options of Grafana: `MergeValues`, `ShowValue`, `AlignValue`, `RowHeight`, `FillOpacity` and `LineWidth` |
 | Thresholds | `Thresholds` with `ThresholdsMode` lines, bands or colored series, reference lines and bands as annotations |
-| Tiles and gauges | `ColorMode` of a KPI tile from a quiet value to a Grafana gradient background, basic, gradient and segmented gauges, values in the bar color or the text color, threshold markers around radial bars, `BarGlow` for glowing rings, `AlertAnimationEnabled` for a critical value |
-| Labels | Legend as a list or a table with last, minimum, maximum and mean, data labels, tooltip and axis labels, with a format, a converter or a delegate |
+| Tiles and gauges | `ColorMode` of a KPI tile from a quiet value to a tinted background, basic and segmented gauges, values in the bar color or the text color, threshold markers around radial bars, `BarGlow` for glowing rings, `AlertAnimationEnabled` for a critical value |
+| Labels | Legend as a list or a table with last, minimum, maximum and mean, sortable by a header, data labels, tooltip and axis labels, with a format, a converter or a delegate |
 | Size | `Density` thins the axes, the legend and the labels as the chart gets smaller |
 
 The default look is quiet: a transparent background, hairline grids, thin lines, light fills and gaps between segments that are really transparent, so a chart can sit on a card, a photo or a map.  
 Sizes are DIP and angles are degrees clockwise from 12 o'clock.  
 
-An implicit style on the base class switches every chart with the app theme.  
+Merge the theme of the library and base an implicit style on it; every chart then follows the app theme.  
 
 ```xml
-<Style TargetType="clam:ChartViewBase" ApplyToDerivedTypes="True">
-    <Setter Property="ChartStyle" Value="{AppThemeBinding Light={x:Static clam:ChartStyles.Light}, Dark={x:Static clam:ChartStyles.Dark}}" />
-</Style>
+<ResourceDictionary.MergedDictionaries>
+    <clam:ClamChartThemes />
+</ResourceDictionary.MergedDictionaries>
+
+<Style TargetType="clam:ChartViewBase" ApplyToDerivedTypes="True" BasedOn="{StaticResource ClamChartTheme}" />
 ```
 
 ## 🔗 Binding and MVVM
 
-Every property except the delegates (`ValueSelector`, `LabelSelector`, `XxxFormatter`, `TooltipFormatter`) and the read-only `EffectiveDensity` is a bindable property.  
+Every property except the read-only `EffectiveDensity` is a bindable property, the delegates (`ValueSelector`, `LabelSelector`, `XxxFormatter`, `TooltipFormatter`) included.  
 An `ObservableCollection` animates its changes: `Add` and `RemoveAt(0)` in a row make the line flow, and an item that raises `PropertyChanged` moves its point.  
 `SelectedItem` and `SelectedIndex` are TwoWay, `TrackedItem` and `TrackedIndex` report the point under the trackball to the view model, and `ChartSeries.IsVisible` follows the legend.  
 Each event has a matching command: `ItemTappedCommand`, `ChartTappedCommand`, `SelectionChangedCommand`, `TrackingChangedCommand` and `LegendItemTappedCommand`.  

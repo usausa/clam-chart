@@ -41,12 +41,12 @@ public sealed class ChartDrawingRadialBarTests
     {
         // Arrange
         using var view = Rings(85, 40);
-        view.DisplayMode = ChartRadialBarMode.Gradient;
+        view.FillMode = ChartFillMode.Gradient;
         view.CapStyle = ChartCapStyle.Round;
         AddThresholds(view.Thresholds);
 
         // Act & Assert
-        AssertSameAsView(view, [85, 40], new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Gradient, CapStyle = ChartCapStyle.Round, Thresholds = Thresholds() });
+        AssertSameAsView(view, [85, 40], new RadialBarDrawOptions { FillMode = ChartFillMode.Gradient, CapStyle = ChartCapStyle.Round, Thresholds = Thresholds() });
     }
 
     [Fact]
@@ -54,11 +54,13 @@ public sealed class ChartDrawingRadialBarTests
     {
         // Arrange
         using var view = Rings(65, 20);
-        view.ChartStyle = ChartStyles.Dark;
-        view.DisplayMode = ChartRadialBarMode.Gradient;
+        view.ApplyStyle(ChartStyles.Dark);
+        view.GradientShift = -15;
+        view.UnlitColor = Color.FromArgb("#33CCCCDC");
+        view.FillMode = ChartFillMode.Gradient;
 
         // Act & Assert
-        AssertSameAsView(view, [65, 20], new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Gradient, IsDark = true });
+        AssertSameAsView(view, [65, 20], new RadialBarDrawOptions { FillMode = ChartFillMode.Gradient, IsDark = true });
     }
 
     [Fact]
@@ -82,46 +84,48 @@ public sealed class ChartDrawingRadialBarTests
         basic.OverflowMode = ChartOverflowMode.Wrap;
         using var gradient = Rings(130);
         gradient.OverflowMode = ChartOverflowMode.Wrap;
-        gradient.DisplayMode = ChartRadialBarMode.Gradient;
+        gradient.FillMode = ChartFillMode.Gradient;
 
         // Act & Assert
         AssertSameAsView(basic, [130], new RadialBarDrawOptions { OverflowMode = ChartOverflowMode.Wrap });
-        AssertSameAsView(gradient, [130], new RadialBarDrawOptions { OverflowMode = ChartOverflowMode.Wrap, DisplayMode = ChartRadialBarMode.Gradient });
+        AssertSameAsView(gradient, [130], new RadialBarDrawOptions { OverflowMode = ChartOverflowMode.Wrap, FillMode = ChartFillMode.Gradient });
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic)]
-    [InlineData(ChartRadialBarMode.Gradient)]
-    [InlineData(ChartRadialBarMode.Segmented)]
-    public void GlowMatchesTheView(ChartRadialBarMode mode)
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Gradient)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartFillMode.Solid)]
+    public void GlowMatchesTheView(ChartRadialBarMode mode, ChartFillMode fill)
     {
         // Arrange
         using var view = Rings(70, 35);
         view.BarGlow = true;
         view.DisplayMode = mode;
+        view.FillMode = fill;
         view.CapStyle = ChartCapStyle.Round;
 
         // Act & Assert
-        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { BarGlow = true, DisplayMode = mode, CapStyle = ChartCapStyle.Round });
+        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { BarGlow = true, DisplayMode = mode, FillMode = fill, CapStyle = ChartCapStyle.Round });
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic, false)]
-    [InlineData(ChartRadialBarMode.Gradient, false)]
-    [InlineData(ChartRadialBarMode.Segmented, false)]
-    [InlineData(ChartRadialBarMode.Basic, true)]
-    [InlineData(ChartRadialBarMode.Gradient, true)]
-    public void ThresholdMarkersMatchTheView(ChartRadialBarMode mode, bool glow)
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Gradient, false)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartFillMode.Solid, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid, true)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Gradient, true)]
+    public void ThresholdMarkersMatchTheView(ChartRadialBarMode mode, ChartFillMode fill, bool glow)
     {
         // Arrange
         using var view = Rings(70, 35);
         view.DisplayMode = mode;
+        view.FillMode = fill;
         view.BarGlow = glow;
         view.ThresholdMarkersVisible = true;
         AddThresholds(view.Thresholds);
 
         // Act & Assert
-        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { DisplayMode = mode, BarGlow = glow, ThresholdMarkersVisible = true, Thresholds = Thresholds() });
+        AssertSameAsView(view, [70, 35], new RadialBarDrawOptions { DisplayMode = mode, FillMode = fill, BarGlow = glow, ThresholdMarkersVisible = true, Thresholds = Thresholds() });
     }
 
     [Fact]
@@ -146,7 +150,7 @@ public sealed class ChartDrawingRadialBarTests
         sized.RingThickness = 10;
         sized.RingSpacing = 6;
         sized.InnerRadius = 0.2;
-        sized.ChartStyle = new ChartStyle { TrackColor = Colors.Red };
+        sized.ApplyStyle(new ChartStyle { TrackColor = Colors.Red });
         using var hidden = Rings(50, Double.NaN);
         hidden.TrackVisible = false;
 
@@ -215,7 +219,7 @@ public sealed class ChartDrawingRadialBarTests
     public async Task RingsCanBeDrawnOnOtherThreads()
     {
         // Arrange
-        var options = new RadialBarDrawOptions { DisplayMode = ChartRadialBarMode.Gradient, BarGlow = true, Thresholds = Thresholds() };
+        var options = new RadialBarDrawOptions { FillMode = ChartFillMode.Gradient, BarGlow = true, Thresholds = Thresholds() };
         using var expected = Draw(120, 120, canvas => ChartDrawing.DrawRadialBar(canvas, new SKRect(0, 0, 120, 120), [80, 40], options));
 
         // Act

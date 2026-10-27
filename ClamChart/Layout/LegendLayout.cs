@@ -301,7 +301,7 @@ internal sealed class LegendLayout
         var nameX = markerColumn + CellPaddingX;
         var maxWidth = sortColumn == 0 ? Math.Max(0, nameMaxWidth - SortArrowGap - arrow) : nameMaxWidth;
         var nameWidth = measurer.Measure(headers[0], fontSize, maxWidth);
-        cells.Add(new LegendCell(-1, headers[0], new ChartRect(nameX, textY, nameWidth, lineHeight), maxWidth));
+        cells.Add(new LegendCell(-1, headers[0], new ChartRect(nameX, textY, nameWidth, lineHeight), maxWidth, sortColumn == 0));
         headerColumns.Add(new ChartRect(markerColumn, 0, Math.Max(0, right - markerColumn), rowHeight));
         if (sortColumn == 0)
         {
@@ -321,7 +321,7 @@ internal sealed class LegendLayout
 
             var text = headers[c + 1];
             var textWidth = measurer.Measure(text, fontSize, Double.PositiveInfinity);
-            cells.Add(new LegendCell(-1, text, new ChartRect(end - textWidth, textY, textWidth, lineHeight), Double.PositiveInfinity));
+            cells.Add(new LegendCell(-1, text, new ChartRect(end - textWidth, textY, textWidth, lineHeight), Double.PositiveInfinity, c + 1 == sortColumn));
         }
     }
 

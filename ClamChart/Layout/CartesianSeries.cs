@@ -21,7 +21,7 @@ internal sealed record CartesianSeries
 
     public double BarWidthRatio { get; init; } = DefaultBarWidthRatio;
 
-    public double? MaxBarWidth { get; init; }
+    public double MaxBarWidth { get; init; } = 24;
 
     public bool IsBubble { get; init; }
 

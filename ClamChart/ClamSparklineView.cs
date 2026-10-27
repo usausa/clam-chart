@@ -35,6 +35,7 @@ public partial class ClamSparklineView : ChartViewBase
     public static readonly BindableProperty ThresholdsModeProperty = BindableProperty.Create(nameof(ThresholdsMode), typeof(ChartThresholdsMode), typeof(ClamSparklineView), ChartThresholdsMode.None, propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty EdgeToEdgeProperty = BindableProperty.Create(nameof(EdgeToEdge), typeof(bool), typeof(ClamSparklineView), false, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty LiveIndicatorVisibleProperty = BindableProperty.Create(nameof(LiveIndicatorVisible), typeof(bool), typeof(ClamSparklineView), false, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty ValueSelectorProperty = BindableProperty.Create(nameof(ValueSelector), typeof(Func<object, double?>), typeof(ClamSparklineView), propertyChanged: OnReaderChanged);
 
     private readonly SparklineCore core;
     private readonly ChartCollectionWatcher thresholdsWatcher;
@@ -172,13 +173,8 @@ public partial class ClamSparklineView : ChartViewBase
 
     public Func<object, double?>? ValueSelector
     {
-        get;
-        set
-        {
-            field = value;
-            core.ResetReader();
-            InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(ValueSelectorProperty);
+        set => SetValue(ValueSelectorProperty, value);
     }
 
     internal SparklineLayout ChartLayout => core.Layout;
@@ -271,7 +267,7 @@ public partial class ClamSparklineView : ChartViewBase
             EdgeToEdge = EdgeToEdge,
             LiveIndicator = LiveIndicatorVisible
         };
-        core.UpdateLayout(width, height, EffectiveContentPadding, ChartStyle, options);
+        core.UpdateLayout(width, height, EffectiveContentPadding, options);
         if (ChartLayout.HasInvertedBounds && !invertedBoundsReported)
         {
             invertedBoundsReported = true;
@@ -288,19 +284,19 @@ public partial class ClamSparklineView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
         }
 
-        var palette = Palette ?? ChartStyle.Palette;
-        var color = Color ?? (palette.Count > 0 ? palette[0] : ChartStyle.OtherColor);
+        var palette = EffectiveStyle.Palette;
+        var color = Color ?? (palette.Count > 0 ? palette[0] : EffectiveStyle.OtherColor);
         Interpolator.Easing = AnimationEasing;
         var line = color.ToSKColor();
-        var weak = EmphasisMode == ChartSparklineEmphasis.Last ? ChartStyle.EmphasisDimmedOpacity : 1;
-        var paint = new SparklinePaint(line, (NegativeColor ?? ChartStyle.CriticalColor).ToSKColor(), ChartColor.Fade(line, ChartStyle.AreaFillOpacity), weak);
-        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, ChartStyle, Smooth, ThresholdsMode, LiveIndicatorVisible, EffectPhase);
+        var weak = EmphasisMode == ChartSparklineEmphasis.Last ? EffectiveStyle.EmphasisDimmedOpacity : 1;
+        var paint = new SparklinePaint(line, (NegativeColor ?? EffectiveStyle.CriticalColor).ToSKColor(), ChartColor.Fade(line, AreaOpacity), weak);
+        painter.Render(canvas, ChartLayout, Interpolator, core.Values, paint, EffectiveStyle, Smooth, ThresholdsMode, LiveIndicatorVisible, EffectPhase);
     }
 
     private static bool ValidateFinite(object? value, string name) =>
@@ -343,7 +339,7 @@ public partial class ClamSparklineView : ChartViewBase
         view.InvalidateLayout();
     }
 
-    private SparklineRenderer EnsureRenderer() => renderer ??= new SparklineRenderer(ChartStyle.FontFamily);
+    private SparklineRenderer EnsureRenderer() => renderer ??= new SparklineRenderer(EffectiveStyle.FontFamily);
 
     private void ReplaceSource()
     {

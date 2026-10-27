@@ -14,8 +14,7 @@ Changes after `Dispose()` are ignored and the public methods throw `ObjectDispos
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
-| `ChartStyle` | `ChartStyle` | `ChartStyles.Light` | ✓ | Look of everything except the data, validated when assigned (see [ChartStyle](#-chartstyle)) |
-| `Palette` | `IReadOnlyList<Color>?` | `null` | ✓ | Series colors; `null` uses `ChartStyle.Palette` |
+| `Palette` | `IReadOnlyList<Color>` | `ChartPalettes.DefaultLight` | ✓ | Series colors (see [Theme](#-theme)) |
 | `Density` | `ChartDensity` | `Auto` | ✓ | Level of detail; `Auto` follows the size of the view (see [Density](#-density)) |
 | `EffectiveDensity` | `ChartDensity` | | | Density in use after `Auto` is resolved |
 | `ContentPadding` | `Thickness?` | `null` | ✓ | Space around the content; `null` is 8 for `Full`, 4 for `Compact` and 0 for `Minimal` |
@@ -24,7 +23,7 @@ Changes after `Dispose()` are ignored and the public methods throw `ObjectDispos
 | `TouchMode` | `ChartTouchMode` | `Auto` | ✓ | How touches are taken (see [Touch](#-touch)) |
 | `IsBusy` | `bool` | `false` | ✓ | Draws a shimmering placeholder in the shape of the chart instead of the data and lets every touch through (see [Loading](#-loading)) |
 | `HapticFeedbackEnabled` | `bool` | `false` | ✓ | A light vibration when a tap selects an element and a tick when the trackball starts or moves to another point (Android) |
-| `AutomationSummaryFormatter` | `Func<ChartViewBase, string?>?` | `null` | | Description read by screen readers; `null` uses the built-in summary (see [Accessibility](#-accessibility)) |
+| `AutomationSummaryFormatter` | `Func<ChartViewBase, string?>?` | `null` | ✓ | Description read by screen readers; `null` uses the built-in summary (see [Accessibility](#-accessibility)) |
 | `AnimationEnabled` | `bool` | `true` | ✓ | `false` turns every animation off and always draws the final state |
 | `AnimationDuration` | `int` | `450` | ✓ | Milliseconds of the entrance and update animations; `0` turns every animation off |
 | `AnimationEasing` | `Easing` | `CubicOut` | ✓ | Easing of the entrance and update animations |
@@ -44,7 +43,7 @@ Looping effects (the loading shimmer, the rings of `LiveIndicatorVisible` and th
 
 | Name | Returns | Description |
 |---|---|---|
-| `Invalidate()` | `void` | Validates `ChartStyle` again, recreates the renderer and redraws; call it after changing the assigned style in place |
+| `Invalidate()` | `void` | Recreates the renderer and redraws |
 | `PlayEntranceAnimation()` | `void` | Plays the entrance animation again, for example when a tab is shown again |
 | `CompleteAnimations()` | `void` | Moves the running animations to their final state |
 | `CancelInteraction()` | `void` | Cancels a press, a long press or the trackball in progress |
@@ -76,7 +75,7 @@ The arguments are created only when the event has a handler or the command is se
 
 `Auto` is `Interactive` when a trackball, `ChartTapped` or `ChartTappedCommand` is set, `HitOnly` when selection, `ItemTapped`, `ItemTappedCommand`, `LegendToggleEnabled`, `LegendItemTapped` or `LegendItemTappedCommand` is set, and `PassThrough` otherwise.  
 A chart with no touch settings therefore never takes touches from a card, a scroll view or a map below it.  
-In `Minimal` density only whole-chart taps are taken: `Interactive` when `ChartTapped` or `ChartTappedCommand` is set, otherwise `PassThrough`, and the chart is covered with `ChartStyle.PressedOverlayColor` while it is pressed.  
+In `Minimal` density only whole-chart taps are taken: `Interactive` when `ChartTapped` or `ChartTappedCommand` is set, otherwise `PassThrough`, and the chart is covered with `PressedOverlayColor` while it is pressed.  
 A touch that moves 6 DIP or more is not a tap and a second finger cancels the touch.  
 
 ### 📐 Density
@@ -87,7 +86,7 @@ A touch that moves 6 DIP or more is not a tap and a second finger cancels the to
 | `Compact` | 320 DIP wide or less, or 200 DIP high or less | Up to 3 labels on the value axis and the two ends of the X axis, no axis titles, a legend only when `LegendVisible` is `true`, data labels up to `Last` |
 | `Minimal` | 160 DIP wide or less, or 96 DIP high or less | Data only, the last point marker and a whole-chart tap; a pie keeps the donut and the center value |
 
-The boundaries are `ChartStyle.CompactSize` and `ChartStyle.MinimalSize`.  
+The boundaries are `CompactSize` and `MinimalSize`.  
 Explicit settings such as `MaxLabelCount` and `LegendVisible = true` take precedence over the density.  
 A sparkline is always `Minimal`.  
 A bar gauge that measures its own height (`AutoHeight`) decides the density from the width only.  
@@ -161,7 +160,7 @@ Dates and numbers cannot share one X axis; a `CategoryAxis` takes any X in order
 | `LegendToggleEnabled` | `bool` | `false` | ✓ | Tapping a legend item shows or hides its series; the last visible series cannot be hidden |
 | `LegendSortEnabled` | `bool` | `false` | ✓ | Tapping a header of a `Table` sorts the rows as in Grafana: descending, then ascending, then unsorted, and another column starts descending |
 | `LegendSortBy` | `ChartLegendSortKey` | `Name` | ✓ | Column the `Table` is sorted by; a value column not in `LegendValues` keeps the order; TwoWay |
-| `LegendSortMode` | `ChartSortMode` | `None` | ✓ | Direction of the sort; TwoWay |
+| `LegendSortMode` | `ChartSortMode` | `None` | ✓ | Direction of the sort; TwoWay. The header of the sorted column and its arrow are drawn in `PrimaryTextColor`, the other headers in `SecondaryTextColor` |
 | `LegendItemTappedCommand` | `ICommand?` | `null` | ✓ | Executed after `LegendItemTapped` |
 | `DataLabelsMode` | `ChartDataLabelsMode` | `None` | ✓ | Points that get a value label |
 
@@ -201,7 +200,7 @@ Tapping the selected element again (the same column for `Category`) clears the s
 An item set from the view model selects its first point, visible series first; an item not in the data yet is selected when it arrives, and the selection is cleared when the item leaves the data.  
 Setting only `SelectedIndex` selects that position in `SelectedSeries`, or in the first visible series when it is `null`.  
 In `Category` selection, `SelectedItem` and `SelectedIndex` are the point of the first visible series at that X.  
-The other elements are dimmed to `ChartStyle.DimmedOpacity`: the other bars and the other line and area series for `Item`, and the other columns of bars for `Category`, which marks the points of lines and areas at that X instead.  
+The other elements are dimmed to `DimmedOpacity`: the other bars and the other line and area series for `Item`, and the other columns of bars for `Category`, which marks the points of lines and areas at that X instead.  
 Labels inside a dimmed bar are dimmed with it.  
 
 Taps hit wider areas than the drawn shapes.  
@@ -220,7 +219,7 @@ Taps hit wider areas than the drawn shapes.
 | `TrackballMode` | `ChartTrackballMode` | `None` | ✓ | How the trackball starts |
 | `TrackballSnapEnabled` | `bool` | `true` | ✓ | `false` draws the line and a horizontal line at the finger, like the cursor of Grafana, while the markers, the tooltip and `TrackedItem` keep the nearest point |
 | `TooltipVisible` | `bool` | `true` | ✓ | Draws the tooltip; `false` keeps only the line and the markers, for showing the values elsewhere through `TrackedItem` |
-| `TooltipFormatter` | `Func<ChartTrackingInfo, string>?` | `null` | | Text of each series row after its colored dot; `null` is the title and the formatted value; called once per point until the layout changes |
+| `TooltipFormatter` | `Func<ChartTrackingInfo, string>?` | `null` | ✓ | Text of each series row after its colored dot; `null` is the title and the formatted value; called once per point until the layout changes |
 | `TrackedItem` | `object?` | `null` | ✓ | Item at the trackball (the first series wins at the same X), OneWayToSource; `null` when released |
 | `TrackedIndex` | `int` | `-1` | ✓ | Position of that item in the data of its series, OneWayToSource |
 | `TrackingChangedCommand` | `ICommand?` | `null` | ✓ | Executed when tracking starts, moves to another point and ends |
@@ -290,7 +289,7 @@ Adding or removing series and changing `Orientation` switch at once.
 
 Series of the same kind (bar or area), the same value axis and the same `StackGroup` stack at the same X.  
 Positive values stack up from 0 and negative values down from 0, and `Percent` scales each side to its own total.  
-Hidden series and missing points are left out, and segments are separated by `ChartStyle.SegmentGap`.  
+Hidden series and missing points are left out, and segments are separated by `SegmentGap`.  
 Each stack and each unstacked bar takes an equal slot of the group, which is the category width times `BarWidthRatio`, and bars narrowed by `MaxBarWidth` are centered in the column.  
 
 ## 📊 Series
@@ -306,34 +305,34 @@ A series is an `Element`, so it inherits the `BindingContext` of the chart.
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data (see [Data](#-data)) |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors of this series, used before those of the chart |
 | `XKey`, `YKey` | `string?` | `null` | ✓ | Keys of X and Y; a `null` `XKey` uses the key of the chart |
-| `ValueSelector` | `Func<object, double?>?` | `null` | | Y of an item from code, used before the keys |
+| `ValueSelector` | `Func<object, double?>?` | `null` | ✓ | Y of an item from code, used before the keys |
 | `YAxis` | `ChartAxisTarget` | `Primary` | ✓ | `Secondary` draws the series on the second value axis |
 | `Color` | `Color?` | `null` | ✓ | `null` takes the palette color at the position of the series |
 | `IsVisible` | `bool` | `true` | ✓ | Shown or hidden, TwoWay so that legend toggles reach the view model; hiding a series keeps the colors of the others |
 | `LegendVisible` | `bool` | `true` | ✓ | Lists the series in the legend |
 | `ValueFormat` | `string?` | `null` | ✓ | Format of data labels and tooltip values: composite when it contains `{` (`{0:N0} kWh`), otherwise a format string (`N1`) |
 | `ValueConverter` | `IValueConverter?` | `null` | ✓ | Converts the value (`double`) to its text; used instead of `ValueFormat` |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Text from code; used before `ValueConverter` and `ValueFormat` |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Text from code; used before `ValueConverter` and `ValueFormat` |
 | `EmptyPointMode` | `ChartEmptyPointMode` | `Gap` | ✓ | How missing values (`null` and `NaN`) are drawn |
 | `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
 
 When the three value formats are unset, data labels and tooltips use the format of the value axis, and when that is the default too, 100% stacks show percentages (`35%`) and the other values use the compact number format.  
-A series beyond the palette is drawn with `ChartStyle.OtherColor` and reported once through `Trace.TraceWarning`.  
+A series beyond the palette is drawn with `OtherColor` and reported once through `Trace.TraceWarning`.  
 
 ### LineSeries
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
-| `Thickness` | `double?` | `null` | ✓ | Line width; `null` uses `ChartStyle.LineThickness` |
+| `Thickness` | `double` | `2` | ✓ | Line width |
 | `Interpolation` | `ChartLineInterpolation` | `Linear` | ✓ | Shape between the points |
 | `DashPattern` | `DoubleCollection?` | `null` | ✓ | Dashes in multiples of the line width (`4,3`), as `StrokeDashArray` |
 | `MarkerMode` | `ChartMarkerMode` | `Auto` | ✓ | Points that get a marker |
-| `MarkerSize` | `double?` | `null` | ✓ | Marker diameter; `null` uses `ChartStyle.MarkerSize` |
+| `MarkerSize` | `double` | `8` | ✓ | Marker diameter |
 | `MarkerShape` | `ChartMarkerShape` | `Circle` | ✓ | Shape of the markers, the selected point, the trackball point and the live dot |
 | `GlowRadius` | `double` | `0` | ✓ | Spread of a soft glow under the line, 0 or more; `0` draws none |
 | `LiveIndicatorVisible` | `bool` | `false` | ✓ | Draws a dot on the last point and two rings that grow from it every 1.8 seconds |
 
-A marker is cut out of the line by `ChartStyle.MarkerKnockout`, which is really transparent, and points clipped by the plot get no marker.  
+A marker is cut out of the line by `MarkerKnockout`, which is really transparent, and points clipped by the plot get no marker.  
 The cut-out follows the shape, and a diamond is the square turned by 45 degrees; the legend and the tooltip keep dots.  
 The glow is 1.8 times the line width in the line color at 55%, blurred with a standard deviation of half of `GlowRadius`. It follows dashes and threshold colors, stays in the plot, and is left out in `Minimal` density and for series of more than 500 points.  
 The live dot has the size and the cut-out of a marker, even with `MarkerMode` `None`, and the rings grow in its color from the marker radius to three times it while fading from 45%. The plot keeps the ring radius from the edge of the view on the side where X ends (the right, or the bottom of a horizontal chart), so the rings are not cut there. With the animations off only the dot is drawn.  
@@ -344,8 +343,7 @@ Derives from `LineSeries`.
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
-| `FillOpacity` | `double?` | `null` | ✓ | Opacity of the fill from 0 to 1; `null` uses `ChartStyle.AreaFillOpacity` |
-| `FillMode` | `ChartFillMode` | `Solid` | ✓ | `Gradient` fades the fill from `FillOpacity` at the line to transparent at the baseline |
+| `FillOpacity` | `double` | `0.1` | ✓ | Opacity of the fill from 0 to 1 |
 | `BaselineValue` | `double?` | `null` | ✓ | Value the fill reaches; `null` is 0, or the edge of the plot when 0 is out of the range |
 | `StackGroup` | `string?` | `null` | ✓ | Areas with the same name stack |
 
@@ -353,23 +351,22 @@ Derives from `LineSeries`.
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
-| `CornerRadius` | `double?` | `null` | ✓ | Radius of the data end of the bar (the top segment of a stack); `null` uses `ChartStyle.BarCornerRadius`; the baseline end and ends cut by the plot stay square |
-| `MaxBarWidth` | `double?` | `null` | ✓ | Widest bar, greater than 0; `null` uses `ChartStyle.MaxBarWidth` |
+| `CornerRadius` | `double` | `0` | ✓ | Radius of the data end of the bar (the top segment of a stack); the baseline end and ends cut by the plot stay square |
+| `MaxBarWidth` | `double` | `24` | ✓ | Widest bar, greater than 0 |
 | `BarWidthRatio` | `double` | `0.6` | ✓ | Share of the category width taken by the bar or the group, greater than 0 and up to 1; a group uses the value of its first visible bar series |
 | `StackGroup` | `string?` | `null` | ✓ | Bars with the same name stack |
 | `NegativeColor` | `Color?` | `null` | ✓ | Color of negative values; `null` uses the series color |
 | `TrackVisible` | `bool` | `false` | ✓ | Draws a faint track behind each bar across the whole value range, like a progress bar |
-| `FillMode` | `ChartFillMode` | `Solid` | ✓ | `Gradient` fades each bar from the series color at its end to transparent at the baseline |
 
 A value axis with bars includes 0 unless `IncludeZero` is `false`, and bars on a numeric or date and time X axis widen the range by half of the smallest gap so that the end bars are not cut.  
-The track uses `ChartStyle.TrackColor` or a neutral gray (black at 7% in light, white at 7% in dark), takes the width and position of the bar with square corners, and is drawn once for a stack.  
+The track uses `TrackColor`, takes the width and position of the bar with square corners, and is drawn once for a stack.  
 A gradient is measured from the value farthest from the baseline in the series, separately for positive and negative values, so short bars are faint; it is solid while thresholds color the series.  
 
 ### ScatterSeries
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
-| `MarkerSize` | `double?` | `null` | ✓ | Point diameter; `null` uses `ChartStyle.MarkerSize` |
+| `MarkerSize` | `double` | `8` | ✓ | Point diameter |
 | `MarkerShape` | `ChartMarkerShape` | `Circle` | ✓ | Shape of the points |
 | `FillOpacity` | `double?` | `null` | ✓ | Opacity of the fill from 0 to 1; `null` is 0.5 |
 
@@ -382,9 +379,9 @@ The legend shows a dot, and the `Auto` entrance fades the points in while they g
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
 | `LowKey`, `HighKey` | `string?` | `null` | ✓ | Keys of the low and the high value; `YKey` and `ValueSelector` are not used |
-| `LowSelector`, `HighSelector` | `Func<object, double?>?` | `null` | | Low and high values from code, used before the keys |
-| `CornerRadius` | `double?` | `null` | ✓ | Radius of both ends; `null` uses `ChartStyle.BarCornerRadius`; ends cut by the plot stay square |
-| `MaxBarWidth` | `double?` | `null` | ✓ | Widest bar, greater than 0; `null` uses `ChartStyle.MaxBarWidth` |
+| `LowSelector`, `HighSelector` | `Func<object, double?>?` | `null` | ✓ | Low and high values from code, used before the keys |
+| `CornerRadius` | `double` | `0` | ✓ | Radius of both ends; ends cut by the plot stay square |
+| `MaxBarWidth` | `double` | `24` | ✓ | Widest bar, greater than 0 |
 | `BarWidthRatio` | `double` | `0.6` | ✓ | Share of the category width taken by the bar or the group, greater than 0 and up to 1 |
 | `TrackVisible` | `bool` | `false` | ✓ | Draws a faint track behind each bar across the whole value range |
 
@@ -399,7 +396,7 @@ Derives from `ScatterSeries`.
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
 | `SizeKey` | `string?` | `null` | ✓ | Key of the size value |
-| `SizeSelector` | `Func<object, double?>?` | `null` | | Size value from code, used before the key |
+| `SizeSelector` | `Func<object, double?>?` | `null` | ✓ | Size value from code, used before the key |
 | `MinBubbleSize`, `MaxBubbleSize` | `double` | `8`, `40` | ✓ | Smallest and largest diameter, 0 or more |
 | `SizeIncludesZero` | `bool` | `true` | ✓ | `false` sizes the bubbles from the smallest to the largest value among all the bubble series, as the XY chart of Grafana does, instead of from 0 |
 
@@ -441,7 +438,7 @@ Labels of a vertical axis take up to a third of the width and longer ones end wi
 | `IncludeZero` | `bool?` | `null` | ✓ | Includes 0; `null` is `true` when bars or areas use the axis |
 | `NiceRange` | `bool` | `true` | ✓ | Widens the automatic ends to the next tick |
 | `TickAlignment` | `ChartTickAlignment` | `AlignToPrimary` | ✓ | How the ticks of the secondary axis are chosen; ignored on the primary axis |
-| `LabelFormatter` | `Func<double, string>?` | `null` | | Label text from code |
+| `LabelFormatter` | `Func<double, string>?` | `null` | ✓ | Label text from code |
 
 The range is decided in this order.  
 
@@ -469,7 +466,7 @@ With two value axes, the title of each axis carries the colored markers of its s
 | `IntervalType` | `ChartDateTimeIntervalType` | `Auto` | ✓ | Tick unit; a unit alone chooses among that unit and the larger ones |
 | `Interval` | `double?` | `null` | ✓ | Ticks every n units of `IntervalType`, greater than 0; not used with `Auto` (months and years are rounded to whole numbers, fractions of the other units become the smaller unit) |
 | `WindowSize` | `TimeSpan?` | `null` | ✓ | Shows only this span ending at `Maximum`, or at the latest point of the visible series when `Maximum` is `null`; `Minimum` is not used; greater than zero |
-| `LabelFormatter` | `Func<DateTime, string>?` | `null` | | Label text from code |
+| `LabelFormatter` | `Func<DateTime, string>?` | `null` | ✓ | Label text from code |
 
 `Auto` chooses the smallest step whose labels fit: 1, 2, 5, 10, 15 or 30 seconds or minutes, 1, 3, 6 or 12 hours, 1 or 2 days, 1 or 2 weeks, 1, 2, 3 or 6 months, or 1, 2, 5, 10, 20, 50 and more years.  
 Ticks follow the calendar: weeks start on `FirstDayOfWeek` of the culture and months on January.  
@@ -485,7 +482,7 @@ With `WindowSize`, short data is drawn at the right with the left side empty, ol
 | `LabelPlacement` | `ChartLabelPlacement` | `BetweenTicks` | ✓ | Where the categories sit |
 | `CategoryWidth` | `double?` | `null` | ✓ | Length of each category; the chart then requests the width (the height in a horizontal chart) of all categories plus the axes, for a horizontal `ScrollView`; greater than 0; an explicit `WidthRequest` or `HeightRequest` wins |
 | `LabelMaxLength` | `int?` | `null` | ✓ | Cuts each label to this many characters and adds `…`, as `xTickLabelMaxLength` of the Grafana bar chart; 1 or more, and `null` keeps the whole label. Emoji and combined characters are not split, spaces at the cut are dropped, and the tooltip shows the whole name |
-| `LabelFormatter` | `Func<string, string>?` | `null` | | Label text from code |
+| `LabelFormatter` | `Func<string, string>?` | `null` | ✓ | Label text from code |
 
 Categories merge the X values of all series in order of appearance, hidden series included, so the axis does not change when a series is toggled.  
 `LabelFormat` applies only composite formats (`{0} st`).  
@@ -540,8 +537,8 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data; `ChartEntry` items need no keys |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
 | `ValueKey`, `LabelKey`, `ColorKey` | `string?` | `null` | ✓ | Keys of the value, the name and the color |
-| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the keys |
-| `LabelSelector` | `Func<object, string>?` | `null` | | Name of an item from code, used before the keys |
+| `ValueSelector` | `Func<object, double?>?` | `null` | ✓ | Value of an item from code, used before the keys |
+| `LabelSelector` | `Func<object, string>?` | `null` | ✓ | Name of an item from code, used before the keys |
 | `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
 
 #### Shape
@@ -551,7 +548,6 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | `InnerRadius` | `double` | `0.6` | ✓ | Hole as a fraction of the radius, from 0 to 0.95 |
 | `StartAngle` | `double` | `0` | ✓ | Start of the sweep |
 | `SweepAngle` | `double` | `360` | ✓ | Sweep, greater than 0 and up to 360 |
-| `SliceGap` | `double?` | `null` | ✓ | Transparent gap between slices; `null` uses `ChartStyle.SegmentGap` |
 | `SortMode` | `ChartSortMode` | `None` | ✓ | Order of the slices; colors keep the data order |
 | `MaxSlices` | `int` | `8` | ✓ | Largest number of slices including the merged slice, 1 or more |
 | `OthersThreshold` | `double` | `0` | ✓ | Slices below this share of the total, from 0 to less than 1, are merged when two or more qualify |
@@ -578,10 +574,10 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | `CenterLabel` | `string?` | `null` | ✓ | Small text under the value; the name and the percentage of the selected slice replace it |
 | `CenterValueFormat` | `string?` | `null` | ✓ | Format of the center value; when the three center formats are unset the value formats are used |
 | `CenterValueConverter` | `IValueConverter?` | `null` | ✓ | Converts the center value to its text |
-| `CenterValueFormatter` | `Func<double, string>?` | `null` | | Center text from code |
+| `CenterValueFormatter` | `Func<double, string>?` | `null` | ✓ | Center text from code |
 | `ValueFormat` | `string?` | `null` | ✓ | Format of the slice values in the labels and the legend; unset uses the compact number format |
 | `ValueConverter` | `IValueConverter?` | `null` | ✓ | Converts the slice value to its text |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Slice value text from code |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Slice value text from code |
 
 #### Selection
 
@@ -605,11 +601,11 @@ The default is a donut with the total in the center; `InnerRadius = 0` draws a p
 | Item | Rule |
 |---|---|
 | Values | Finite values greater than 0 become slices; negative values are skipped and reported once through `Trace.TraceWarning` |
-| Merged slice | Items over `MaxSlices` (the smallest first) and below `OthersThreshold` become one last slice named `OthersLabel` in `ChartStyle.OtherColor`; a single item is never merged |
+| Merged slice | Items over `MaxSlices` (the smallest first) and below `OthersThreshold` become one last slice named `OthersLabel` in `OtherColor`; a single item is never merged |
 | Order | `None` keeps the data order, and `Descending` and `Ascending` order by value, equal values in data order |
 | Colors | An explicit color (`ColorKey`, `ChartEntry.Color`) first, otherwise the palette in the data order of the slices drawn when nothing is hidden, followed by the items that hiding brings out of the merged slice; slices beyond the palette use `OtherColor` with a warning |
 | Placement | The swept sector, hole included, is scaled to the largest size that fits outside the legend; the upper half sits on the bottom edge |
-| Gaps | Parallel gaps of `SliceGap` between neighboring slices, none at the ends of a partial sweep or around a single full slice |
+| Gaps | Parallel gaps of `SegmentGap` between neighboring slices, none at the ends of a partial sweep or around a single full slice |
 | Labels | At the middle angle of the slice, centered in the ring of a donut or at 0.62 of the radius of a pie, drawn only when they fit with 2 DIP of margin, in white or `#0B0B0B` by WCAG contrast; percentages use `P0` |
 | Outside labels | Slices whose middle is on the right get a label in a column on the right, the others on the left. A line in the slice color leaves the edge, bends 8 DIP out and runs to the column 16 DIP out, and the text follows 4 DIP later in `SecondaryTextColor`. The labels of each side are stacked 2 DIP apart near their slices, and those of the smallest slices are left out when they do not fit. The pie shrinks to make room but not below half its size, leaving out the widest labels instead. The line follows a selected slice that moves out |
 | Center value | Drawn when `InnerRadius` is greater than 0, shrunk to fit the hole (not drawn under 6 DIP); a half donut puts it on the flat side; switching the selection crossfades it over 150 ms; the number counts up from 0 during the entrance and from the shown number on updates |
@@ -631,18 +627,18 @@ It is drawn without allocations of its own: bars and win-loss allocate nothing, 
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | Items of any type read through `ValueAccessors` and `ValueKey` |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
 | `ValueKey` | `string?` | `null` | ✓ | Key of the value |
-| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the key |
+| `ValueSelector` | `Func<object, double?>?` | `null` | ✓ | Value of an item from code, used before the key |
 | `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item of `ItemsSource` again when it raises `PropertyChanged` |
 | `Kind` | `ChartSparklineKind` | `Line` | ✓ | Shape |
 | `Color` | `Color?` | `null` | ✓ | `null` uses the first palette color |
-| `NegativeColor` | `Color?` | `null` | ✓ | Negative bars and losses; `null` uses `ChartStyle.CriticalColor` |
-| `Thickness` | `double?` | `null` | ✓ | Line width; `null` uses `ChartStyle.LineThickness`, or 1.5 when the view is lower than 24 DIP |
+| `NegativeColor` | `Color?` | `null` | ✓ | Negative bars and losses; `null` uses `CriticalColor` |
+| `Thickness` | `double?` | `null` | ✓ | Line width; `null` uses 2, or 1.5 when the view is lower than 24 DIP |
 | `Smooth` | `bool` | `false` | ✓ | Monotone cubic interpolation |
 | `Markers` | `ChartSparklineMarkers` | `Last` | ✓ | Points that get a marker on lines and areas: `First`, `Last`, `High` and `Low` combined |
 | `Minimum`, `Maximum` | `double?` | `null` | ✓ | Fixed range; pass the same values to every row to compare rows on one scale |
 | `ReferenceValue` | `double?` | `null` | ✓ | Dashed hairline in `AxisLineColor` for a target or an average, included in the automatic range; not drawn for win-loss |
 | `NormalRangeMinimum`, `NormalRangeMaximum` | `double?` | `null` | ✓ | Normal range drawn as a band in `MutedTextColor` at 15% and included in the automatic range; one end alone reaches the edge; finite values; not drawn for win-loss |
-| `EmphasisMode` | `ChartSparklineEmphasis` | `None` | ✓ | `Last` draws the last segment (the last bar) in the series color and the rest, the fill included, at `ChartStyle.EmphasisDimmedOpacity` |
+| `EmphasisMode` | `ChartSparklineEmphasis` | `None` | ✓ | `Last` draws the last segment (the last bar) in the series color and the rest, the fill included, at `EmphasisDimmedOpacity` |
 | `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Thresholds, not included in the automatic range; `null` throws `ArgumentNullException` |
 | `ThresholdsMode` | `ChartThresholdsMode` | `None` | ✓ | As in `ClamChartView`, with 1 DIP dashed lines (`4,4`); `ColorSeries` colors lines and areas by region and bars, win-loss and markers by value |
 | `EdgeToEdge` | `bool` | `false` | ✓ | Draws lines and areas to the edges of the content without the inset for the line caps and the markers, for card backgrounds; markers are kept inside |
@@ -671,7 +667,7 @@ The value counts up from the shown value when it changes, and counting allocates
 | `Title` | `string?` | `null` | ✓ | Label at the top left |
 | `Value` | `double` | `0` | ✓ | Value; `NaN` shows `EmptyText` in `MutedTextColor` without the unit, the difference and the state |
 | `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the value (see [Formats](#formats)); the default is the compact number |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the value from code, used first |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Format of the value from code, used first |
 | `Unit` | `string?` | `null` | ✓ | Unit after the value, on the same baseline |
 | `ValueFontSize`, `MinValueFontSize` | `double` | `32`, `16` | ✓ | Largest and smallest size of the value; positive finite values |
 | `PreviousValue` | `double?` | `null` | ✓ | Base of the difference |
@@ -685,9 +681,9 @@ The value counts up from the shown value when it changes, and counting allocates
 | `TrendPlacement` | `ChartTrendPlacement` | `Bottom` | ✓ | Place of the trend |
 | `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | State by value; `null` throws `ArgumentNullException` |
 | `ColorMode` | `ChartStatColorMode` | `None` | ✓ | How the state and the tile color are shown |
-| `Fill` | `Color?` | `null` | ✓ | Color of the tile used by `Value`, `BackgroundGradient` and the trend; `null` uses the state color, then the first palette color |
+| `Fill` | `Color?` | `null` | ✓ | Color of the tile used by `Value`, `Background` and the trend; `null` uses the state color, then the first palette color |
 | `LayoutMode` | `ChartStatLayoutMode` | `Auto` | ✓ | Arrangement |
-| `AlertAnimationEnabled` | `bool` | `false` | ✓ | While the value is at a `Critical` threshold, the band and the icon of `Indicator`, the background of `Background` and `BackgroundGradient`, or the value and the unit of `Value` pulse between 100% and 60% opacity every 1.2 seconds; nothing pulses with `None` or with the animations off |
+| `AlertAnimationEnabled` | `bool` | `false` | ✓ | While the value is at a `Critical` threshold, the band and the icon of `Indicator`, the background of `Background`, or the value and the unit of `Value` pulse between 100% and 60% opacity every 1.2 seconds; nothing pulses with `None` or with the animations off |
 
 | Item | Rule |
 |---|---|
@@ -696,7 +692,7 @@ The value counts up from the shown value when it changes, and counting allocates
 | Fitting | The value takes the largest size up to `ValueFontSize` in 0.5 DIP steps. A short height drops the bottom trend and then the difference before the value goes below `MinValueFontSize`, and a short width drops the unit. After that the value shrinks below the minimum down to 6 DIP and is not drawn under it, so numbers are never truncated |
 | Difference | Nothing is shown when `Percent` mode has a base of 0. With the default format, a difference that rounds to zero is neutral (`SecondaryTextColor`, no arrow); others get a vector arrow in `PositiveTextColor` or `NegativeTextColor` |
 | Trend | A line of 1 DIP in the tile color (`Fill`, then the threshold color even with `None`, then the first palette color) over a fill of the same color at 20%; on a filled background, the line is the tile color brightened by 40% over a white fill at 40%, as in the Grafana stat panel. `Bottom` keeps at least 16 DIP under the text, `Right` takes the right 40% of the content, and `Background` fills the bottom 60% of the tile edge to edge and fades toward the top |
-| Colors | `None` draws the text in ink colors. `Value` writes the value, the unit and the trend in the tile color. `Indicator` adds a 4 DIP band in the state color at the left edge, `Background` tints the tile with the state color at 15%, and `BackgroundGradient` fills the tile at 120° from the tile color shifted by +8° in hue and -15 in lightness to -8° and -5 (+10.5 and +3.5 when `ChartStyle.IsDark` is `false`). Text on the gradient is `#202226` when the brightness of the tile color is above 180 and `#F7F8FA` otherwise |
+| Colors | `None` draws the text in ink colors. `Value` writes the value, the unit and the trend in the tile color. `Indicator` adds a 4 DIP band in the state color at the left edge, and `Background` tints the tile with the state color at 15%, or, with `FillMode` set to `Gradient`, fills the tile at 120° from the tile color shifted by +8° in hue and -15 in lightness to -8° and -5, each multiplied by `GradientStrength`. Text on the gradient is `#202226` when the brightness of the tile color is above 180 and `#F7F8FA` otherwise |
 | State icon | With a color mode, the level of the threshold puts a vector icon before the title: `Good` ✓, `Warning` ▲, `Serious` ◆ and `Critical` ● |
 | Padding | `ContentPadding` `null` is 12 DIP with a color mode and the density default with `None` |
 | Animation | The entrance counts from 0, reveals the trend and fades in the difference, the caption and the icon over its last 30%. A new value counts from the shown value; the trend animates like a sparkline. Numbers in the default format count with the decimals of the two ends |
@@ -717,7 +713,7 @@ Changes of a notifying list are followed; after changing a threshold in place, c
 ## 📶 ClamBarGaugeView
 
 Bars of a value against a maximum for several items, such as storage use, the progress of stores toward their goals or a ranking.  
-The bars are drawn like the Grafana bar gauge: `Basic`, `Gradient` and the LCD-like `Segmented`.  
+The bars are drawn like the Grafana bar gauge: `Basic`, the LCD-like `Segmented`, and the gradient of `FillMode`.  
 With `AutoHeight`, a horizontal gauge measures its height from the rows, so it grows with the items in a `StackLayout`.  
 
 ### 🧩 Properties
@@ -729,8 +725,8 @@ With `AutoHeight`, a horizontal gauge measures its height from the rows, so it g
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data; `ChartEntry` items need no keys |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
 | `ValueKey`, `LabelKey`, `MaximumKey`, `TargetKey`, `ColorKey` | `string?` | `null` | ✓ | Keys of the value, the name, the maximum of the item, the target and the color |
-| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the keys |
-| `LabelSelector` | `Func<object, string?>?` | `null` | | Name of an item from code, used before the keys |
+| `ValueSelector` | `Func<object, double?>?` | `null` | ✓ | Value of an item from code, used before the keys |
+| `LabelSelector` | `Func<object, string?>?` | `null` | ✓ | Name of an item from code, used before the keys |
 | `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
 
 #### Shape
@@ -748,8 +744,8 @@ With `AutoHeight`, a horizontal gauge measures its height from the rows, so it g
 | `ValueMode` | `ChartBarGaugeValueMode` | `Percent` | ✓ | Text of the value |
 | `ValueColorMode` | `ChartBarGaugeValueColorMode` | `Bar` | ✓ | Color of the value: the bar color, or `PrimaryTextColor` as the text value mode of the Grafana bar gauge |
 | `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the numbers in `Value` and `ValueOfMaximum` (see [Formats](#formats)); the default is the compact number |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the numbers from code, used first |
-| `TrackVisible` | `bool` | `true` | ✓ | Draws the part that is not reached in `ChartStyle.TrackColor` |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Format of the numbers from code, used first |
+| `TrackVisible` | `bool` | `true` | ✓ | Draws the part that is not reached in `TrackColor` |
 | `TargetVisible` | `bool` | `true` | ✓ | Draws a line at the target of the items that have one |
 | `Thresholds` | `IList<ChartThreshold>` | empty | ✓ | Colors by the percentage of the maximum; `null` throws `ArgumentNullException` |
 | `Color` | `Color?` | `null` | ✓ | Color of every bar; `null` uses the first palette color |
@@ -764,9 +760,9 @@ With `AutoHeight`, a horizontal gauge measures its height from the rows, so it g
 | Ratio | (value − `Minimum`) / (maximum − `Minimum`), where the maximum is the item's, otherwise `Maximum`. Bars are clamped from 0 to 1 and drawn at least 1 DIP long, and `Percent` writes the ratio in `P0` without clamping (`120%`). An item without a value or with an empty range draws neither the bar nor the value |
 | Thresholds | Compared with the percentage of the maximum (`Value = 70` means 70%), so items with different maximums share them; the later one wins a tie |
 | `Basic` | The bar color at 35% with a 2 DIP line at the end |
-| `Gradient` | The threshold colors change halfway between each threshold and the previous one; thresholds above the value are not used and the last color sits at the end of the bar. Without thresholds the bar is one color |
-| `Segmented` | Each cell takes the threshold color at its start. Cells up to the value are lit with a radial gradient from 95% to 55%, and the others are drawn at 18%. Cells are separated by `ChartStyle.SegmentGap` and fill the bar length |
-| Track | `Basic` and `Gradient` draw the track only beyond the bar; in `Segmented` the unlit cells take its place |
+| `FillMode` `Gradient` | The threshold colors change halfway between each threshold and the previous one; thresholds above the value are not used and the last color sits at the end of the bar. Without thresholds the bar is one color. `Segmented` keeps its cells |
+| `Segmented` | Each cell takes the threshold color at its start. Cells up to the value are lit with a radial gradient from 95% to 55%, and the others are drawn at 18%. Cells are separated by `SegmentGap` and fill the bar length |
+| Track | `Basic` draws the track only beyond the bar; in `Segmented` the unlit cells take its place |
 | Target | A 2 DIP line in `PrimaryTextColor`, 3 DIP longer than the bar on each side |
 | Colors | The bar color is the item color (`ColorKey`, `ChartEntry.Color`), then `Color`, then the first palette color, and the threshold color at the value when thresholds are set. The value uses the same color, or `PrimaryTextColor` with `ValueColorMode` set to `Text`, and the name `SecondaryTextColor` |
 | Height | `AutoHeight` measures the rows that are shown plus the padding. The density then depends on the width only, so a gauge with one row keeps its item taps |
@@ -788,8 +784,8 @@ The first item is the outermost ring.
 | `ItemsSource` | `IEnumerable?` | `null` | ✓ | Data; `ChartEntry` items need no keys |
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
 | `ValueKey`, `LabelKey`, `MaximumKey`, `ColorKey` | `string?` | `null` | ✓ | Keys of the value, the name, the maximum of the item and the color |
-| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the keys |
-| `LabelSelector` | `Func<object, string?>?` | `null` | | Name of an item from code, used before the keys |
+| `ValueSelector` | `Func<object, double?>?` | `null` | ✓ | Value of an item from code, used before the keys |
+| `LabelSelector` | `Func<object, string?>?` | `null` | ✓ | Name of an item from code, used before the keys |
 | `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
 
 #### Shape
@@ -804,7 +800,7 @@ The first item is the outermost ring.
 | `CapStyle` | `ChartCapStyle` | `Flat` | ✓ | Ends of the rings and the track |
 | `DisplayMode` | `ChartRadialBarMode` | `Basic` | ✓ | Drawing of the rings |
 | `SegmentCount` | `int` | `20` | ✓ | Cells of a ring in `Segmented`, 1 or more; fewer on short rings |
-| `TrackVisible` | `bool` | `true` | ✓ | Draws the rest of each ring in `ChartStyle.TrackColor` |
+| `TrackVisible` | `bool` | `true` | ✓ | Draws the rest of each ring in `TrackColor` |
 | `BarGlow` | `bool` | `false` | ✓ | Makes the value of each ring glow, like the bar glow of the Grafana gauge |
 | `ThresholdMarkersVisible` | `bool` | `false` | ✓ | Draws a thin ring of the threshold ranges outside the outermost ring, like the threshold markers of the Grafana gauge |
 | `OverflowMode` | `ChartOverflowMode` | `Clamp` | ✓ | Values over the maximum |
@@ -818,7 +814,7 @@ The first item is the outermost ring.
 | `CenterText` | `string?` | `null` | ✓ | Text shown in the middle while no ring is selected, instead of the value |
 | `CenterLabel` | `string?` | `null` | ✓ | Small text under the value while no ring is selected, instead of the name |
 | `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the `Total` value and the legend values (see [Formats](#formats)); the default is the compact number |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the values from code, used first |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Format of the values from code, used first |
 | `LegendVisible` | `bool?` | `null` | ✓ | `null` shows the legend in `Full` density |
 | `LegendPosition` | `ChartLegendPosition` | `Right` | ✓ | Rows at the top or the bottom, or a column on the left or the right |
 | `LegendValueMode` | `ChartLegendValueMode` | `None` | ✓ | Adds the value or the percentage after the names |
@@ -848,10 +844,10 @@ The first item is the outermost ring.
 | Ratio | (value − `Minimum`) / (maximum − `Minimum`), where the maximum is the item's, otherwise `Maximum`. `Clamp` keeps it from 0 to 1. `Wrap` draws the part over the maximum on top of the first lap in the ring color with 15 less lightness, showing only what is left of the last lap. An item without a value or with an empty range draws only the track |
 | Colors | The item color (`ColorKey`, `ChartEntry.Color`), then the palette in ring order, and the threshold color at the value when thresholds are set; rings beyond the palette use `OtherColor` with a warning |
 | Track | From the end of the value to the end of the sweep, with the same ends, in `TrackColor` or a neutral gray (black at 7% in light, white at 7% in dark) |
-| `Gradient` | As in the Grafana gauge. With thresholds, each threshold color sits at its position around the ring and the ring shows it up to the value. Without thresholds, a darker and a lighter shade of the ring color are turned so that the strongest contrast falls at the value. Round ends get the colors at both ends |
-| `Segmented` | Each cell takes the threshold color at its start and is lit when its start is before the value. Unlit cells use `TrackColor`, otherwise 30% black in light and 20% white in dark. Cells are separated by `ChartStyle.SegmentGap`, at least 3 DIP long, with flat ends; `Wrap` is not used |
-| Glow | As the bar glow of Grafana: a copy of the value arc with the same width and colors, blurred with a standard deviation of 0.75 + 0.08 × the thickness, drawn under all the rings. `Basic` follows `CapStyle`, `Gradient` keeps its colors and blurs round ends too, and `Segmented` glows every cell, unlit ones included unless `TrackVisible` is `false`. The track of `Basic` and `Gradient` and the wrapped lap do not glow. `Minimal` density draws no glow |
-| Threshold markers | As in Grafana, one thin ring outside the outermost ring: 0.2 × thickness^0.92 wide, from 4 to 12 DIP, with half of that (from 2 to 12 DIP) of space, and the rings shrink to make room. Each threshold range takes its color, the range below the first threshold the color of the outermost ring; `Gradient` uses the gradient of the outermost ring and `Segmented` does not split it. The ends are flat and `BarGlow` makes it glow too. Nothing is drawn or reserved without thresholds or in `Minimal` density |
+| `FillMode` `Gradient` | As in the Grafana gauge. With thresholds, each threshold color sits at its position around the ring and the ring shows it up to the value. Without thresholds, a darker and a lighter shade of the ring color are turned so that the strongest contrast falls at the value. Round ends get the colors at both ends |
+| `Segmented` | Each cell takes the threshold color at its start and is lit when its start is before the value. Unlit cells use `UnlitColor`. Cells are separated by `SegmentGap`, at least 3 DIP long, with flat ends; `Wrap` is not used |
+| Glow | As the bar glow of Grafana: a copy of the value arc with the same width and colors, blurred with a standard deviation of 0.75 + 0.08 × the thickness, drawn under all the rings. `Basic` follows `CapStyle`, the gradient keeps its colors and blurs round ends too, and `Segmented` glows every cell, unlit ones included unless `TrackVisible` is `false`. The track of `Basic` and the wrapped lap do not glow. `Minimal` density draws no glow |
+| Threshold markers | As in Grafana, one thin ring outside the outermost ring: 0.2 × thickness^0.92 wide, from 4 to 12 DIP, with half of that (from 2 to 12 DIP) of space, and the rings shrink to make room. Each threshold range takes its color, the range below the first threshold the color of the outermost ring; The gradient of `FillMode` uses the gradient of the outermost ring and `Segmented` does not split it. The ends are flat and `BarGlow` makes it glow too. Nothing is drawn or reserved without thresholds or in `Minimal` density |
 | Center | Fitted inside the innermost ring, up to 32 DIP. `Auto` shows the selected ring, otherwise the outermost one, as a percentage with its name; `Total` shows the sum of the values with `CenterLabel`. The number counts up from 0 during the entrance and from the shown number on updates |
 | Selection | The other rings fade to `DimmedOpacity` over 150 ms; a second tap on the selected ring clears it |
 | Taps | The band of each ring, up to half the spacing, raises `ItemTapped` with the data position in `Index`, the name in `X` and the value in `Y`; elsewhere `ChartTapped` is raised and the selection is cleared |
@@ -882,7 +878,7 @@ Grafana has no radar, so the look follows its line and area tone: a hairline gri
 | `GridShape` | `ChartRadarGridShape` | `Polygon` | ✓ | Shape of the rings; fewer than 3 items always use circles |
 | `LevelCount` | `int` | `5` | ✓ | Most rings, 1 or more; nice level steps can give fewer |
 | `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the level values and of the tooltip values of series without their own format (see [Formats](#formats)); the default is the compact number |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of those values from code, used first |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Format of those values from code, used first |
 
 #### Legend
 
@@ -904,7 +900,7 @@ Grafana has no radar, so the look follows its line and area tone: a hairline gri
 | `SelectionChangedCommand` | `ICommand?` | `null` | ✓ | Executed after `SelectionChanged` |
 | `TrackballMode` | `ChartTrackballMode` | `None` | ✓ | How the trackball starts, as in `ClamChartView` |
 | `TooltipVisible` | `bool` | `true` | ✓ | Draws the tooltip |
-| `TooltipFormatter` | `Func<ChartTrackingInfo, string>?` | `null` | | Text of each series row after its colored dot; `null` is the title and the formatted value |
+| `TooltipFormatter` | `Func<ChartTrackingInfo, string>?` | `null` | ✓ | Text of each series row after its colored dot; `null` is the title and the formatted value |
 | `TrackedItem` | `object?` | `null` | ✓ | Item of the first series at the tracked axis, OneWayToSource; `null` when released |
 | `TrackedIndex` | `int` | `-1` | ✓ | Position of that item in the data of its series, OneWayToSource |
 | `TrackingChangedCommand` | `ICommand?` | `null` | ✓ | Executed when tracking starts, moves to another axis and ends |
@@ -916,7 +912,7 @@ Derives from `ChartSeries`, so `Title`, `ItemsSource`, `ValueAccessors`, `Color`
 
 | Name | Type | Default | Bindable | Description |
 |---|---|---|:-:|---|
-| `Thickness` | `double?` | `null` | ✓ | Line thickness, 0 or more; `null` uses `ChartStyle.LineThickness` |
+| `Thickness` | `double?` | `null` | ✓ | Line thickness, 0 or more; `null` uses 2 |
 | `FillOpacity` | `double` | `0.15` | ✓ | Opacity of the fill, from 0 to 1 |
 
 ### 📣 Events
@@ -963,8 +959,8 @@ The colors follow the Grafana heatmap: the Oranges scheme in 64 steps, reversed 
 | `ValueAccessors` | `IChartAccessorProvider?` | `null` | ✓ | Accessors (see [Data](#-data)) |
 | `RowKey`, `ColumnKey`, `ValueKey` | `string?` | `null` | ✓ | Keys of the row name, the column and the value of a matrix; without `RowKey` the matrix has one row |
 | `DateKey` | `string?` | `null` | ✓ | Key of the date of a calendar (`DateTime` or `DateTimeOffset`) |
-| `RowSelector` | `Func<object, string?>?` | `null` | | Row name of an item from code, used before the key |
-| `ValueSelector` | `Func<object, double?>?` | `null` | | Value of an item from code, used before the key |
+| `RowSelector` | `Func<object, string?>?` | `null` | ✓ | Row name of an item from code, used before the key |
+| `ValueSelector` | `Func<object, double?>?` | `null` | ✓ | Value of an item from code, used before the key |
 | `TrackItemChanges` | `bool` | `true` | ✓ | Reads an item again when it raises `PropertyChanged` |
 
 #### Shape and colors
@@ -973,10 +969,10 @@ The colors follow the Grafana heatmap: the Oranges scheme in 64 steps, reversed 
 |---|---|---|:-:|---|
 | `LayoutMode` | `ChartHeatmapLayoutMode` | `Matrix` | ✓ | A matrix or a calendar |
 | `Minimum`, `Maximum` | `double?` | `null` | ✓ | Values at the two ends of the colors, finite values; `null` takes the smallest and the largest value, and a `Maximum` not greater than `Minimum` falls back to them with a warning |
-| `ColorScale` | `IReadOnlyList<Color>?` | `null` | ✓ | Colors from low to high values, two or more; `null` uses `ChartStyle.HeatmapColorScale` |
+| `ColorScale` | `IReadOnlyList<Color>` | `ChartPalettes.OrangesLight` | ✓ | Colors from low to high values, two or more |
 | `CellGap` | `double` | `1` | ✓ | Space after each cell, 0 or more |
 | `ValueFormat`, `ValueConverter` | `string?`, `IValueConverter?` | `null` | ✓ | Format of the values of the legend and the tooltip (see [Formats](#formats)); the default is the compact number |
-| `ValueFormatter` | `Func<double, string>?` | `null` | | Format of the values from code, used first |
+| `ValueFormatter` | `Func<double, string>?` | `null` | ✓ | Format of the values from code, used first |
 | `LegendVisible` | `bool?` | `null` | ✓ | Shows the color scale; `null` shows it in `Full` density |
 | `LegendPosition` | `ChartLegendPosition` | `Bottom` | ✓ | A horizontal scale under or above the cells, or a vertical one on the left or the right |
 
@@ -1005,7 +1001,7 @@ The colors follow the Grafana heatmap: the Oranges scheme in 64 steps, reversed 
 
 | Item | Rule |
 |---|---|
-| Matrix | Rows follow the order in which their names appear. Columns follow the order of appearance for text and ascend for numbers and dates. When a cell gets two or more values, the first one is used. A cell without a value is drawn in `ChartStyle.TrackColor` or a neutral gray (black at 7% in light, white at 7% in dark). The cells fill the area left by the names and the legend, with their own width and height |
+| Matrix | Rows follow the order in which their names appear. Columns follow the order of appearance for text and ascend for numbers and dates. When a cell gets two or more values, the first one is used. A cell without a value is drawn in `TrackColor`. The cells fill the area left by the names and the legend, with their own width and height |
 | Calendar | One column per week and one row per day of the week, starting on the `FirstDayOfWeek` of the culture. The weeks run from the first to the last date of the data, up to the latest 1,000 weeks; days outside that range are not drawn, and days in it without a value are neutral gray. The cells are the largest squares that fit, and the whole calendar with its names and legend is centered. When a day gets two or more values, the first one is used |
 | Colors | The range from `Minimum` to `Maximum` is split into 64 steps, and a value takes step `floor(64 × (value − minimum) / range)` (a range of 0 counts as 1), as in Grafana. The colors are spread over the 64 steps with the B-spline of d3 (`interpolateRgbBasis`), opacity included, which gives exactly the colors of Grafana for the Oranges scheme. Values of zero and below are drawn too |
 | Gaps | Each cell leaves `CellGap` on its right and bottom, and the edges are rounded to whole pixels |
@@ -1101,71 +1097,105 @@ A value mapping of Grafana for `ValueMappings`.
 | Allocation | Still frames and the trackball within one state allocate nothing |
 | Density | `Full` shows the legend, `Compact` hides it unless `LegendVisible` is `true`, and `Minimal` keeps only the bands, without names, the axis or interaction, with whole-chart taps |
 
-## 🎨 ChartStyle
+## 🎨 Theme
 
-`ChartStyle` holds the look of everything except the data, together with the defaults of series widths, opacities and sizes.  
-One style can be shared by every chart.  
-Treat an assigned style as immutable and create a new one with a `with` expression, or call `Invalidate()` after changing it in place.  
-The style is validated when assigned: font sizes, `LegendMarkerSize`, `LineThickness`, `MaxBarWidth` and `MarkerSize` must be positive, the other widths, radii and gaps zero or more, the opacities from 0 to 1, and `MinimalSize` must not exceed `CompactSize`; otherwise `ArgumentException` is thrown.  
+The look is set with ordinary bindable properties on the views, the axes and the series; there is no style object.  
+A chart builds a snapshot of them when one changes, so a frame reads one object and allocates nothing.  
+Each property is validated when it is assigned: font sizes and marker sizes must be positive, widths, radii and gaps zero or more, opacities from 0 to 1; otherwise `ArgumentOutOfRangeException` is thrown.  
 
-| Name | Type | Light | Dark | Description |
+### Of every chart
+
+These are declared on `ChartViewBase`, so one implicit style with `ApplyToDerivedTypes` reaches all nine chart types.  
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `FontFamily` | `string` | `sans-serif` | Primary font of all text; missing characters are resolved through `FallbackFonts` of SkiaExtension |
+| `PrimaryTextColor` | `Color` | `#0B0B0B` | Center value of a pie and the value of a KPI tile |
+| `SecondaryTextColor` | `Color` | `#52514E` | Legend, axis titles, data labels outside the elements, the caption under the center value, and the title, unit and caption of a KPI tile |
+| `MutedTextColor` | `Color` | `#898781` | Tick labels, hidden legend items, `+N` of the legend and `EmptyText` |
+| `TextHaloColor`, `TextHaloWidth` | `Color`, `double` | `Transparent`, `0` | Outline around text |
+| `LegendFontSize`, `LegendMarkerSize` | `double` | `12`, `8` | Legend text and the marker in front of an entry |
+| `DataLabelFontSize` | `double` | `11` | Data labels |
+| `TooltipBackground`, `TooltipTextColor`, `TooltipBorderColor` | `Color` | `#F0FCFCFB`, `#0B0B0B`, `#1A0B0B0B` | Tooltip |
+| `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `0` | Tooltip text and corners |
+| `TrackballLineColor` | `Color` | `#898781` | Trackball line |
+| `TrackColor` | `Color` | `#12000000` | Part of a bar, gauge or ring that is not reached |
+| `DimmedOpacity` | `double` | `0.35` | Elements that are not emphasized |
+| `PressedOverlayColor` | `Color` | `#0F000000` | Cover of a pressed chart |
+| `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | Loading placeholder and the band that sweeps over it |
+| `Palette` | `IReadOnlyList<Color>` | `ChartPalettes.DefaultLight` | Series colors in a fixed order |
+| `OtherColor` | `Color` | `#B5B3AA` | Merged slices and series beyond the palette |
+| `GoodColor`, `WarningColor`, `SeriousColor`, `CriticalColor` | `Color` | `#56A64B`, `#F2CC0C`, `#FF780A`, `#E02F44` | Status colors used by thresholds: the Grafana named colors of the light theme; `CriticalColor` is also the default color of negative sparkline values |
+| `MarkerKnockout` | `double` | `2` | Transparent ring around a marker |
+| `SegmentGap` | `double` | `2` | Gap between stack segments, grouped bars, slices and the cells of segmented gauges |
+| `FillMode` | `ChartFillMode` | `Solid` | `Gradient` fills the areas, the bars, the sparkline areas, the bar gauges, the rings and the KPI backgrounds with a gradient instead of one color. Areas and sparkline areas fade to nothing at the baseline, bars keep 40% there so that they hold their shape; bar gauges, rings and KPI tiles use the shades of their own color |
+| `CompactSize`, `MinimalSize` | `Size` | `320, 200`, `160, 96` | Density boundaries: a width or a height at or below a size switches to that density |
+
+### Of one chart type
+
+| View | Name | Type | Default | Description |
 |---|---|---|---|---|
-| `IsDark` | `bool` | `false` | `true` | Whether the style is for a dark theme; chooses the direction of KPI gradients and the text on them |
-| `FontFamily` | `string` | `sans-serif` | `sans-serif` | Primary font of all text; missing characters are resolved through `FallbackFonts` of SkiaExtension |
-| `PrimaryTextColor` | `Color` | `#0B0B0B` | `#F0EFEC` | Center value of a pie and the value of a KPI tile |
-| `SecondaryTextColor` | `Color` | `#52514E` | `#C3C2B7` | Legend, axis titles, data labels outside the elements, the caption under the center value, and the title, unit and caption of a KPI tile |
-| `MutedTextColor` | `Color` | `#898781` | `#898781` | Tick labels, hidden legend items, `+N` of the legend and `EmptyText` |
-| `TextHaloColor`, `TextHaloWidth` | `Color`, `double` | `Transparent`, `0` | `Transparent`, `0` | Outline around text |
-| `AxisLabelFontSize`, `AxisTitleFontSize` | `double` | `11`, `11` | `11`, `11` | Axis text |
-| `AxisLineColor` | `Color` | `#C3C2B7` | `#383835` | Baseline and axis lines |
-| `GridLineColor` | `Color` | `#E1E0D9` | `#2C2C2A` | Grid lines |
-| `GridLineThickness` | `double` | `0` | `0` | Width of the grid lines; `0` is one physical pixel |
-| `LegendFontSize`, `LegendMarkerSize` | `double` | `12`, `8` | `12`, `8` | Legend |
-| `DataLabelFontSize` | `double` | `11` | `11` | Data labels and the text on state timeline bands |
-| `TooltipBackground` | `Color` | `#F0FCFCFB` | `#F01F1F1D` | Tooltip fill |
-| `TooltipTextColor` | `Color` | `#0B0B0B` | `#F0EFEC` | Tooltip text |
-| `TooltipBorderColor` | `Color` | `#1A0B0B0B` | `#1AF0EFEC` | Tooltip hairline border |
-| `TooltipFontSize`, `TooltipCornerRadius` | `double` | `12`, `0` | `12`, `0` | Tooltip |
-| `TrackballLineColor` | `Color` | `#898781` | `#898781` | Trackball line |
-| `TrackColor` | `Color?` | `null` | `null` | Part of a bar gauge or a radial bar that is not reached, unlit radial segments and heatmap cells without a value; `null` is a neutral gray (black at 7% in light, white at 7% in dark) |
-| `DimmedOpacity` | `double` | `0.35` | `0.35` | Opacity of the elements that are not selected |
-| `EmphasisDimmedOpacity` | `double` | `0.35` | `0.5` | Opacity of a sparkline except its emphasized last segment |
-| `PressedOverlayColor` | `Color` | `#0F000000` | `#14FFFFFF` | Cover of a pressed chart |
-| `SkeletonColor`, `SkeletonHighlightColor` | `Color` | `#ECEBE6`, `#F6F5F2` | `#232321`, `#2C2C2A` | Loading placeholder and the band that sweeps over it |
-| `Palette` | `IReadOnlyList<Color>` | `ChartPalettes.DefaultLight` | `ChartPalettes.DefaultDark` | Series colors in a fixed order |
-| `HeatmapColorScale` | `IReadOnlyList<Color>` | `ChartPalettes.OrangesLight` | `ChartPalettes.OrangesDark` | Heatmap colors from low to high values, two or more |
-| `OtherColor` | `Color` | `#B5B3AA` | `#5C5B56` | Merged slices and series beyond the palette |
-| `GoodColor`, `WarningColor`, `SeriousColor`, `CriticalColor` | `Color` | `#56A64B`, `#F2CC0C`, `#FF780A`, `#E02F44` | `#73BF69`, `#FADE2A`, `#FF9830`, `#F2495C` | Status colors used by thresholds: the Grafana named colors green, yellow, orange and red of each theme; `CriticalColor` is the default color of negative sparkline values |
-| `PositiveTextColor`, `NegativeTextColor` | `Color` | `#56A64B`, `#E02F44` | `#73BF69`, `#F2495C` | Good and bad differences in KPI tiles, the Grafana green and red |
-| `LineThickness` | `double` | `2` | `2` | Default line width |
-| `AreaFillOpacity` | `double` | `0.1` | `0.1` | Default fill opacity |
-| `BarCornerRadius`, `MaxBarWidth` | `double` | `0`, `24` | `0`, `24` | Default bar corner and width |
-| `MarkerSize`, `MarkerKnockout` | `double` | `8`, `2` | `8`, `2` | Default marker diameter and the transparent ring around it |
-| `SegmentGap` | `double` | `2` | `2` | Gap between stack segments, grouped bars, slices and the cells of segmented gauges |
-| `CompactSize`, `MinimalSize` | `Size` | `320, 200`, `160, 96` | same | Density boundaries: a width or a height at or below a size switches to that density |
+| `ClamChartView` | `AxisTitleFontSize` | `double` | `11` | Axis titles |
+| `ClamSparklineView` | `BaselineColor` | `Color` | `#C3C2B7` | Zero line |
+| `ClamSparklineView` | `AreaOpacity` | `double` | `0.1` | Fill of the `Area` kind |
+| `ClamSparklineView` | `EmphasisDimmedOpacity` | `double` | `0.35` | Everything but the emphasized last segment |
+| `ClamHeatmapView` | `LabelFontSize` | `double` | `11` | Row and column labels |
+| `ClamHeatmapView` | `ColorScale` | `IReadOnlyList<Color>` | `ChartPalettes.OrangesLight` | Cell colors from low to high values, two or more |
+| `ClamStatView` | `PositiveTextColor`, `NegativeTextColor` | `Color` | `#56A64B`, `#E02F44` | Good and bad differences |
+| `ClamStatView` | `AccentTextColor` | `Color` | `#202226` | Text over an accent that is nearly transparent |
+| `ClamStatView` | `GradientStrength` | `double` | `-0.7` | How far the background gradient moves the lightness of the accent |
+| `ClamRadarChartView` | `WebColor`, `WebThickness` | `Color`, `double` | `#E1E0D9`, `0` | Rings and spokes of the web |
+| `ClamRadarChartView` | `LabelFontSize` | `double` | `11` | Category and level labels |
+| `ClamStateTimelineView` | `SeparatorColor`, `SeparatorThickness` | `Color`, `double` | `#E1E0D9`, `0` | Lines between the rows |
+| `ClamStateTimelineView` | `LabelFontSize` | `double` | `11` | Row and time labels |
+| `ClamRadialBarView` | `UnlitColor` | `Color` | `#4D24292E` | Cells of `Segmented` that are not lit |
+| `ClamRadialBarView` | `GradientShift` | `double` | `5` | Lightness the `Gradient` mode travels; a negative value runs from dark to light for a dark background |
 
-### ChartStyles
+### Of an axis and a series
 
-| Name | Description |
-|---|---|
-| `ChartStyles.Light` | Style for light screens and the default of `ChartViewBase.ChartStyle` |
-| `ChartStyles.Dark` | Style for dark screens |
-| `ChartStyles.OverlayLight` | `Light` for charts over light photos and cards: no grid or axis lines, white outline of 1.5 DIP at 80% around text, fill opacity 0.06, placeholder in black at 8% with a white band |
-| `ChartStyles.OverlayDark` | `Dark` for charts over maps, dark photos and video: no grid or axis lines, black outline of 1.5 DIP at 80% around text, fill opacity 0.08, placeholder in white at 12% |
+| Owner | Name | Type | Default | Description |
+|---|---|---|---|---|
+| `ChartAxis` | `LabelFontSize` | `double` | `11` | Tick labels of that axis |
+| `ChartAxis` | `LineColor` | `Color` | `#C3C2B7` | Axis line and ticks of that axis |
+| `ChartAxis` | `GridLineColor`, `GridLineThickness` | `Color`, `double` | `#E1E0D9`, `0` | Grid lines of that axis |
+| `LineSeries`, `RadarSeries` | `Thickness` | `double` | `2` | Line width |
+| `LineSeries`, `ScatterSeries` | `MarkerSize` | `double` | `8` | Marker diameter |
+| `AreaSeries` | `FillOpacity` | `double` | `0.1` | Fill under the line |
+| `BarSeries`, `RangeBarSeries` | `CornerRadius`, `MaxBarWidth` | `double` | `0`, `24` | Bar corner and widest bar |
 
-The library does not follow the theme of the system by itself.  
-An implicit style on the base class with `AppThemeBinding` themes every chart at once.  
+⚠️ An axis and a series are not visual elements, so a MAUI `Style` cannot target them. Reference the theme from each declaration instead, with `{DynamicResource}`, `{StaticResource}` or `{AppThemeBinding}`; a `Binding` and the binding context reach them as well.  
+
+### ClamChartThemes
+
+The library ships a `ResourceDictionary` of keyed styles whose setters carry both themes with `{AppThemeBinding}`, so merging it once is enough.  
+
+| Key | Target | Description |
+|---|---|---|
+| `ClamChartTheme` | `ChartViewBase` (derived types too) | Text, tooltip, track, placeholder, palette and status colors of both themes |
+| `ClamChartOverlayTheme` | the same | `ClamChartTheme` with an outline around text and a lighter placeholder, for charts over photos, maps and cards |
+| `ClamChartSparklineTheme`, `ClamChartHeatmapTheme`, `ClamChartStatTheme`, `ClamChartRadarTheme`, `ClamChartStateTimelineTheme`, `ClamChartRadialBarTheme` | that chart type | `ClamChartTheme` with the values of that type |
+| `ClamChartAxisLineColor`, `ClamChartGridLineColor` | `Color` | For the axes, which a style cannot reach |
 
 ```xml
-<Style TargetType="clam:ChartViewBase" ApplyToDerivedTypes="True">
-    <Setter Property="ChartStyle" Value="{AppThemeBinding Light={x:Static clam:ChartStyles.Light}, Dark={x:Static clam:ChartStyles.Dark}}" />
-</Style>
+<Application.Resources>
+    <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <clam:ClamChartThemes />
+        </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+</Application.Resources>
+
+<Style TargetType="clam:ChartViewBase" ApplyToDerivedTypes="True" BasedOn="{StaticResource ClamChartTheme}" />
+<Style TargetType="clam:ClamStatView" BasedOn="{StaticResource ClamChartStatTheme}" />
 ```
 
+⚠️ MAUI picks the most specific implicit style and does not merge two of them, so base an application style on the key instead of writing a second implicit style for the same type.  
+⚠️ MAUI has no theme of one element (the `RequestedTheme` of WinUI), so a dark chart on a light page is an application style that sets the dark values itself.  
 ### ChartPalettes
 
 The default palettes are eight colors in a fixed order chosen so that neighbors stay distinct for color vision deficiencies.  
 Colors belong to series and slices by position, so hiding a series does not change the others, and colors are never reused in a cycle.  
+`MaterialLight` and `MaterialDark` are the Material Design steps, 500 with Amber 600 on light and 300 on dark, for applications that follow Material; the default palettes stay what they are.  
 
 | Name | Colors |
 |---|---|
@@ -1173,6 +1203,8 @@ Colors belong to series and slices by position, so hiding a series does not chan
 | `ChartPalettes.DefaultDark` | `#3987E5`, `#D95926`, `#199E70`, `#C98500`, `#D55181`, `#008300`, `#9085E9`, `#E66767` |
 | `ChartPalettes.GrafanaLight` | `#56A64B`, `#E0B400`, `#3274D9`, `#FF780A`, `#E02F44`, `#A352CC` |
 | `ChartPalettes.GrafanaDark` | `#73BF69`, `#F2CC0C`, `#5794F2`, `#FF9830`, `#F2495C`, `#B877D9` |
+| `ChartPalettes.MaterialLight` | `#2196F3`, `#4CAF50`, `#FFB300`, `#E91E63`, `#00BCD4`, `#673AB7`, `#FF5722`, `#009688` |
+| `ChartPalettes.MaterialDark` | `#64B5F6`, `#81C784`, `#FFD54F`, `#F06292`, `#4DD0E1`, `#9575CD`, `#FF8A65`, `#4DB6AC` |
 | `ChartPalettes.RedShadesLight` | `#E02F44`, `#EF3E4E`, `#D21F39`, `#FE4D58`, `#B81B37`, `#FF5C62`, `#9E1833`, `#FF6A6B`, `#84142E`, `#FF7D79`, `#6A1027` |
 | `ChartPalettes.RedShadesDark` | `#F2495C`, `#FF5866`, `#F02D49`, `#FF6771`, `#EE1136`, `#FF767B`, `#D30F35`, `#FF8484`, `#B70D33`, `#FF9793`, `#9B0B2F` |
 | `ChartPalettes.OrangeShadesLight` | `#FF780A`, `#FF8E19`, `#EB6300`, `#FFA428`, `#CD5100`, `#FFB937`, `#B04000`, `#FFCE45`, `#923100`, `#FFE454`, `#742400` |
@@ -1193,7 +1225,7 @@ The shades are the shades of Grafana: the named color of each hue in each theme 
 In XAML, choose the shades by the theme with `{AppThemeBinding Light={x:Static clam:ChartPalettes.BlueShadesLight}, Dark={x:Static clam:ChartPalettes.BlueShadesDark}}`.  
 They are not checked for color vision deficiencies, so pair them with labels or a legend.  
 `OrangesLight` and `OrangesDark` are the Oranges scheme of d3 that the Grafana heatmap uses by default, from low to high values; the dark theme reverses it so that large values are light. They are meant for `ColorScale` of a heatmap, not for series.  
-Any `IReadOnlyList<Color>` works as a palette, on a view through `Palette` or for every chart through `ChartStyle.Palette`; in XAML, list the colors in `x:Array Type="{x:Type Color}"`. The `AppPalettes.Material` of the Example (the 400 tones of five Material Design colors for both themes) is such an application palette.  
+Any `IReadOnlyList<Color>` works as a palette, on a view through `Palette`, or on every chart at once through a style; in XAML, list the colors in `x:Array Type="{x:Type Color}"`. The `AppPalettes.Material` of the Example (the 400 tones of five Material Design colors for both themes) is such an application palette.  
 
 ## 🖌 ChartDrawing
 
@@ -1228,7 +1260,8 @@ Each method also has an overload with a `ChartDrawingCache?` after the options (
 | `Thickness` | `float?` | `null` | Thickness of each ring; `null` divides the area outside `InnerRadius`, up to 1/6 of the radius |
 | `Spacing` | `float` | `4` | Space between the rings |
 | `CapStyle` | `ChartCapStyle` | `Flat` | Ends of the rings and the track |
-| `DisplayMode` | `ChartRadialBarMode` | `Basic` | `Basic`, `Gradient` or `Segmented` |
+| `DisplayMode` | `ChartRadialBarMode` | `Basic` | `Basic` or `Segmented` |
+| `FillMode` | `ChartFillMode` | `Solid` | `Gradient` draws the rings with the gradient |
 | `SegmentCount`, `SegmentGap` | `int`, `float` | `20`, `2` | Cells of a ring in `Segmented` and the gap between them; fewer cells on short rings |
 | `TrackVisible`, `TrackColor` | `bool`, `SKColor?` | `true`, `null` | Draws the rest of each ring; `null` uses the track color of the theme |
 | `BarGlow` | `bool` | `false` | Makes the value of each ring glow as `ClamRadialBarView.BarGlow` does |
@@ -1242,7 +1275,8 @@ Each method also has an overload with a `ChartDrawingCache?` after the options (
 |---|---|---|---|
 | `Minimum`, `Maximum` | `double` | `0`, `100` | Range of the values and the targets |
 | `Orientation` | `ChartOrientation` | `Horizontal` | `Horizontal` stacks rows and `Vertical` places columns |
-| `DisplayMode` | `ChartBarGaugeMode` | `Basic` | `Basic`, `Gradient` or `Segmented` |
+| `DisplayMode` | `ChartBarGaugeMode` | `Basic` | `Basic` or `Segmented` |
+| `FillMode` | `ChartFillMode` | `Solid` | `Gradient` draws the bars with the gradient |
 | `SegmentWidth`, `SegmentGap` | `float` | `12`, `2` | Width of a cell in `Segmented` and the gap between cells |
 | `Spacing` | `float` | `12` | Space between the bars |
 | `TrackVisible`, `TrackColor` | `bool`, `SKColor?` | `true`, `null` | Draws the part that is not reached; `null` uses the track color of the theme |
@@ -1504,8 +1538,8 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | `ChartMarkerMode` | `Auto` | The last point and the selected point |
 | | `None` | No markers |
 | | `All` | Every point |
-| `ChartFillMode` | `Solid` | Even fill |
-| | `Gradient` | Fades out toward the baseline |
+| `ChartFillMode` | `Solid` | One color |
+| | `Gradient` | A gradient; areas and sparkline areas fade to nothing at the baseline and bars keep 40% there, bar gauges, rings and KPI tiles use the shades of their own color |
 | `ChartEmptyPointMode` | `Gap` | Breaks the line and skips the point |
 | | `Zero` | Treats the point as 0 |
 | | `Interpolate` | Interpolates between the neighbors along X |
@@ -1542,11 +1576,9 @@ A struct with the point of one series under the trackball, also passed to `Toolt
 | | `Value` | Value, unit and trend in the tile color |
 | | `Indicator` | State icon and a band at the left edge |
 | | `Background` | Tile tinted with the state color |
-| | `BackgroundGradient` | Gradient of the tile color with text in light or dark ink by its brightness |
 | `ChartStatLayoutMode` | `Auto` | Horizontal when the width is at least 2.5 times the height |
 | | `Vertical`, `Horizontal` | Fixed arrangement |
 | `ChartBarGaugeMode` | `Basic` | Bar color at 35% with a line at the end |
-| | `Gradient` | Gradient of the threshold colors up to the value |
 | | `Segmented` | Cells lit up to the value, like an LCD |
 | `ChartBarGaugeLabelPosition` | `Top` | Name above the bar |
 | | `Left` | Names in a column on the left |

@@ -260,10 +260,10 @@ public sealed class ClamChartViewRenderingTests
         stacked.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
         using var dark = Bars(new BarSeries { ItemsSource = Entries(3), TrackVisible = true });
         dark.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
-        dark.ChartStyle = ChartStyles.Dark;
+        dark.ApplyStyle(ChartStyles.Dark);
         using var custom = Bars(new BarSeries { ItemsSource = Entries(3), TrackVisible = true });
         custom.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
-        custom.ChartStyle = ChartStyles.Light with { TrackColor = Colors.Lime };
+        custom.ApplyStyle(ChartStyles.Light with { TrackColor = Colors.Lime });
 
         // Act
         using var stackedBitmap = stacked.Paint(360, 240);
@@ -287,7 +287,7 @@ public sealed class ClamChartViewRenderingTests
         using var surface = SKSurface.Create(new SKImageInfo(720, 480));
         var idle = MeasureFrame(view, surface.Canvas);
         bar.TrackVisible = true;
-        bar.FillMode = ChartFillMode.Gradient;
+        view.FillMode = ChartFillMode.Gradient;
         using var styled = view.Paint(360, 240);
 
         // Act
@@ -301,9 +301,11 @@ public sealed class ClamChartViewRenderingTests
     public void GradientBarsFadeFromTheFarthestValueToTheBaseline()
     {
         // Arrange
-        using var view = Bars(new BarSeries { ItemsSource = Entries(10, 5, -10), Color = Colors.Blue, NegativeColor = Colors.Lime, FillMode = ChartFillMode.Gradient });
+        using var view = Bars(new BarSeries { ItemsSource = Entries(10, 5, -10), Color = Colors.Blue, NegativeColor = Colors.Lime });
+        view.FillMode = ChartFillMode.Gradient;
         view.YAxis = new NumericAxis { Minimum = -10, Maximum = 10, GridLinesVisible = false };
-        using var horizontal = Bars(new BarSeries { ItemsSource = Entries(10), Color = Colors.Blue, FillMode = ChartFillMode.Gradient });
+        using var horizontal = Bars(new BarSeries { ItemsSource = Entries(10), Color = Colors.Blue });
+        horizontal.FillMode = ChartFillMode.Gradient;
         horizontal.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
         horizontal.Orientation = ChartOrientation.Horizontal;
 
@@ -317,23 +319,24 @@ public sealed class ClamChartViewRenderingTests
         var half = GetBarBounds(view, 0, 1);
         var low = GetBarBounds(view, 0, 2);
         Assert.InRange(GetPixelAlpha(bitmap, high.MidX, axis.ToPixel(9.5)), 230, 255);
-        Assert.InRange(GetPixelAlpha(bitmap, high.MidX, axis.ToPixel(0.5)), 1, 25);
-        Assert.InRange(GetPixelAlpha(bitmap, half.MidX, axis.ToPixel(4.5)), 100, 130);
+        Assert.InRange(GetPixelAlpha(bitmap, high.MidX, axis.ToPixel(0.5)), 95, 120);
+        Assert.InRange(GetPixelAlpha(bitmap, half.MidX, axis.ToPixel(4.5)), 160, 185);
         var negative = GetPixel(bitmap, low.MidX, axis.ToPixel(-9.5));
         Assert.InRange(negative.Alpha, 230, 255);
         Assert.True((negative.Green > 240) && (negative.Blue < 10));
-        Assert.InRange(GetPixelAlpha(bitmap, low.MidX, axis.ToPixel(-0.5)), 1, 25);
+        Assert.InRange(GetPixelAlpha(bitmap, low.MidX, axis.ToPixel(-0.5)), 95, 120);
         var bar = GetBarBounds(horizontal, 0, 0);
         axis = horizontal.ChartLayout.YAxis;
         Assert.InRange(GetPixelAlpha(horizontalBitmap, axis.ToPixel(9.5), bar.MidY), 230, 255);
-        Assert.InRange(GetPixelAlpha(horizontalBitmap, axis.ToPixel(0.5), bar.MidY), 1, 25);
+        Assert.InRange(GetPixelAlpha(horizontalBitmap, axis.ToPixel(0.5), bar.MidY), 95, 120);
     }
 
     [Fact]
     public void ColorSeriesKeepsGradientBarsSolid()
     {
         // Arrange
-        using var view = Bars(new BarSeries { ItemsSource = Entries(20, 80), FillMode = ChartFillMode.Gradient });
+        using var view = Bars(new BarSeries { ItemsSource = Entries(20, 80) });
+        view.FillMode = ChartFillMode.Gradient;
         view.Thresholds = Steps(50);
         view.ThresholdsMode = ChartThresholdsMode.ColorSeries;
 
@@ -349,8 +352,10 @@ public sealed class ClamChartViewRenderingTests
     public void GradientAreaStartsAtTheFillOpacity()
     {
         // Arrange
-        using var view = new TestClamChartView { YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false } };
-        view.Series.Add(new AreaSeries { ItemsSource = new List<double> { 10, 10, 10 }, Color = Colors.Blue, FillOpacity = 0.5, FillMode = ChartFillMode.Gradient });
+        using var view = new TestClamChartView();
+        view.FillMode = ChartFillMode.Gradient;
+        view.YAxis = new NumericAxis { Maximum = 10, GridLinesVisible = false };
+        view.Series.Add(new AreaSeries { ItemsSource = new List<double> { 10, 10, 10 }, Color = Colors.Blue, FillOpacity = 0.5 });
 
         // Act
         using var bitmap = view.Paint(360, 240);
@@ -366,7 +371,8 @@ public sealed class ClamChartViewRenderingTests
     public void RangeBarSpansItsRangeAndTheAxisLeavesOutZero()
     {
         // Arrange
-        using var view = new TestClamChartView { YAxis = new NumericAxis { GridLinesVisible = false } };
+        using var view = new TestClamChartView();
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
         view.Series.Add(RangeBars((12, 25), (8, 18)));
 
         // Act
@@ -387,7 +393,9 @@ public sealed class ClamChartViewRenderingTests
     public void RangeBarLabelsSitAtBothEnds()
     {
         // Arrange
-        using var view = new TestClamChartView { DataLabelsMode = ChartDataLabelsMode.All, YAxis = new NumericAxis { Minimum = 0, Maximum = 30, GridLinesVisible = false } };
+        using var view = new TestClamChartView();
+        view.DataLabelsMode = ChartDataLabelsMode.All;
+        view.YAxis = new NumericAxis { Minimum = 0, Maximum = 30, GridLinesVisible = false };
         view.Series.Add(RangeBars((12, 25), (8, 18)));
 
         // Act
@@ -409,7 +417,8 @@ public sealed class ClamChartViewRenderingTests
         var series = RangeBars((10, 20));
         series.CornerRadius = 8;
         series.TrackVisible = true;
-        using var view = new TestClamChartView { YAxis = new NumericAxis { Minimum = 0, Maximum = 30, GridLinesVisible = false } };
+        using var view = new TestClamChartView();
+        view.YAxis = new NumericAxis { Minimum = 0, Maximum = 30, GridLinesVisible = false };
         view.Series.Add(series);
 
         // Act
@@ -872,7 +881,9 @@ public sealed class ClamChartViewRenderingTests
     public void LineMarkersTakeTheShape(ChartMarkerShape shape, bool corner, bool tip)
     {
         // Arrange
-        using var view = new TestClamChartView { Density = ChartDensity.Full, YAxis = new NumericAxis { GridLinesVisible = false } };
+        using var view = new TestClamChartView();
+        view.Density = ChartDensity.Full;
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
         view.Series.Add(new LineSeries { ItemsSource = new List<double> { 5, 5, 5 }, Color = Colors.Lime, MarkerMode = ChartMarkerMode.All, MarkerShape = shape });
 
         // Act
@@ -893,7 +904,8 @@ public sealed class ClamChartViewRenderingTests
     public void MarkerKnockoutFollowsTheShape(ChartMarkerShape shape, int alpha)
     {
         // Arrange
-        using var view = new TestClamChartView { Density = ChartDensity.Full };
+        using var view = new TestClamChartView();
+        view.Density = ChartDensity.Full;
         view.Series.Add(new AreaSeries { ItemsSource = new List<double> { 5, 5, 5 }, FillOpacity = 1, MarkerMode = ChartMarkerMode.All, MarkerShape = shape });
 
         // Act
@@ -910,7 +922,9 @@ public sealed class ClamChartViewRenderingTests
     public void BubblesTakeTheirSizeAndFitInTheAutomaticRange()
     {
         // Arrange
-        using var view = new TestClamChartView { XAxis = new NumericAxis { GridLinesVisible = false }, YAxis = new NumericAxis { GridLinesVisible = false } };
+        using var view = new TestClamChartView();
+        view.XAxis = new NumericAxis { GridLinesVisible = false };
+        view.YAxis = new NumericAxis { GridLinesVisible = false };
         view.Series.Add(new BubbleSeries { ItemsSource = BubblePoints(), SizeSelector = static x => ((ChartPoint)x).X * 10, Color = Colors.Blue });
 
         // Act
@@ -971,9 +985,13 @@ public sealed class ClamChartViewRenderingTests
     public void BubblesAddNoAllocationToAFrame()
     {
         // Arrange
-        using var scatter = new TestClamChartView { XAxis = new NumericAxis { Minimum = 0, Maximum = 12 }, YAxis = new NumericAxis { Minimum = 0, Maximum = 24 } };
+        using var scatter = new TestClamChartView();
+        scatter.XAxis = new NumericAxis { Minimum = 0, Maximum = 12 };
+        scatter.YAxis = new NumericAxis { Minimum = 0, Maximum = 24 };
         scatter.Series.Add(new ScatterSeries { ItemsSource = BubblePoints() });
-        using var bubbles = new TestClamChartView { XAxis = new NumericAxis { Minimum = 0, Maximum = 12 }, YAxis = new NumericAxis { Minimum = 0, Maximum = 24 } };
+        using var bubbles = new TestClamChartView();
+        bubbles.XAxis = new NumericAxis { Minimum = 0, Maximum = 12 };
+        bubbles.YAxis = new NumericAxis { Minimum = 0, Maximum = 24 };
         bubbles.Series.Add(new BubbleSeries { ItemsSource = BubblePoints(), SizeSelector = static x => ((ChartPoint)x).X });
         using var first = scatter.Paint(360, 240);
         using var second = bubbles.Paint(360, 240);
@@ -1008,7 +1026,8 @@ public sealed class ClamChartViewRenderingTests
     public void VerticalAxisTitleIsDrawnTurned()
     {
         // Arrange
-        using var view = new TestClamChartView { YAxis = new NumericAxis { Title = "Sales", TitleOrientation = ChartOrientation.Vertical } };
+        using var view = new TestClamChartView();
+        view.YAxis = new NumericAxis { Title = "Sales", TitleOrientation = ChartOrientation.Vertical };
         view.Series.Add(new LineSeries { ItemsSource = new List<double> { 1, 2, 3 } });
 
         // Act
@@ -1023,10 +1042,37 @@ public sealed class ClamChartViewRenderingTests
     }
 
     [Fact]
+    public void SortedLegendHeaderUsesThePrimaryTextColor()
+    {
+        // Arrange
+        using var view = new TestClamChartView();
+        view.LegendMode = ChartLegendMode.Table;
+        view.LegendValues = ChartLegendValues.Max;
+        view.LegendSortBy = ChartLegendSortKey.Max;
+        view.LegendSortMode = ChartSortMode.Descending;
+        view.Series.Add(new LineSeries { Title = "a", ItemsSource = new List<double> { 1, 4 } });
+        view.Series.Add(new LineSeries { Title = "b", ItemsSource = new List<double> { 2, 9 } });
+
+        // Act
+        using var bitmap = view.Paint(360, 400);
+
+        // Assert
+        var cells = view.ChartLayout.Legend.Cells;
+        var sorted = cells.First(static cell => cell.Sorted);
+        var plain = cells.First(static cell => (cell.Row < 0) && !cell.Sorted);
+        Assert.True(CountPixels(bitmap, ToSKRect(sorted.Bounds), IsPrimaryInk) > 0, "並べ替え中の見出しが濃い文字色で描かれていない");
+        Assert.Equal(0, CountPixels(bitmap, ToSKRect(plain.Bounds), IsPrimaryInk));
+    }
+
+    [Fact]
     public void SortedLegendHeaderShowsTheDirection()
     {
         // Arrange
-        using var view = new TestClamChartView { LegendMode = ChartLegendMode.Table, LegendValues = ChartLegendValues.Max, LegendSortBy = ChartLegendSortKey.Max, LegendSortMode = ChartSortMode.Descending };
+        using var view = new TestClamChartView();
+        view.LegendMode = ChartLegendMode.Table;
+        view.LegendValues = ChartLegendValues.Max;
+        view.LegendSortBy = ChartLegendSortKey.Max;
+        view.LegendSortMode = ChartSortMode.Descending;
         view.Series.Add(new LineSeries { Title = "a", ItemsSource = new List<double> { 1, 4 } });
         view.Series.Add(new LineSeries { Title = "b", ItemsSource = new List<double> { 2, 9 } });
 
@@ -1056,9 +1102,10 @@ public sealed class ClamChartViewRenderingTests
         canvas.Scale(Scale);
         view.Render(canvas, 360, 240);
         view.Render(canvas, 360, 240);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, 360, 240);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            view.Render(canvas, 360, 240);
+        });
         canvas.Restore();
         return allocated;
     }
@@ -1124,6 +1171,12 @@ public sealed class ClamChartViewRenderingTests
     private static bool IsWhite(SKColor color) => (color.Alpha > 0) && (color.Red > 200) && (color.Green > 200) && (color.Blue > 200);
 
     private static bool IsDark(SKColor color) => (color.Alpha > 0) && (color.Red < 80) && (color.Green < 80) && (color.Blue < 80);
+
+    private static bool IsPrimaryInk(SKColor color) =>
+        (color.Alpha > 200) && (color.Red < 40) && (color.Green < 40) && (color.Blue < 40);
+
+    private static SKRect ToSKRect(ChartRect bounds) =>
+        new((float)bounds.X, (float)bounds.Y, (float)bounds.Right, (float)bounds.Bottom);
 
     private static bool IsInk(SKColor color) =>
         (color.Alpha > 0) && (color.Red < 160) && (Math.Abs(color.Red - color.Green) < 24) && (Math.Abs(color.Green - color.Blue) < 24);

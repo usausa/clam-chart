@@ -1,12 +1,12 @@
-namespace ClamChart;
+namespace ClamChart.Tests;
 
-public static class ChartStyles
+internal static class ChartStyles
 {
     public static ChartStyle Light { get; } = new();
 
     public static ChartStyle Dark { get; } = new()
     {
-        IsDark = true,
+        TrackColor = Color.FromArgb("#12FFFFFF"),
         PrimaryTextColor = Color.FromArgb("#F0EFEC"),
         SecondaryTextColor = Color.FromArgb("#C3C2B7"),
         AxisLineColor = Color.FromArgb("#383835"),
@@ -35,7 +35,6 @@ public static class ChartStyles
         GridLineColor = Colors.Transparent,
         TextHaloColor = Color.FromArgb("#CCFFFFFF"),
         TextHaloWidth = 1.5,
-        AreaFillOpacity = 0.06,
         SkeletonColor = Color.FromArgb("#14000000"),
         SkeletonHighlightColor = Color.FromArgb("#66FFFFFF")
     };
@@ -46,7 +45,6 @@ public static class ChartStyles
         GridLineColor = Colors.Transparent,
         TextHaloColor = Color.FromArgb("#CC000000"),
         TextHaloWidth = 1.5,
-        AreaFillOpacity = 0.08,
         SkeletonColor = Color.FromArgb("#1FFFFFFF"),
         SkeletonHighlightColor = Color.FromArgb("#26FFFFFF")
     };

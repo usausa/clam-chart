@@ -209,8 +209,8 @@ internal sealed class SparklineCore : IDisposable
         return allowed;
     }
 
-    public void UpdateLayout(double width, double height, Thickness padding, ChartStyle style, SparklineLayoutOptions options) =>
-        Layout.Update(width, height, padding, style, options, Values);
+    public void UpdateLayout(double width, double height, Thickness padding, SparklineLayoutOptions options) =>
+        Layout.Update(width, height, padding, options, Values);
 
     public void CompleteTransition(bool captured, ChartEntranceAnimation entrance, double length)
     {

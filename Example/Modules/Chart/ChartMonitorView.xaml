@@ -25,30 +25,30 @@
                 <Border Grid.Row="0" Grid.Column="0"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Cpu}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#3274D9,
                                                               Dark=#5794F2}"
-                                       Title="CPU" TrendPlacement="Background"
+                                       FillMode="Gradient" Title="CPU" TrendPlacement="Background"
                                        TrendValues="{Binding CpuTrend}"
                                        Unit="%" ValueFormat="N1" />
                 </Border>
                 <Border Grid.Row="0" Grid.Column="1"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Memory}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#3274D9,
                                                               Dark=#5794F2}"
-                                       Title="Memory" TrendPlacement="Background"
+                                       FillMode="Gradient" Title="Memory" TrendPlacement="Background"
                                        TrendValues="{Binding MemoryTrend}"
                                        Unit="%" ValueFormat="N1" />
                 </Border>
                 <Border Grid.Row="0" Grid.Column="2"
                         Style="{StaticResource StatBorder}">
                     <clam:ClamStatView Value="{Binding Temperature}"
-                                       ColorMode="BackgroundGradient"
+                                       ColorMode="Background"
                                        Fill="{AppThemeBinding Light=#E02F44,
                                                               Dark=#F2495C}"
-                                       Title="Temp" TrendPlacement="Background"
+                                       FillMode="Gradient" Title="Temp" TrendPlacement="Background"
                                        TrendValues="{Binding TemperatureTrend}"
                                        Unit="°C" ValueFormat="N0" />
                 </Border>

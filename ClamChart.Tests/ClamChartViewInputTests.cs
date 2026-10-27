@@ -619,9 +619,12 @@ public sealed class ClamChartViewInputTests
         Move(view, x, 2);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        Move(view, x, 100);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var time = 100d;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            Move(view, x, time);
+            time += 20;
+        });
 
         // Assert
         Assert.True(view.IsTracking);
@@ -875,9 +878,12 @@ public sealed class ClamChartViewInputTests
         Move(view, x, 2);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        Move(view, x, 100);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var time = 100d;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            Move(view, x, time);
+            time += 20;
+        });
 
         // Assert
         Assert.True(view.IsTracking);
@@ -941,9 +947,10 @@ public sealed class ClamChartViewInputTests
         canvas.Scale(2);
         view.Render(canvas, 360, 240);
         view.Render(canvas, 360, 240);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, 360, 240);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            view.Render(canvas, 360, 240);
+        });
         canvas.Restore();
         return allocated;
     }

@@ -39,7 +39,7 @@ public sealed class ChartViewBaseTests
         using var view = new TestChartView();
 
         // Act & Assert
-        Assert.Null(view.Palette);
+        Assert.Same(ChartPalettes.DefaultLight, view.Palette);
         Assert.Null(view.ContentPadding);
         Assert.Null(view.Culture);
         Assert.Null(view.EmptyText);
@@ -169,40 +169,12 @@ public sealed class ChartViewBaseTests
         view.Paint(200, 100);
 
         // Act
-        view.ChartStyle = ChartStyles.Dark;
+        view.FontFamily = "serif";
         view.Paint(200, 100);
 
         // Assert
         Assert.Equal(1, view.RendererResets);
         Assert.Equal(2, view.LayoutUpdates);
-    }
-
-    [Fact]
-    public void ChartStyleIsLightByDefaultAndRejectsNullAndInvalidStyles()
-    {
-        // Arrange
-        using var view = new TestChartView();
-
-        // Act & Assert
-        Assert.Same(ChartStyles.Light, view.ChartStyle);
-        Assert.Throws<ArgumentNullException>(() => view.ChartStyle = null!);
-        Assert.Throws<ArgumentException>(() => view.ChartStyle = ChartStyles.Light with { LineThickness = 0 });
-        Assert.Same(ChartStyles.Light, view.ChartStyle);
-    }
-
-    [Fact]
-    public void InvalidateRevalidatesAStyleChangedInPlace()
-    {
-        // Arrange
-        using var view = new TestChartView();
-        var style = ChartStyles.Light with { };
-        view.ChartStyle = style;
-
-        // Act
-        style.MarkerSize = -1;
-
-        // Assert
-        Assert.Throws<ArgumentException>(view.Invalidate);
     }
 
     [Fact]
@@ -226,7 +198,7 @@ public sealed class ChartViewBaseTests
         // Act & Assert
         view.Density = ChartDensity.Auto;
         view.Frame = new Rect(0, 0, 400, 300);
-        view.ChartStyle = ChartStyles.Light with { CompactSize = new Size(500, 400) };
+        view.ApplyStyle(ChartStyles.Light with { CompactSize = new Size(500, 400) });
         Assert.Equal(ChartDensity.Compact, view.EffectiveDensity);
     }
 

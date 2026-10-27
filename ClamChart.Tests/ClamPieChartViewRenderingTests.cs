@@ -343,9 +343,10 @@ public sealed class ClamPieChartViewRenderingTests
         canvas.Scale(Scale);
         view.Render(canvas, 340, 340);
         view.Render(canvas, 340, 340);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, 340, 340);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            view.Render(canvas, 340, 340);
+        });
         canvas.Restore();
         return allocated;
     }

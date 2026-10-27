@@ -14,7 +14,6 @@ public sealed class ClamPieChartViewTests
         Assert.Equal(0.6, view.InnerRadius);
         Assert.Equal(0, view.StartAngle);
         Assert.Equal(360, view.SweepAngle);
-        Assert.Null(view.SliceGap);
         Assert.Equal(ChartSortMode.None, view.SortMode);
         Assert.Equal(8, view.MaxSlices);
         Assert.Equal(0, view.OthersThreshold);
@@ -44,7 +43,6 @@ public sealed class ClamPieChartViewTests
         Assert.Throws<ArgumentOutOfRangeException>(() => view.StartAngle = Double.PositiveInfinity);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.SweepAngle = 0);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.SweepAngle = 361);
-        Assert.Throws<ArgumentOutOfRangeException>(() => view.SliceGap = -1);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.MaxSlices = 0);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.OthersThreshold = 1);
         Assert.Throws<ArgumentOutOfRangeException>(() => view.OthersThreshold = -0.1);
@@ -53,7 +51,6 @@ public sealed class ClamPieChartViewTests
         Assert.Throws<ArgumentNullException>(() => view.OthersLabel = null!);
         view.InnerRadius = 0;
         view.SweepAngle = 180;
-        view.SliceGap = null;
         view.CenterValue = null;
         Assert.Equal(0, view.InnerRadius);
     }
@@ -178,7 +175,7 @@ public sealed class ClamPieChartViewTests
         using var bitmap = view.Paint(300, 300);
 
         // Assert
-        Assert.Equal(1, capture.Count("has no color in the palette"));
+        Assert.Equal(1, capture.Count("The slice at index 2 has no color in the palette"));
     }
 
     [Fact]

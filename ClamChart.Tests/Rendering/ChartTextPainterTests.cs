@@ -62,9 +62,10 @@ public sealed class ChartTextPainterTests
         DrawRepeatedly(painter, canvas);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        DrawRepeatedly(painter, canvas);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            DrawRepeatedly(painter, canvas);
+        });
 
         // Assert
         Assert.Equal(0, allocated);

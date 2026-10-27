@@ -21,6 +21,8 @@ public abstract class ChartSeries : Element
     public static readonly BindableProperty ValueConverterProperty = BindableProperty.Create(nameof(ValueConverter), typeof(IValueConverter), typeof(ChartSeries), propertyChanged: OnLayoutChanged);
     public static readonly BindableProperty EmptyPointModeProperty = BindableProperty.Create(nameof(EmptyPointMode), typeof(ChartEmptyPointMode), typeof(ChartSeries), ChartEmptyPointMode.Gap, propertyChanged: OnDataChanged);
     public static readonly BindableProperty TrackItemChangesProperty = BindableProperty.Create(nameof(TrackItemChanges), typeof(bool), typeof(ChartSeries), true, propertyChanged: OnTrackItemChangesChanged);
+    public static readonly BindableProperty ValueSelectorProperty = BindableProperty.Create(nameof(ValueSelector), typeof(Func<object, double?>), typeof(ChartSeries), propertyChanged: OnDataChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ChartSeries), propertyChanged: OnLayoutChanged);
 
     public string? Title
     {
@@ -102,22 +104,14 @@ public abstract class ChartSeries : Element
 
     public Func<object, double?>? ValueSelector
     {
-        get;
-        set
-        {
-            field = value;
-            Owner?.InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(ValueSelectorProperty);
+        set => SetValue(ValueSelectorProperty, value);
     }
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            Owner?.InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     internal ChartViewBase? Owner { get; set; }

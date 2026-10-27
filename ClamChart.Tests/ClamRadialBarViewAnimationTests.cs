@@ -159,15 +159,16 @@ public sealed class ClamRadialBarViewAnimationTests
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic)]
-    [InlineData(ChartRadialBarMode.Gradient)]
-    [InlineData(ChartRadialBarMode.Segmented)]
-    public void AnimationFramesDoNotAllocate(ChartRadialBarMode mode)
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Gradient)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartFillMode.Solid)]
+    public void AnimationFramesDoNotAllocate(ChartRadialBarMode mode, ChartFillMode fill)
     {
         // Arrange
         var entries = new ObservableCollection<ChartEntry>([new ChartEntry("Move", 82), new ChartEntry("Exercise", 58), new ChartEntry("Stand", 31)]);
         using var view = Quiet(entries);
         view.DisplayMode = mode;
+        view.FillMode = fill;
         view.CapStyle = ChartCapStyle.Round;
         view.Thresholds.Add(new ChartThreshold { Level = ChartThresholdLevel.Good });
         view.Thresholds.Add(new ChartThreshold { Value = 60, Level = ChartThresholdLevel.Warning });
@@ -212,19 +213,19 @@ public sealed class ClamRadialBarViewAnimationTests
     {
         canvas.Save();
         canvas.Scale(2);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            driver.Frame(Data, i * 0.2);
-            if (driver.IsRunning(Center))
+            for (var i = 1; i <= 4; i++)
             {
-                driver.Frame(Center, i * 0.2);
+                driver.Frame(Data, i * 0.2);
+                if (driver.IsRunning(Center))
+                {
+                    driver.Frame(Center, i * 0.2);
+                }
+
+                view.Render(canvas, 300, 300);
             }
-
-            view.Render(canvas, 300, 300);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        });
         canvas.Restore();
         return allocated;
     }

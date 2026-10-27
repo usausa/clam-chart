@@ -356,7 +356,7 @@ public abstract partial class ChartViewBase
         }
 
         pressedPaint ??= new SKPaint { IsAntialias = false, Style = SKPaintStyle.Fill };
-        pressedPaint.Color = ChartStyle.PressedOverlayColor.ToSKColor();
+        pressedPaint.Color = EffectiveStyle.PressedOverlayColor.ToSKColor();
         canvas.DrawRect(0, 0, width, height, pressedPaint);
     }
 

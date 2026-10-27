@@ -94,9 +94,14 @@ public sealed partial class ChartStatViewModel : ChartViewModelBase
     [ObservableProperty]
     public partial ChartStatColorMode SalesColorMode { get; set; } = ChartStatColorMode.Value;
 
+    [ObservableProperty]
+    public partial ChartFillMode FillMode { get; set; }
+
     public IObserveCommand SelectLayoutCommand { get; }
 
     public IObserveCommand SelectColorCommand { get; }
+
+    public IObserveCommand SelectFillModeCommand { get; }
 
     public ChartStatViewModel()
     {
@@ -122,6 +127,7 @@ public sealed partial class ChartStatViewModel : ChartViewModelBase
         Requests = RequestTrend[^1];
         SelectLayoutCommand = MakeDelegateCommand<ChartStatLayoutMode>(x => LayoutMode = x);
         SelectColorCommand = MakeDelegateCommand<ChartStatColorMode>(x => SalesColorMode = x);
+        SelectFillModeCommand = MakeDelegateCommand<ChartFillMode>(x => FillMode = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)
         {

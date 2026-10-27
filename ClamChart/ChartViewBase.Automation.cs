@@ -6,16 +6,14 @@ using ClamChart.Rendering;
 
 public abstract partial class ChartViewBase
 {
+    public static readonly BindableProperty AutomationSummaryFormatterProperty = BindableProperty.Create(nameof(AutomationSummaryFormatter), typeof(Func<ChartViewBase, string>), typeof(ChartViewBase), propertyChanged: OnLayoutInputChanged);
+
     private string? automationText;
 
     public Func<ChartViewBase, string?>? AutomationSummaryFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<ChartViewBase, string?>?)GetValue(AutomationSummaryFormatterProperty);
+        set => SetValue(AutomationSummaryFormatterProperty, value);
     }
 
     internal virtual string? CreateAutomationSummary(ChartSummaryText text) => null;

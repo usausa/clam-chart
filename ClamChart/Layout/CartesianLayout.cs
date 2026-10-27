@@ -140,7 +140,6 @@ internal sealed class CartesianLayout : IDisposable
         SecondaryYAxis.IsPercent = HasSecondaryAxis && IsPercentAxis(series, ChartAxisTarget.Secondary, options.StackMode);
         PrepareLegend(series, options, culture);
 
-        var lineHeight = measurer.GetLineHeight(style.AxisLabelFontSize);
         var titleLineHeight = measurer.GetLineHeight(style.AxisTitleFontSize);
         var legendVisible = options.LegendVisible && (legendEntries.Count > 0);
         var legendRows = legendVisible && (options.LegendPosition is ChartLegendPosition.Top or ChartLegendPosition.Bottom);
@@ -159,9 +158,10 @@ internal sealed class CartesianLayout : IDisposable
         }
 
         var verticalLabels = ForVerticalAxes(static axis => axis.ShowsLabels);
-        var labelOffset = Math.Max(LabelGap, verticalLabels ? lineHeight / 2 : 0);
-        top += GetHorizontalExtent(AxisSide.Top, lineHeight, titleLineHeight, labelOffset, verticalLabels);
-        bottom -= GetHorizontalExtent(AxisSide.Bottom, lineHeight, titleLineHeight, labelOffset, verticalLabels);
+        var verticalLineHeight = GetVerticalLineHeight(measurer);
+        var labelOffset = Math.Max(LabelGap, verticalLabels ? verticalLineHeight / 2 : 0);
+        top += GetHorizontalExtent(AxisSide.Top, measurer, titleLineHeight, labelOffset, verticalLabels, verticalLineHeight);
+        bottom -= GetHorizontalExtent(AxisSide.Bottom, measurer, titleLineHeight, labelOffset, verticalLabels, verticalLineHeight);
         var endSide = GetEndSide();
         var extent = options.LiveIndicatorExtent;
         if (endSide == AxisSide.Top)
@@ -175,7 +175,7 @@ internal sealed class CartesianLayout : IDisposable
 
         var plotHeight = Math.Max(0, bottom - top);
 
-        ResolveAxes(true, series, plotHeight, measurer, style.AxisLabelFontSize, Bounds.Width * VerticalLabelRatio);
+        ResolveAxes(true, series, plotHeight, measurer, Bounds.Width * VerticalLabelRatio);
         var left = Bounds.X + GetVerticalExtent(AxisSide.Left, titleLineHeight);
         var right = Bounds.Right - GetVerticalExtent(AxisSide.Right, titleLineHeight);
         if (legendVisible && !legendRows)
@@ -207,15 +207,15 @@ internal sealed class CartesianLayout : IDisposable
         }
 
         PlotBounds = new ChartRect(left, top, Math.Max(0, right - left), plotHeight);
-        ResolveAxes(false, series, PlotBounds.Width, measurer, style.AxisLabelFontSize, Double.PositiveInfinity);
+        ResolveAxes(false, series, PlotBounds.Width, measurer, Double.PositiveInfinity);
         UpdateBarColumnWidth(series);
         foreach (var axis in axes)
         {
-            axis.Place(PlotBounds, Bounds, lineHeight, labelOffset);
+            axis.Place(PlotBounds, Bounds, measurer.GetLineHeight(axis.Options.LabelFontSize), labelOffset);
         }
 
         PlaceBars(series, style);
-        PlaceTitles(series, measurer, style, titleRowTop, titleLineHeight, lineHeight, labelOffset);
+        PlaceTitles(series, measurer, style, titleRowTop, titleLineHeight, labelOffset);
         if (legendRows)
         {
             Legend.Offset(Bounds.X, options.LegendPosition == ChartLegendPosition.Top ? Bounds.Y : Bounds.Bottom - legendHeight);
@@ -274,8 +274,8 @@ internal sealed class CartesianLayout : IDisposable
         _ => AxisSide.Top
     };
 
-    private static double GetBarWidth(CartesianSeries series, ChartStyle style, double slot) =>
-        Math.Min(slot, series.MaxBarWidth ?? style.MaxBarWidth);
+    private static double GetBarWidth(CartesianSeries series, double slot) =>
+        Math.Min(slot, series.MaxBarWidth);
 
     private static double GetBarWidthRatio(IReadOnlyList<CartesianSeries> series)
     {
@@ -571,7 +571,21 @@ internal sealed class CartesianLayout : IDisposable
         return false;
     }
 
-    private double GetHorizontalExtent(AxisSide side, double lineHeight, double titleLineHeight, double labelOffset, bool verticalLabels)
+    private double GetVerticalLineHeight(IChartTextMeasurer measurer)
+    {
+        var height = 0d;
+        foreach (var axis in axes)
+        {
+            if (IsVertical(axis.Side) && axis.ShowsLabels)
+            {
+                height = Math.Max(height, measurer.GetLineHeight(axis.Options.LabelFontSize));
+            }
+        }
+
+        return height;
+    }
+
+    private double GetHorizontalExtent(AxisSide side, IChartTextMeasurer measurer, double titleLineHeight, double labelOffset, bool verticalLabels, double verticalLineHeight)
     {
         var extent = 0d;
         var labels = false;
@@ -580,11 +594,11 @@ internal sealed class CartesianLayout : IDisposable
             if (axis.Side == side)
             {
                 labels |= axis.ShowsLabels;
-                extent += (axis.ShowsLabels ? labelOffset + lineHeight : 0) + (axis.ShowsTitle ? TitleGap + titleLineHeight : 0);
+                extent += (axis.ShowsLabels ? labelOffset + measurer.GetLineHeight(axis.Options.LabelFontSize) : 0) + (axis.ShowsTitle ? TitleGap + titleLineHeight : 0);
             }
         }
 
-        return verticalLabels && !labels ? extent + (lineHeight / 2) : extent;
+        return verticalLabels && !labels ? extent + (verticalLineHeight / 2) : extent;
     }
 
     private double GetVerticalExtent(AxisSide side, double titleLineHeight)
@@ -611,22 +625,22 @@ internal sealed class CartesianLayout : IDisposable
         return extent;
     }
 
-    private void ResolveAxes(bool vertical, IReadOnlyList<CartesianSeries> series, double length, IChartTextMeasurer measurer, double fontSize, double maxLabelWidth)
+    private void ResolveAxes(bool vertical, IReadOnlyList<CartesianSeries> series, double length, IChartTextMeasurer measurer, double maxLabelWidth)
     {
         if (IsVertical(XAxis.Side) == vertical)
         {
             var (minimum, maximum) = Pad(positionRange, BubbleExtent, length);
-            XAxis.Resolve(minimum, maximum, length, Categories, null, measurer, fontSize, maxLabelWidth);
+            XAxis.Resolve(minimum, maximum, length, Categories, null, measurer, XAxis.Options.LabelFontSize, maxLabelWidth);
         }
 
         if (IsVertical(YAxis.Side) == vertical)
         {
             var (minimum, maximum) = Pad(GetValueRange(series, ChartAxisTarget.Primary), GetBubbleExtent(series, ChartAxisTarget.Primary), length);
-            YAxis.Resolve(minimum, maximum, length, NoCategories, null, measurer, fontSize, maxLabelWidth);
+            YAxis.Resolve(minimum, maximum, length, NoCategories, null, measurer, YAxis.Options.LabelFontSize, maxLabelWidth);
             if (HasSecondaryAxis)
             {
                 (minimum, maximum) = Pad(GetValueRange(series, ChartAxisTarget.Secondary), GetBubbleExtent(series, ChartAxisTarget.Secondary), length);
-                SecondaryYAxis.Resolve(minimum, maximum, length, NoCategories, YAxis, measurer, fontSize, maxLabelWidth);
+                SecondaryYAxis.Resolve(minimum, maximum, length, NoCategories, YAxis, measurer, SecondaryYAxis.Options.LabelFontSize, maxLabelWidth);
             }
         }
     }
@@ -968,7 +982,7 @@ internal sealed class CartesianLayout : IDisposable
             var index = geometries[s].BarSlot;
             if (index >= 0)
             {
-                slotWidths[index] = Math.Max(slotWidths[index], GetBarWidth(series[s], style, slot));
+                slotWidths[index] = Math.Max(slotWidths[index], GetBarWidth(series[s], slot));
             }
         }
 
@@ -996,7 +1010,7 @@ internal sealed class CartesianLayout : IDisposable
             var end = start + slotWidths[index];
             var hitStart = index == 0 ? -column / 2 : start - (gap / 2);
             var hitEnd = index == count - 1 ? column / 2 : end + (gap / 2);
-            geometry.PlaceBar((start + end) / 2 * units, GetBarWidth(series[s], style, slot) * units, hitStart * units, hitEnd * units);
+            geometry.PlaceBar((start + end) / 2 * units, GetBarWidth(series[s], slot) * units, hitStart * units, hitEnd * units);
         }
     }
 
@@ -1084,7 +1098,7 @@ internal sealed class CartesianLayout : IDisposable
         }
     }
 
-    private void PlaceTitles(IReadOnlyList<CartesianSeries> series, IChartTextMeasurer measurer, ChartStyle style, double titleRowTop, double titleLineHeight, double lineHeight, double labelOffset)
+    private void PlaceTitles(IReadOnlyList<CartesianSeries> series, IChartTextMeasurer measurer, ChartStyle style, double titleRowTop, double titleLineHeight, double labelOffset)
     {
         var both = ForVerticalAxes(static axis => axis.ShowsTitle && !axis.RotatesTitle && (axis.Side == AxisSide.Left)) && ForVerticalAxes(static axis => axis.ShowsTitle && !axis.RotatesTitle && (axis.Side == AxisSide.Right));
         foreach (var axis in axes)
@@ -1108,7 +1122,7 @@ internal sealed class CartesianLayout : IDisposable
             else
             {
                 axis.MeasureTitle(measurer, style.AxisTitleFontSize, PlotBounds.Width, markers, style.LegendMarkerSize);
-                var labels = axis.ShowsLabels ? labelOffset + lineHeight : 0;
+                var labels = axis.ShowsLabels ? labelOffset + measurer.GetLineHeight(axis.Options.LabelFontSize) : 0;
                 var y = axis.Side == AxisSide.Top ? PlotBounds.Y - labels - TitleGap - titleLineHeight : PlotBounds.Bottom + labels + TitleGap;
                 row = new ChartRect(PlotBounds.X, y, PlotBounds.Width, titleLineHeight);
             }

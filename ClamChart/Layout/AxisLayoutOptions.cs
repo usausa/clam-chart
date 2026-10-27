@@ -6,6 +6,14 @@ internal sealed record AxisLayoutOptions
 {
     public ChartAxisKind Kind { get; init; }
 
+    public double LabelFontSize { get; init; } = 11;
+
+    public Color LineColor { get; init; } = Color.FromArgb("#C3C2B7");
+
+    public Color GridLineColor { get; init; } = Color.FromArgb("#E1E0D9");
+
+    public double GridLineThickness { get; init; }
+
     public bool IsVisible { get; init; } = true;
 
     public bool LabelsVisible { get; init; } = true;

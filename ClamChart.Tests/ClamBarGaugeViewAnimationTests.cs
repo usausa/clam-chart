@@ -208,15 +208,16 @@ public sealed class ClamBarGaugeViewAnimationTests
     }
 
     [Theory]
-    [InlineData(ChartBarGaugeMode.Basic)]
-    [InlineData(ChartBarGaugeMode.Gradient)]
-    [InlineData(ChartBarGaugeMode.Segmented)]
-    public void AnimationFramesDoNotAllocate(ChartBarGaugeMode mode)
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Solid)]
+    [InlineData(ChartBarGaugeMode.Basic, ChartFillMode.Gradient)]
+    [InlineData(ChartBarGaugeMode.Segmented, ChartFillMode.Solid)]
+    public void AnimationFramesDoNotAllocate(ChartBarGaugeMode mode, ChartFillMode fill)
     {
         // Arrange
         var entries = new ObservableCollection<ChartEntry>([new ChartEntry("Tokyo", 82, Target: 90), new ChartEntry("Osaka", 58), new ChartEntry("Nagoya", 31)]);
         using var view = Quiet(entries);
         view.DisplayMode = mode;
+        view.FillMode = fill;
         view.ValueMode = ChartBarGaugeValueMode.Value;
         view.Thresholds.Add(new ChartThreshold { Level = ChartThresholdLevel.Good });
         view.Thresholds.Add(new ChartThreshold { Value = 60, Level = ChartThresholdLevel.Warning });
@@ -260,14 +261,14 @@ public sealed class ClamBarGaugeViewAnimationTests
     {
         canvas.Save();
         canvas.Scale(2);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            driver.Frame(Data, i * 0.2);
-            view.Render(canvas, 360, 120);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 1; i <= 4; i++)
+            {
+                driver.Frame(Data, i * 0.2);
+                view.Render(canvas, 360, 120);
+            }
+        });
         canvas.Restore();
         return allocated;
     }

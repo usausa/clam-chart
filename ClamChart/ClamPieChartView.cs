@@ -21,7 +21,6 @@ public partial class ClamPieChartView : ChartViewBase
     public static readonly BindableProperty InnerRadiusProperty = BindableProperty.Create(nameof(InnerRadius), typeof(double), typeof(ClamPieChartView), 0.6, validateValue: static (_, value) => ValidateInnerRadius(value, nameof(InnerRadius)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty StartAngleProperty = BindableProperty.Create(nameof(StartAngle), typeof(double), typeof(ClamPieChartView), 0d, validateValue: static (_, value) => ValidateFinite(value, nameof(StartAngle)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty SweepAngleProperty = BindableProperty.Create(nameof(SweepAngle), typeof(double), typeof(ClamPieChartView), 360d, validateValue: static (_, value) => ValidateSweepAngle(value, nameof(SweepAngle)), propertyChanged: OnLayoutInputChanged);
-    public static readonly BindableProperty SliceGapProperty = BindableProperty.Create(nameof(SliceGap), typeof(double?), typeof(ClamPieChartView), validateValue: static (_, value) => ChartSeries.ValidateSize(value, nameof(SliceGap)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty SortModeProperty = BindableProperty.Create(nameof(SortMode), typeof(ChartSortMode), typeof(ClamPieChartView), ChartSortMode.None, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty MaxSlicesProperty = BindableProperty.Create(nameof(MaxSlices), typeof(int), typeof(ClamPieChartView), 8, validateValue: static (_, value) => ValidateMaxSlices(value, nameof(MaxSlices)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty OthersThresholdProperty = BindableProperty.Create(nameof(OthersThreshold), typeof(double), typeof(ClamPieChartView), 0d, validateValue: static (_, value) => ValidateThreshold(value, nameof(OthersThreshold)), propertyChanged: OnLayoutInputChanged);
@@ -39,6 +38,10 @@ public partial class ClamPieChartView : ChartViewBase
     public static readonly BindableProperty ValueFormatProperty = BindableProperty.Create(nameof(ValueFormat), typeof(string), typeof(ClamPieChartView), propertyChanged: OnValueFormatChanged);
     public static readonly BindableProperty ValueConverterProperty = BindableProperty.Create(nameof(ValueConverter), typeof(IValueConverter), typeof(ClamPieChartView), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty ExplodeOffsetProperty = BindableProperty.Create(nameof(ExplodeOffset), typeof(double), typeof(ClamPieChartView), 6d, validateValue: static (_, value) => ChartSeries.ValidateSize(value, nameof(ExplodeOffset)), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty ValueSelectorProperty = BindableProperty.Create(nameof(ValueSelector), typeof(Func<object, double?>), typeof(ClamPieChartView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty LabelSelectorProperty = BindableProperty.Create(nameof(LabelSelector), typeof(Func<object, string>), typeof(ClamPieChartView), propertyChanged: OnDataPropertyChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ClamPieChartView), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty CenterValueFormatterProperty = BindableProperty.Create(nameof(CenterValueFormatter), typeof(Func<double, string>), typeof(ClamPieChartView), propertyChanged: OnLayoutInputChanged);
 
     private readonly ChartDataSource source;
     private readonly PieInteraction interaction = new();
@@ -102,12 +105,6 @@ public partial class ClamPieChartView : ChartViewBase
     {
         get => (double)GetValue(SweepAngleProperty);
         set => SetValue(SweepAngleProperty, value);
-    }
-
-    public double? SliceGap
-    {
-        get => (double?)GetValue(SliceGapProperty);
-        set => SetValue(SliceGapProperty, value);
     }
 
     public ChartSortMode SortMode
@@ -214,42 +211,26 @@ public partial class ClamPieChartView : ChartViewBase
 
     public Func<object, double?>? ValueSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, double?>?)GetValue(ValueSelectorProperty);
+        set => SetValue(ValueSelectorProperty, value);
     }
 
     public Func<object, string?>? LabelSelector
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateData();
-        }
+        get => (Func<object, string?>?)GetValue(LabelSelectorProperty);
+        set => SetValue(LabelSelectorProperty, value);
     }
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     public Func<double, string>? CenterValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(CenterValueFormatterProperty);
+        set => SetValue(CenterValueFormatterProperty, value);
     }
 
     internal PieLayout ChartLayout { get; } = new();
@@ -315,7 +296,7 @@ public partial class ClamPieChartView : ChartViewBase
     {
         var captured = PrepareTransition();
         var culture = Culture ?? CultureInfo.CurrentCulture;
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, CreateLayoutOptions(), snapshot, EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, EffectiveContentPadding, EffectiveStyle, culture, CreateLayoutOptions(), snapshot, EnsureRenderer().Measurer);
         if (ChartLayout.HasNegativeValues && !negativeReported)
         {
             negativeReported = true;
@@ -350,18 +331,18 @@ public partial class ClamPieChartView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
         }
 
-        var palette = Palette ?? ChartStyle.Palette;
+        var palette = EffectiveStyle.Palette;
         ReportPaletteOverflow(palette);
         interaction.ExplodeOffset = IsSelectable ? ExplodeOffset : 0;
         Interpolator.Easing = AnimationEasing;
         CenterCount.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, interaction, CenterCount, countedKey, palette, ChartStyle);
+        painter.Render(canvas, ChartLayout, Interpolator, interaction, CenterCount, countedKey, palette, EffectiveStyle);
     }
 
     private static bool ValidateInnerRadius(object? value, string name) =>
@@ -409,7 +390,7 @@ public partial class ClamPieChartView : ChartViewBase
         view.InvalidateLayout();
     }
 
-    private PieRenderer EnsureRenderer() => renderer ??= new PieRenderer(ChartStyle.FontFamily);
+    private PieRenderer EnsureRenderer() => renderer ??= new PieRenderer(EffectiveStyle.FontFamily);
 
     private PieLayoutOptions CreateLayoutOptions()
     {
@@ -421,7 +402,7 @@ public partial class ClamPieChartView : ChartViewBase
             InnerRadius = InnerRadius,
             StartAngle = StartAngle,
             SweepAngle = SweepAngle,
-            Gap = SliceGap ?? ChartStyle.SegmentGap,
+            Gap = EffectiveStyle.SegmentGap,
             ExplodeMargin = selectable ? ExplodeOffset : 0,
             SortMode = SortMode,
             MaxSlices = MaxSlices,

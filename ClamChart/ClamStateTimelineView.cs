@@ -259,7 +259,7 @@ public partial class ClamStateTimelineView : ChartViewBase
     {
         var captured = PrepareTransition();
         var culture = Culture ?? CultureInfo.CurrentCulture;
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, EffectiveContentPadding, EffectiveStyle, culture, CreateLayoutOptions(culture), CollectionsMarshal.AsSpan(entries), EnsureRenderer().Measurer);
         CompleteTransition(captured);
         RefreshTracking();
     }
@@ -271,7 +271,7 @@ public partial class ClamStateTimelineView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
@@ -280,7 +280,7 @@ public partial class ClamStateTimelineView : ChartViewBase
         interaction.TooltipVisible = TooltipVisible;
         Interpolator.Easing = AnimationEasing;
         ChartLayout.Axis.DisplayScale = Interpolator.DisplayScale;
-        painter.Render(canvas, ChartLayout, Interpolator, interaction, new StateTimelineRenderState(FillOpacity, LineWidth, ShowValue, AlignValue), ChartStyle, width, height);
+        painter.Render(canvas, ChartLayout, Interpolator, interaction, new StateTimelineRenderState(FillOpacity, LineWidth, ShowValue, AlignValue), EffectiveStyle, width, height);
     }
 
     internal override string? CreateAutomationSummary(ChartSummaryText text)
@@ -345,7 +345,7 @@ public partial class ClamStateTimelineView : ChartViewBase
 
     private void OnListChanged(NotifyCollectionChangedEventArgs e) => InvalidateLayout();
 
-    private StateTimelineRenderer EnsureRenderer() => renderer ??= new StateTimelineRenderer(ChartStyle.FontFamily);
+    private StateTimelineRenderer EnsureRenderer() => renderer ??= new StateTimelineRenderer(EffectiveStyle.FontFamily);
 
     private StateTimelineLayoutOptions CreateLayoutOptions(CultureInfo culture)
     {

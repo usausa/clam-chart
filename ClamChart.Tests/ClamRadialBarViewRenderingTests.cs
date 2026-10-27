@@ -109,7 +109,7 @@ public sealed class ClamRadialBarViewRenderingTests
     {
         // Arrange
         using var view = Ring(100);
-        view.DisplayMode = ChartRadialBarMode.Gradient;
+        view.FillMode = ChartFillMode.Gradient;
         view.Thresholds.Add(new ChartThreshold { Level = ChartThresholdLevel.Good });
         view.Thresholds.Add(new ChartThreshold { Value = 60, Level = ChartThresholdLevel.Warning });
         view.Thresholds.Add(new ChartThreshold { Value = 80, Level = ChartThresholdLevel.Critical });
@@ -128,7 +128,7 @@ public sealed class ClamRadialBarViewRenderingTests
     {
         // Arrange
         using var view = Ring(75);
-        view.DisplayMode = ChartRadialBarMode.Gradient;
+        view.FillMode = ChartFillMode.Gradient;
 
         // Act
         using var bitmap = view.Paint(300, 300);
@@ -139,13 +139,13 @@ public sealed class ClamRadialBarViewRenderingTests
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic)]
-    [InlineData(ChartRadialBarMode.Gradient)]
-    public void GlowSpreadsOutsideTheValueOnly(ChartRadialBarMode mode)
+    [InlineData(ChartFillMode.Solid)]
+    [InlineData(ChartFillMode.Gradient)]
+    public void GlowSpreadsOutsideTheValueOnly(ChartFillMode fill)
     {
         // Arrange
         using var view = Ring(50);
-        view.DisplayMode = mode;
+        view.FillMode = fill;
         view.BarGlow = true;
 
         // Act
@@ -196,7 +196,7 @@ public sealed class ClamRadialBarViewRenderingTests
     {
         // Arrange
         using var view = Ring(50);
-        view.DisplayMode = ChartRadialBarMode.Gradient;
+        view.FillMode = ChartFillMode.Gradient;
         view.CapStyle = ChartCapStyle.Round;
         view.BarGlow = true;
 
@@ -258,14 +258,14 @@ public sealed class ClamRadialBarViewRenderingTests
     }
 
     [Theory]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Flat, false)]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, false)]
-    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, false)]
-    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, false)]
-    [InlineData(ChartRadialBarMode.Basic, ChartCapStyle.Round, true)]
-    [InlineData(ChartRadialBarMode.Gradient, ChartCapStyle.Round, true)]
-    [InlineData(ChartRadialBarMode.Segmented, ChartCapStyle.Flat, true)]
-    public void FramesDoNotAllocate(ChartRadialBarMode mode, ChartCapStyle cap, bool glow)
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid, ChartCapStyle.Flat, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid, ChartCapStyle.Round, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Gradient, ChartCapStyle.Round, false)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartFillMode.Solid, ChartCapStyle.Flat, false)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Solid, ChartCapStyle.Round, true)]
+    [InlineData(ChartRadialBarMode.Basic, ChartFillMode.Gradient, ChartCapStyle.Round, true)]
+    [InlineData(ChartRadialBarMode.Segmented, ChartFillMode.Solid, ChartCapStyle.Flat, true)]
+    public void FramesDoNotAllocate(ChartRadialBarMode mode, ChartFillMode fill, ChartCapStyle cap, bool glow)
     {
         // Arrange
         using var view = new TestClamRadialBarView
@@ -274,6 +274,7 @@ public sealed class ClamRadialBarViewRenderingTests
             ItemsSource = new List<ChartEntry> { new("Move", 120), new("Exercise", 58), new("Stand", 31, Maximum: 50) },
             EntranceAnimation = ChartEntranceAnimation.None,
             DisplayMode = mode,
+            FillMode = fill,
             CapStyle = cap,
             BarGlow = glow,
             ThresholdMarkersVisible = true,
@@ -291,13 +292,13 @@ public sealed class ClamRadialBarViewRenderingTests
         view.Render(canvas, 400, 240);
 
         // Act
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            view.Render(canvas, 400, 240);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 0; i < 4; i++)
+            {
+                view.Render(canvas, 400, 240);
+            }
+        });
 
         // Assert
         Assert.Equal(0, allocated);

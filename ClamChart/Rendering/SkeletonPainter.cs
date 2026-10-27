@@ -7,6 +7,10 @@ using SkiaSharp.Views.Maui;
 
 internal sealed class SkeletonPainter : IDisposable
 {
+    private const float SkeletonLineThickness = 4;
+
+    private const float SkeletonBarWidth = 24;
+
     private const float BandRatio = 0.4f;
 
     private const float BarRatio = 0.6f;
@@ -61,7 +65,7 @@ internal sealed class SkeletonPainter : IDisposable
             return;
         }
 
-        var current = EnsurePath(bounds, shape, (float)style.LineThickness * 2, (float)style.MaxBarWidth);
+        var current = EnsurePath(bounds, shape, SkeletonLineThickness, SkeletonBarWidth);
         fill.Color = style.SkeletonColor.ToSKColor();
         canvas.DrawPath(current, fill);
         if (Double.IsNaN(phase))

@@ -13,6 +13,10 @@ using SkiaSharp.Views.Maui;
 [ContentProperty(nameof(Series))]
 public partial class ClamRadarChartView : ChartViewBase
 {
+    private const double RingThickness = 2;
+
+    private const double RingMarkerSize = 8;
+
     public static readonly BindableProperty ValueAccessorsProperty = BindableProperty.Create(nameof(ValueAccessors), typeof(IChartAccessorProvider), typeof(ClamRadarChartView), propertyChanged: OnDataPropertyChanged);
     public static readonly BindableProperty XKeyProperty = BindableProperty.Create(nameof(XKey), typeof(string), typeof(ClamRadarChartView), propertyChanged: OnDataPropertyChanged);
     public static readonly BindableProperty MinimumProperty = BindableProperty.Create(nameof(Minimum), typeof(double?), typeof(ClamRadarChartView), validateValue: static (_, value) => ChartAxis.ValidateFinite(value, nameof(Minimum)), propertyChanged: OnBoundsChanged);
@@ -23,6 +27,7 @@ public partial class ClamRadarChartView : ChartViewBase
     public static readonly BindableProperty LegendPositionProperty = BindableProperty.Create(nameof(LegendPosition), typeof(ChartLegendPosition), typeof(ClamRadarChartView), ChartLegendPosition.Bottom, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty ValueFormatProperty = BindableProperty.Create(nameof(ValueFormat), typeof(string), typeof(ClamRadarChartView), propertyChanged: OnValueFormatChanged);
     public static readonly BindableProperty ValueConverterProperty = BindableProperty.Create(nameof(ValueConverter), typeof(IValueConverter), typeof(ClamRadarChartView), propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty ValueFormatterProperty = BindableProperty.Create(nameof(ValueFormatter), typeof(Func<double, string>), typeof(ClamRadarChartView), propertyChanged: OnLayoutInputChanged);
 
     private readonly List<CartesianSeries> layoutSeries = [];
     private readonly List<SKColor> colors = [];
@@ -94,12 +99,8 @@ public partial class ClamRadarChartView : ChartViewBase
 
     public Func<double, string>? ValueFormatter
     {
-        get;
-        set
-        {
-            field = value;
-            InvalidateLayout();
-        }
+        get => (Func<double, string>?)GetValue(ValueFormatterProperty);
+        set => SetValue(ValueFormatterProperty, value);
     }
 
     internal RadarLayout ChartLayout { get; } = new();
@@ -191,7 +192,7 @@ public partial class ClamRadarChartView : ChartViewBase
         }
 
         var culture = Culture ?? CultureInfo.CurrentCulture;
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, CreateLayoutOptions(), layoutSeries, EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, EffectiveContentPadding, EffectiveStyle, culture, CreateLayoutOptions(), layoutSeries, EnsureRenderer().Measurer);
         ReportInvertedBounds();
         CompleteTransition(captured);
         RefreshTracking();
@@ -204,7 +205,7 @@ public partial class ClamRadarChartView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
@@ -213,7 +214,7 @@ public partial class ClamRadarChartView : ChartViewBase
         UpdateColors();
         interaction.TooltipVisible = TooltipVisible;
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, interaction, ChartStyle, width, height);
+        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, interaction, EffectiveStyle, width, height);
     }
 
     internal override string? CreateAutomationSummary(ChartSummaryText text)
@@ -285,7 +286,7 @@ public partial class ClamRadarChartView : ChartViewBase
         view.InvalidateLayout();
     }
 
-    private RadarRenderer EnsureRenderer() => renderer ??= new RadarRenderer(ChartStyle.FontFamily);
+    private RadarRenderer EnsureRenderer() => renderer ??= new RadarRenderer(EffectiveStyle.FontFamily);
 
     private RadarLayoutOptions CreateLayoutOptions()
     {
@@ -299,7 +300,7 @@ public partial class ClamRadarChartView : ChartViewBase
             GridShape = GridShape,
             LevelCount = LevelCount,
             LabelsVisible = !minimal,
-            RingMargin = minimal ? ChartStyle.LineThickness / 2 : (ChartStyle.MarkerSize / 2) + ChartStyle.MarkerKnockout,
+            RingMargin = minimal ? RingThickness / 2 : (RingMarkerSize / 2) + EffectiveStyle.MarkerKnockout,
             LegendVisible = LegendVisible ?? ((attached.Count >= 2) && full),
             LegendPosition = LegendPosition,
             LegendMaxRows = full ? LegendLayout.MaxRows : 1,
@@ -350,7 +351,7 @@ public partial class ClamRadarChartView : ChartViewBase
     private void UpdateColors()
     {
         colors.Clear();
-        var palette = Palette ?? ChartStyle.Palette;
+        var palette = EffectiveStyle.Palette;
         for (var i = 0; i < attached.Count; i++)
         {
             var series = attached[i];
@@ -364,7 +365,7 @@ public partial class ClamRadarChartView : ChartViewBase
             }
             else
             {
-                colors.Add(ChartStyle.OtherColor.ToSKColor());
+                colors.Add(EffectiveStyle.OtherColor.ToSKColor());
                 if (!series.OtherColorReported)
                 {
                     series.OtherColorReported = true;

@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    xmlns:clam="clr-namespace:ClamChart"
+                    x:Class="ClamChart.ClamChartThemes">
+
+    <Color x:Key="ClamChartAxisLineColor">#C3C2B7</Color>
+    <Color x:Key="ClamChartGridLineColor">#E1E0D9</Color>
+
+    <Style x:Key="ClamChartTheme"
+           TargetType="clam:ChartViewBase"
+           ApplyToDerivedTypes="True">
+        <Setter Property="PrimaryTextColor" Value="{AppThemeBinding Light=#0B0B0B, Dark=#F0EFEC}" />
+        <Setter Property="SecondaryTextColor" Value="{AppThemeBinding Light=#52514E, Dark=#C3C2B7}" />
+        <Setter Property="TooltipBackground" Value="{AppThemeBinding Light=#F0FCFCFB, Dark=#F01F1F1D}" />
+        <Setter Property="TooltipTextColor" Value="{AppThemeBinding Light=#0B0B0B, Dark=#F0EFEC}" />
+        <Setter Property="TooltipBorderColor" Value="{AppThemeBinding Light=#1A0B0B0B, Dark=#1AF0EFEC}" />
+        <Setter Property="TrackColor" Value="{AppThemeBinding Light=#12000000, Dark=#12FFFFFF}" />
+        <Setter Property="PressedOverlayColor" Value="{AppThemeBinding Light=#0F000000, Dark=#14FFFFFF}" />
+        <Setter Property="SkeletonColor" Value="{AppThemeBinding Light=#ECEBE6, Dark=#232321}" />
+        <Setter Property="SkeletonHighlightColor" Value="{AppThemeBinding Light=#F6F5F2, Dark=#2C2C2A}" />
+        <Setter Property="OtherColor" Value="{AppThemeBinding Light=#B5B3AA, Dark=#5C5B56}" />
+        <Setter Property="GoodColor" Value="{AppThemeBinding Light=#56A64B, Dark=#73BF69}" />
+        <Setter Property="WarningColor" Value="{AppThemeBinding Light=#F2CC0C, Dark=#FADE2A}" />
+        <Setter Property="SeriousColor" Value="{AppThemeBinding Light=#FF780A, Dark=#FF9830}" />
+        <Setter Property="CriticalColor" Value="{AppThemeBinding Light=#E02F44, Dark=#F2495C}" />
+        <Setter Property="Palette" Value="{AppThemeBinding Light={x:Static clam:ChartPalettes.DefaultLight}, Dark={x:Static clam:ChartPalettes.DefaultDark}}" />
+    </Style>
+
+    <Style x:Key="ClamChartOverlayTheme"
+           TargetType="clam:ChartViewBase"
+           BasedOn="{StaticResource ClamChartTheme}"
+           ApplyToDerivedTypes="True">
+        <Setter Property="TextHaloColor" Value="{AppThemeBinding Light=#CCFFFFFF, Dark=#CC000000}" />
+        <Setter Property="TextHaloWidth" Value="1.5" />
+        <Setter Property="SkeletonColor" Value="{AppThemeBinding Light=#14000000, Dark=#1FFFFFFF}" />
+        <Setter Property="SkeletonHighlightColor" Value="{AppThemeBinding Light=#66FFFFFF, Dark=#26FFFFFF}" />
+    </Style>
+
+    <Style x:Key="ClamChartSparklineTheme"
+           TargetType="clam:ClamSparklineView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="BaselineColor" Value="{AppThemeBinding Light=#C3C2B7, Dark=#383835}" />
+        <Setter Property="EmphasisDimmedOpacity" Value="{AppThemeBinding Light=0.35, Dark=0.5}" />
+    </Style>
+
+    <Style x:Key="ClamChartHeatmapTheme"
+           TargetType="clam:ClamHeatmapView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="ColorScale" Value="{AppThemeBinding Light={x:Static clam:ChartPalettes.OrangesLight}, Dark={x:Static clam:ChartPalettes.OrangesDark}}" />
+    </Style>
+
+    <Style x:Key="ClamChartStatTheme"
+           TargetType="clam:ClamStatView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="PositiveTextColor" Value="{AppThemeBinding Light=#56A64B, Dark=#73BF69}" />
+        <Setter Property="NegativeTextColor" Value="{AppThemeBinding Light=#E02F44, Dark=#F2495C}" />
+        <Setter Property="AccentTextColor" Value="{AppThemeBinding Light=#202226, Dark=#F7F8FA}" />
+        <Setter Property="GradientStrength" Value="{AppThemeBinding Light=-0.7, Dark=1}" />
+    </Style>
+
+    <Style x:Key="ClamChartRadarTheme"
+           TargetType="clam:ClamRadarChartView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="WebColor" Value="{AppThemeBinding Light=#E1E0D9, Dark=#2C2C2A}" />
+    </Style>
+
+    <Style x:Key="ClamChartStateTimelineTheme"
+           TargetType="clam:ClamStateTimelineView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="SeparatorColor" Value="{AppThemeBinding Light=#E1E0D9, Dark=#2C2C2A}" />
+    </Style>
+
+    <Style x:Key="ClamChartRadialBarTheme"
+           TargetType="clam:ClamRadialBarView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="UnlitColor" Value="{AppThemeBinding Light=#4D24292E, Dark=#33CCCCDC}" />
+        <Setter Property="GradientShift" Value="{AppThemeBinding Light=5, Dark=-15}" />
+    </Style>
+
+</ResourceDictionary>

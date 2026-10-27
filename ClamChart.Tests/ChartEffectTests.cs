@@ -519,7 +519,8 @@ public sealed class ChartEffectTests
     {
         // Arrange
         var driver = new TestAnimationDriver();
-        using var view = Alert(95, ChartStatColorMode.BackgroundGradient, driver);
+        using var view = Alert(95, ChartStatColorMode.Background, driver);
+        view.FillMode = ChartFillMode.Gradient;
         using var first = view.Paint(200, 120);
 
         // Act
@@ -585,7 +586,8 @@ public sealed class ChartEffectTests
     {
         // Arrange
         var driver = new TestAnimationDriver();
-        using var view = Alert(95, ChartStatColorMode.BackgroundGradient, driver);
+        using var view = Alert(95, ChartStatColorMode.Background, driver);
+        view.FillMode = ChartFillMode.Gradient;
         using var bitmap = view.Paint(200, 120);
         using var surface = SKSurface.Create(new SKImageInfo(400, 240));
         MeasureEffectFrames(view, driver, surface.Canvas, 200, 120);
@@ -660,9 +662,10 @@ public sealed class ChartEffectTests
         canvas.Scale(Scale);
         view.Render(canvas, width, height);
         view.Render(canvas, width, height);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        view.Render(canvas, width, height);
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = ChartAllocation.Measure(() =>
+        {
+            view.Render(canvas, width, height);
+        });
         canvas.Restore();
         return allocated;
     }
@@ -671,14 +674,14 @@ public sealed class ChartEffectTests
     {
         canvas.Save();
         canvas.Scale(Scale);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            driver.Frame(Effect, i * 0.2);
-            view.Render(canvas, width, height);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 1; i <= 4; i++)
+            {
+                driver.Frame(Effect, i * 0.2);
+                view.Render(canvas, width, height);
+            }
+        });
         canvas.Restore();
         return allocated;
     }

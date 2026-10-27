@@ -25,6 +25,8 @@ internal sealed partial class CartesianRenderer : IDisposable
 
     private const int MaxGlowPoints = 500;
 
+    private const byte BarGradientTail = 102;
+
     private readonly PaintCache paints = new();
     private readonly SKPaint glowPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
     private readonly ChartTextPainter text;
@@ -103,9 +105,9 @@ internal sealed partial class CartesianRenderer : IDisposable
         var current = GetSelection(layout, series, interaction.SelectedSeries, interaction.SelectedIndex, interaction.CategorySelection);
         var progress = interaction.SelectionProgress;
         var selection = new SelectionBlend(progress < 1 ? previous : default, current, progress < 1 ? display.Ease(progress) : 1, style.DimmedOpacity);
-        DrawGrid(canvas, layout, style, scale);
-        DrawBaseline(canvas, layout, style, scale);
-        DrawSecondaryTicks(canvas, layout, style, scale);
+        DrawGrid(canvas, layout, scale);
+        DrawBaseline(canvas, layout, scale);
+        DrawSecondaryTicks(canvas, layout, scale);
         DrawBands(canvas, layout, state, style);
         DrawThresholdLines(canvas, layout, state, style);
         DrawSeries(canvas, layout, display, series, colors, style, selection, state);
@@ -160,11 +162,11 @@ internal sealed partial class CartesianRenderer : IDisposable
     private static double GetGrowth(SnapshotInterpolator display, ChartEntranceAnimation entrance, int index, int count) =>
         entrance == ChartEntranceAnimation.Grow ? display.Ease(ChartProgress.ForElement(display.Progress, index, count)) : 1;
 
-    private static double? GetCornerRadius(ChartSeries item) => item switch
+    private static double GetCornerRadius(ChartSeries item) => item switch
     {
         BarSeries bar => bar.CornerRadius,
         RangeBarSeries range => range.CornerRadius,
-        _ => null
+        _ => 0
     };
 
     private static bool IsTrackVisible(ChartSeries item) => item is BarSeries { TrackVisible: true } or RangeBarSeries { TrackVisible: true };
@@ -227,17 +229,21 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
     }
 
-    private void DrawGrid(SKCanvas canvas, CartesianLayout layout, ChartStyle style, float scale)
+    private void DrawGrid(SKCanvas canvas, CartesianLayout layout, float scale)
     {
-        var thickness = (float)style.GridLineThickness;
-        var paint = paints.Stroke(style.GridLineColor.ToSKColor(), thickness, SKStrokeCap.Butt);
-        var snap = thickness <= 0 ? scale : 0;
-        DrawGridLines(canvas, layout.XAxis, layout.PlotBounds, paint, snap);
-        DrawGridLines(canvas, layout.YAxis, layout.PlotBounds, paint, snap);
+        DrawAxisGrid(canvas, layout.XAxis, layout.PlotBounds, scale);
+        DrawAxisGrid(canvas, layout.YAxis, layout.PlotBounds, scale);
         if (layout.HasSecondaryAxis)
         {
-            DrawGridLines(canvas, layout.SecondaryYAxis, layout.PlotBounds, paint, snap);
+            DrawAxisGrid(canvas, layout.SecondaryYAxis, layout.PlotBounds, scale);
         }
+    }
+
+    private void DrawAxisGrid(SKCanvas canvas, AxisLayout axis, ChartRect bounds, float scale)
+    {
+        var thickness = (float)axis.Options.GridLineThickness;
+        var paint = paints.Stroke(axis.Options.GridLineColor.ToSKColor(), thickness, SKStrokeCap.Butt);
+        DrawGridLines(canvas, axis, bounds, paint, thickness <= 0 ? scale : 0);
     }
 
     private static void DrawGridLines(SKCanvas canvas, AxisLayout axis, ChartRect plot, SKPaint paint, float snap)
@@ -260,7 +266,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
     }
 
-    private void DrawBaseline(SKCanvas canvas, CartesianLayout layout, ChartStyle style, float scale)
+    private void DrawBaseline(SKCanvas canvas, CartesianLayout layout, float scale)
     {
         if (!layout.XAxis.Options.IsVisible)
         {
@@ -268,10 +274,10 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         var axis = layout.YAxis;
-        DrawLine(canvas, axis.IsVertical, Snap(axis.ToDisplayPixel(GetBase(axis)), scale), layout.PlotBounds, paints.Stroke(style.AxisLineColor.ToSKColor(), 0, SKStrokeCap.Butt));
+        DrawLine(canvas, axis.IsVertical, Snap(axis.ToDisplayPixel(GetBase(axis)), scale), layout.PlotBounds, paints.Stroke(axis.Options.LineColor.ToSKColor(), 0, SKStrokeCap.Butt));
     }
 
-    private void DrawSecondaryTicks(SKCanvas canvas, CartesianLayout layout, ChartStyle style, float scale)
+    private void DrawSecondaryTicks(SKCanvas canvas, CartesianLayout layout, float scale)
     {
         var axis = layout.SecondaryYAxis;
         if (!layout.HasSecondaryAxis || !axis.ShowsLabels || (axis.Options.TickAlignment != ChartTickAlignment.Independent))
@@ -280,7 +286,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         var plot = layout.PlotBounds;
-        var paint = paints.Stroke(style.AxisLineColor.ToSKColor(), 0, SKStrokeCap.Butt);
+        var paint = paints.Stroke(axis.Options.LineColor.ToSKColor(), 0, SKStrokeCap.Butt);
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < axis.Ticks.Count; i++)
         {
@@ -334,11 +340,11 @@ internal sealed partial class CartesianRenderer : IDisposable
 
             if (series[s] is LineSeries line)
             {
-                inflate = Math.Max(inflate, (float)(line.Thickness ?? style.LineThickness) / 2);
+                inflate = Math.Max(inflate, (float)line.Thickness / 2);
             }
             else if (series[s] is ScatterSeries scatter and not BubbleSeries)
             {
-                inflate = Math.Max(inflate, ((float)(scatter.MarkerSize ?? style.MarkerSize) / 2) + ScatterStrokeWidth);
+                inflate = Math.Max(inflate, ((float)scatter.MarkerSize / 2) + ScatterStrokeWidth);
             }
         }
 
@@ -407,7 +413,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         var glow = layout.GlowEnabled && (line.GlowRadius > 0) && (geometry.Count <= MaxGlowPoints) ? GetGlow(line) : null;
-        StrokeLine(canvas, line, count, interpolation, horizontal, color, alpha, (float)(line.Thickness ?? style.LineThickness), glow, style, coloring, inflate);
+        StrokeLine(canvas, line, count, interpolation, horizontal, color, alpha, (float)line.Thickness, glow, style, coloring, inflate);
     }
 
     private int Project(CartesianLayout layout, SnapshotInterpolator display, SeriesGeometry geometry, AxisLayout axis, ChartEntranceAnimation entrance)
@@ -519,7 +525,7 @@ internal sealed partial class CartesianRenderer : IDisposable
     private void FillArea(SKCanvas canvas, AreaSeries area, int count, ChartLineInterpolation interpolation, bool horizontal, SKColor baseColor, double alpha, ChartStyle style, CartesianLayout? coloring, float inflate)
     {
         var color = ChartColor.Fade(baseColor, alpha);
-        var opacity = area.FillOpacity ?? style.AreaFillOpacity;
+        var opacity = area.FillOpacity;
         if (opacity <= 0)
         {
             return;
@@ -588,7 +594,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             return;
         }
 
-        if (area.FillMode == ChartFillMode.Gradient)
+        if (style.FillMode == ChartFillMode.Gradient)
         {
             paint.Color = SKColors.Black;
             paint.Shader = GetGradient(area, fill, extreme, baseline, horizontal);
@@ -611,11 +617,11 @@ internal sealed partial class CartesianRenderer : IDisposable
         var target = layout.Geometries[seriesIndex];
         var axis = layout.GetValueAxis(item.YAxis);
         var negative = bar?.NegativeColor is { } negativeColor ? negativeColor.ToSKColor() : color;
-        var radius = (float)(GetCornerRadius(item) ?? style.BarCornerRadius);
+        var radius = (float)GetCornerRadius(item);
         var gap = (float)style.SegmentGap;
         var values = geometry.Value;
         var coloring = IsColoring(layout, state, item.YAxis);
-        var gradient = (bar is { FillMode: ChartFillMode.Gradient }) && !coloring ? GetBarGradient(bar, layout, geometry, axis, color, negative) : null;
+        var gradient = (bar is not null) && (style.FillMode == ChartFillMode.Gradient) && !coloring ? GetBarGradient(bar, layout, geometry, axis, color, negative) : null;
         for (var i = 0; i < geometry.Count; i++)
         {
             if (!TryGetBar(layout, geometry, axis, i, gap, GetGrowth(display, entrance, i, geometry.Count), out var shape))
@@ -784,7 +790,7 @@ internal sealed partial class CartesianRenderer : IDisposable
                 continue;
             }
 
-            var radius = (float)(line.MarkerSize ?? style.MarkerSize) / 2;
+            var radius = (float)line.MarkerSize / 2;
             if (radius <= 0)
             {
                 continue;
@@ -978,7 +984,7 @@ internal sealed partial class CartesianRenderer : IDisposable
                 continue;
             }
 
-            var radius = (float)(line.MarkerSize ?? style.MarkerSize) / 2;
+            var radius = (float)line.MarkerSize / 2;
             if (radius > 0)
             {
                 var point = LinePathBuilder.ToPoint((float)layout.XAxis.ToDisplayPixel(geometry.X[index]), (float)layout.GetValueAxis(line.YAxis).ToDisplayPixel(geometry.End[index]), horizontal);
@@ -1114,9 +1120,9 @@ internal sealed partial class CartesianRenderer : IDisposable
             return false;
         }
 
-        var radius = line.MarkerMode == ChartMarkerMode.None ? 0 : (float)(line.MarkerSize ?? style.MarkerSize) / 2;
+        var radius = line.MarkerMode == ChartMarkerMode.None ? 0 : (float)line.MarkerSize / 2;
         var marker = radius > 0 ? radius + (float)style.MarkerKnockout : 0;
-        var offset = Math.Max(marker, (float)(line.Thickness ?? style.LineThickness) / 2) + DataLabelOffset;
+        var offset = Math.Max(marker, (float)line.Thickness / 2) + DataLabelOffset;
         if (horizontal)
         {
             var top = Shift(point.Y - (size.Height / 2), size.Height, plot.Y, plot.Bottom);
@@ -1176,7 +1182,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             var label = axis.Labels[i];
             if (axis.IsDisplayed(label.Value))
             {
-                DrawText(canvas, label.Text, axis.GetDisplayBounds(label), style.AxisLabelFontSize, label.MaxWidth, color, style);
+                DrawText(canvas, label.Text, axis.GetDisplayBounds(label), axis.Options.LabelFontSize, label.MaxWidth, color, style);
             }
         }
     }
@@ -1265,16 +1271,17 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
 
         var color = style.SecondaryTextColor.ToSKColor();
+        var sorted = style.PrimaryTextColor.ToSKColor();
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < legend.Cells.Count; i++)
         {
             var cell = legend.Cells[i];
-            DrawText(canvas, cell.Text, cell.Bounds, style.LegendFontSize, cell.MaxWidth, color, style);
+            DrawText(canvas, cell.Text, cell.Bounds, style.LegendFontSize, cell.MaxWidth, cell.Sorted ? sorted : color, style);
         }
 
         if (!legend.SortArrow.IsEmpty)
         {
-            DrawSortArrow(canvas, legend.SortArrow, legend.SortDescending, paints.Stroke(color, SortArrowThickness, SKStrokeCap.Square));
+            DrawSortArrow(canvas, legend.SortArrow, legend.SortDescending, paints.Stroke(sorted, SortArrowThickness, SKStrokeCap.Square));
         }
     }
 
@@ -1402,12 +1409,12 @@ internal sealed partial class CartesianRenderer : IDisposable
         entry.HasNegative = low < origin;
         if (entry.HasPositive)
         {
-            entry.Positive.Update(color, (float)axis.ToDisplayPixel(high), basePixel, horizontal);
+            entry.Positive.Update(color, (float)axis.ToDisplayPixel(high), basePixel, horizontal, BarGradientTail);
         }
 
         if (entry.HasNegative)
         {
-            entry.Negative.Update(negative, (float)axis.ToDisplayPixel(low), basePixel, horizontal);
+            entry.Negative.Update(negative, (float)axis.ToDisplayPixel(low), basePixel, horizontal, BarGradientTail);
         }
 
         return entry;
@@ -1493,40 +1500,6 @@ internal sealed partial class CartesianRenderer : IDisposable
         public float Sigma { get; set; }
 
         public int Frame { get; set; }
-    }
-
-    private sealed class GradientEntry
-    {
-        public SKShader? Shader { get; set; }
-
-        public SKColor Color { get; set; }
-
-        public float From { get; set; }
-
-        public float To { get; set; }
-
-        public bool Horizontal { get; set; }
-
-        public int Frame { get; set; }
-
-        public SKShader Update(SKColor color, float from, float to, bool horizontal)
-        {
-            if ((Shader is null) || (Color != color) || !From.Equals(from) || !To.Equals(to) || (Horizontal != horizontal))
-            {
-                Shader?.Dispose();
-                Color = color;
-                From = from;
-                To = to;
-                Horizontal = horizontal;
-                Shader = SKShader.CreateLinearGradient(
-                    LinePathBuilder.ToPoint(0, from, horizontal),
-                    LinePathBuilder.ToPoint(0, to, horizontal),
-                    [color, color.WithAlpha(0)],
-                    SKShaderTileMode.Clamp);
-            }
-
-            return Shader;
-        }
     }
 
     private sealed class BarGradientEntry : IDisposable

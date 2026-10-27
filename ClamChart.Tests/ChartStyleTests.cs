@@ -14,14 +14,10 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#E1E0D9"), style.GridLineColor);
         Assert.Equal(0d, style.GridLineThickness);
         Assert.Equal(Color.FromArgb("#F0FCFCFB"), style.TooltipBackground);
-        Assert.Null(style.TrackColor);
+        Assert.Equal(Color.FromArgb("#12000000"), style.TrackColor);
         Assert.Equal(0.35, style.DimmedOpacity);
         Assert.Equal(0.35, style.EmphasisDimmedOpacity);
-        Assert.Equal(0.1, style.AreaFillOpacity);
-        Assert.Equal(24d, style.MaxBarWidth);
-        Assert.Equal(0d, style.BarCornerRadius);
         Assert.Equal(0d, style.TooltipCornerRadius);
-        Assert.False(style.IsDark);
         Assert.Equal(Color.FromArgb("#56A64B"), style.GoodColor);
         Assert.Equal(Color.FromArgb("#F2CC0C"), style.WarningColor);
         Assert.Equal(Color.FromArgb("#FF780A"), style.SeriousColor);
@@ -45,7 +41,6 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#F0EFEC"), dark.PrimaryTextColor);
         Assert.Equal(Color.FromArgb("#2C2C2A"), dark.GridLineColor);
         Assert.Equal(Color.FromArgb("#F01F1F1D"), dark.TooltipBackground);
-        Assert.True(dark.IsDark);
         Assert.Equal(Color.FromArgb("#73BF69"), dark.GoodColor);
         Assert.Equal(Color.FromArgb("#FADE2A"), dark.WarningColor);
         Assert.Equal(Color.FromArgb("#FF9830"), dark.SeriousColor);
@@ -81,6 +76,14 @@ public sealed class ChartStyleTests
         Assert.Equal(Color.FromArgb("#F2CC0C"), ChartPalettes.GrafanaDark[1]);
         Assert.Equal(Color.FromArgb("#B877D9"), ChartPalettes.GrafanaDark[5]);
         Assert.IsNotType<Color[]>(ChartPalettes.GrafanaLight);
+        Assert.Equal(8, ChartPalettes.MaterialLight.Count);
+        Assert.Equal(8, ChartPalettes.MaterialDark.Count);
+        Assert.Equal(Color.FromArgb("#2196F3"), ChartPalettes.MaterialLight[0]);
+        Assert.Equal(Color.FromArgb("#FFB300"), ChartPalettes.MaterialLight[2]);
+        Assert.Equal(Color.FromArgb("#009688"), ChartPalettes.MaterialLight[7]);
+        Assert.Equal(Color.FromArgb("#64B5F6"), ChartPalettes.MaterialDark[0]);
+        Assert.Equal(Color.FromArgb("#4DB6AC"), ChartPalettes.MaterialDark[7]);
+        Assert.IsNotType<Color[]>(ChartPalettes.MaterialLight);
     }
 
     [Fact]
@@ -97,16 +100,12 @@ public sealed class ChartStyleTests
         Assert.Equal(Colors.Transparent, light.AxisLineColor);
         Assert.Equal(Color.FromArgb("#CCFFFFFF"), light.TextHaloColor);
         Assert.Equal(1.5, light.TextHaloWidth);
-        Assert.Equal(0.06, light.AreaFillOpacity);
         Assert.Same(ChartPalettes.DefaultLight, light.Palette);
-        Assert.False(light.IsDark);
         Assert.Equal(Colors.Transparent, dark.GridLineColor);
         Assert.Equal(Colors.Transparent, dark.AxisLineColor);
         Assert.Equal(Color.FromArgb("#CC000000"), dark.TextHaloColor);
         Assert.Equal(1.5, dark.TextHaloWidth);
-        Assert.Equal(0.08, dark.AreaFillOpacity);
         Assert.Same(ChartPalettes.DefaultDark, dark.Palette);
-        Assert.True(dark.IsDark);
         Assert.Equal(ChartStyles.Dark.PrimaryTextColor, dark.PrimaryTextColor);
     }
 
@@ -173,11 +172,11 @@ public sealed class ChartStyleTests
     public void WithCreatesAnIndependentCopy()
     {
         // Act
-        var style = ChartStyles.Light with { LineThickness = 3 };
+        var style = ChartStyles.Light with { SegmentGap = 3 };
 
         // Assert
-        Assert.Equal(3d, style.LineThickness);
-        Assert.Equal(2d, ChartStyles.Light.LineThickness);
+        Assert.Equal(3d, style.SegmentGap);
+        Assert.Equal(2d, ChartStyles.Light.SegmentGap);
         Assert.NotSame(ChartStyles.Light, style);
     }
 
@@ -197,14 +196,12 @@ public sealed class ChartStyleTests
         [
             ChartStyles.Light with { AxisLabelFontSize = 0 },
             ChartStyles.Light with { TooltipFontSize = Double.NaN },
-            ChartStyles.Light with { LineThickness = -1 },
-            ChartStyles.Light with { MarkerSize = Double.PositiveInfinity },
+            ChartStyles.Light with { LegendMarkerSize = -1 },
             ChartStyles.Light with { TextHaloWidth = -0.5 },
             ChartStyles.Light with { GridLineThickness = Double.NaN },
             ChartStyles.Light with { SegmentGap = -1 },
             ChartStyles.Light with { DimmedOpacity = 1.5 },
             ChartStyles.Light with { EmphasisDimmedOpacity = -0.1 },
-            ChartStyles.Light with { AreaFillOpacity = Double.NaN },
             ChartStyles.Light with { CompactSize = new Size(-1, 200) },
             ChartStyles.Light with { MinimalSize = new Size(400, 96) },
             ChartStyles.Light with { HeatmapColorScale = [Colors.Red] }

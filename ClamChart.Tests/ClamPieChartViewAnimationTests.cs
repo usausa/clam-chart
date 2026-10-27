@@ -466,19 +466,19 @@ public sealed class ClamPieChartViewAnimationTests
     {
         canvas.Save();
         canvas.Scale(Scale);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            driver.Frame(Data, i * 0.2);
-            if (driver.IsRunning(Center))
+            for (var i = 1; i <= 4; i++)
             {
-                driver.Frame(Center, i * 0.2);
+                driver.Frame(Data, i * 0.2);
+                if (driver.IsRunning(Center))
+                {
+                    driver.Frame(Center, i * 0.2);
+                }
+
+                view.Render(canvas, 340, 340);
             }
-
-            view.Render(canvas, 340, 340);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        });
         canvas.Restore();
         return allocated;
     }

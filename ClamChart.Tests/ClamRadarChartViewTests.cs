@@ -24,7 +24,7 @@ public sealed class ClamRadarChartViewTests
         Assert.Equal(ChartTrackballMode.None, view.TrackballMode);
         Assert.True(view.TooltipVisible);
         Assert.Equal(-1, view.TrackedIndex);
-        Assert.Null(series.Thickness);
+        Assert.Equal(2d, series.Thickness);
         Assert.Equal(0.15, series.FillOpacity);
     }
 

@@ -211,14 +211,14 @@ public sealed class ClamSparklineViewAnimationTests
     {
         canvas.Save();
         canvas.Scale(Scale);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 1; i <= 4; i++)
+        var allocated = ChartAllocation.Measure(() =>
         {
-            driver.Frame(Data, i * 0.2);
-            view.Render(canvas, 120, 28);
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            for (var i = 1; i <= 4; i++)
+            {
+                driver.Frame(Data, i * 0.2);
+                view.Render(canvas, 120, 28);
+            }
+        });
         canvas.Restore();
         return allocated;
     }

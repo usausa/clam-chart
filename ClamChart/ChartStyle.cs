@@ -1,9 +1,7 @@
 namespace ClamChart;
 
-public sealed record ChartStyle
+internal sealed record ChartStyle
 {
-    public bool IsDark { get; set; }
-
     public string FontFamily { get; set; } = "sans-serif";
 
     public Color PrimaryTextColor { get; set; } = Color.FromArgb("#0B0B0B");
@@ -44,7 +42,7 @@ public sealed record ChartStyle
 
     public Color TrackballLineColor { get; set; } = Color.FromArgb("#898781");
 
-    public Color? TrackColor { get; set; }
+    public Color TrackColor { get; set; } = Color.FromArgb("#12000000");
 
     public double DimmedOpacity { get; set; } = 0.35;
 
@@ -74,30 +72,15 @@ public sealed record ChartStyle
 
     public Color NegativeTextColor { get; set; } = Color.FromArgb("#E02F44");
 
-    public double LineThickness { get; set; } = 2;
-
-    public double AreaFillOpacity { get; set; } = 0.1;
-
-    public double BarCornerRadius { get; set; }
-
-    public double MaxBarWidth { get; set; } = 24;
-
-    public double MarkerSize { get; set; } = 8;
-
     public double MarkerKnockout { get; set; } = 2;
 
     public double SegmentGap { get; set; } = 2;
 
+    public ChartFillMode FillMode { get; set; }
+
     public Size CompactSize { get; set; } = new(320, 200);
 
     public Size MinimalSize { get; set; } = new(160, 96);
-
-    internal static bool ValidateValue(object? value)
-    {
-        ArgumentNullException.ThrowIfNull(value, nameof(ChartStyle));
-        ((ChartStyle)value).Validate();
-        return true;
-    }
 
     internal void Validate()
     {
@@ -106,17 +89,17 @@ public sealed record ChartStyle
             throw new ArgumentException("Font sizes must be positive finite values.");
         }
 
-        if (!IsPositive(LegendMarkerSize) || !IsPositive(LineThickness) || !IsPositive(MaxBarWidth) || !IsPositive(MarkerSize))
+        if (!IsPositive(LegendMarkerSize))
         {
-            throw new ArgumentException("Line thickness, marker sizes and the bar width must be positive finite values.");
+            throw new ArgumentException("The legend marker size must be a positive finite value.");
         }
 
-        if (!IsNonNegative(TextHaloWidth) || !IsNonNegative(GridLineThickness) || !IsNonNegative(TooltipCornerRadius) || !IsNonNegative(BarCornerRadius) || !IsNonNegative(MarkerKnockout) || !IsNonNegative(SegmentGap))
+        if (!IsNonNegative(TextHaloWidth) || !IsNonNegative(GridLineThickness) || !IsNonNegative(TooltipCornerRadius) || !IsNonNegative(MarkerKnockout) || !IsNonNegative(SegmentGap))
         {
             throw new ArgumentException("Widths, radii and gaps must be finite values of zero or more.");
         }
 
-        if (!IsOpacity(DimmedOpacity) || !IsOpacity(EmphasisDimmedOpacity) || !IsOpacity(AreaFillOpacity))
+        if (!IsOpacity(DimmedOpacity) || !IsOpacity(EmphasisDimmedOpacity))
         {
             throw new ArgumentException("Opacities must be values from 0 to 1.");
         }

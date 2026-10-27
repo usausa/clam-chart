@@ -9,6 +9,8 @@ using SkiaSharp.Views.Maui;
 
 internal sealed partial class SparklineRenderer : IDisposable
 {
+    private const float MaxBarWidth = 24;
+
     private const float WinLossGap = 1;
 
     private const float BarGapRatio = 0.25f;
@@ -16,6 +18,7 @@ internal sealed partial class SparklineRenderer : IDisposable
     private const float ReferenceDash = 2;
 
     private readonly PaintCache paints = new();
+    private readonly GradientEntry areaGradient = new();
     private readonly ChartTextPainter text;
     private readonly bool ownsText;
     private readonly SKPathEffect dash = SKPathEffect.CreateDash([ReferenceDash, ReferenceDash], 0);
@@ -49,6 +52,7 @@ internal sealed partial class SparklineRenderer : IDisposable
             text.Dispose();
         }
 
+        areaGradient.Shader?.Dispose();
         dash.Dispose();
         thresholdDash.Dispose();
         Return(ref along);
@@ -85,11 +89,11 @@ internal sealed partial class SparklineRenderer : IDisposable
                     var weak = paint.HasEmphasis ? paint.WeakOpacity : 1;
                     if (coloring)
                     {
-                        FillArea(canvas, layout, scale, count, smooth, paint.Color, fill * weak * paint.Area.Alpha / 255d, style);
+                        FillArea(canvas, layout, scale, count, smooth, paint.Color, fill * weak * paint.Area.Alpha / 255d, style, false);
                     }
                     else
                     {
-                        FillArea(canvas, layout, scale, count, smooth, paint.Area, fill * weak, null);
+                        FillArea(canvas, layout, scale, count, smooth, paint.Area, fill * weak, null, style.FillMode == ChartFillMode.Gradient);
                     }
                 }
 
@@ -289,7 +293,7 @@ internal sealed partial class SparklineRenderer : IDisposable
         bool IsPoint(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
     }
 
-    private void FillArea(SKCanvas canvas, SparklineLayout layout, SparklineScale scale, int count, bool smooth, SKColor color, double alpha, ChartStyle? coloring)
+    private void FillArea(SKCanvas canvas, SparklineLayout layout, SparklineScale scale, int count, bool smooth, SKColor color, double alpha, ChartStyle? coloring, bool gradient)
     {
         if ((color.Alpha == 0) || (alpha <= 0))
         {
@@ -340,9 +344,16 @@ internal sealed partial class SparklineRenderer : IDisposable
         }
 
         using var path = builder.Detach();
-        var paint = paints.Fill(ChartColor.Fade(color, alpha));
+        var fill = ChartColor.Fade(color, alpha);
+        var paint = paints.Fill(fill);
         if (coloring is null)
         {
+            if (gradient && TryGetTop(count, out var top))
+            {
+                paint.Color = SKColors.Black;
+                paint.Shader = areaGradient.Update(fill, top, bottom, false);
+            }
+
             canvas.DrawPath(path, paint);
         }
         else
@@ -351,6 +362,20 @@ internal sealed partial class SparklineRenderer : IDisposable
         }
 
         bool IsPoint(int index) => Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
+
+        bool TryGetTop(int length, out float value)
+        {
+            value = Single.PositiveInfinity;
+            for (var i = 0; i < length; i++)
+            {
+                if (Single.IsFinite(across[i]) && (across[i] < value))
+                {
+                    value = across[i];
+                }
+            }
+
+            return Single.IsFinite(value);
+        }
     }
 
     private void DrawBars(SKCanvas canvas, SparklineLayout layout, SparklineInterpolator display, SparklineValues values, SparklineScale scale, SparklinePaint paint, ChartStyle style, double alpha, ChartEntranceAnimation entrance, bool coloring)
@@ -360,7 +385,7 @@ internal sealed partial class SparklineRenderer : IDisposable
         var count = morphing ? geometry.Count : values.Count;
         var slot = layout.GetSlot(scale);
         var gap = Math.Min(style.SegmentGap, slot * BarGapRatio);
-        var width = (float)Math.Max(0, Math.Min(slot - gap, style.MaxBarWidth));
+        var width = (float)Math.Max(0, Math.Min(slot - gap, MaxBarWidth));
         if (width <= 0)
         {
             return;

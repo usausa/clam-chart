@@ -180,7 +180,7 @@ public partial class ClamChartView : ChartViewBase
         PrepareAnnotations();
         var culture = Culture ?? CultureInfo.CurrentCulture;
         var options = CreateLayoutOptions(EffectiveDensity, culture);
-        ChartLayout.Update(width, height, EffectiveContentPadding, ChartStyle, culture, options, layoutSeries, EnsureRenderer().Measurer);
+        ChartLayout.Update(width, height, EffectiveContentPadding, EffectiveStyle, culture, options, layoutSeries, EnsureRenderer().Measurer);
         ReportInvertedBounds(options);
         CompleteTransition(captured);
         RefreshTracking();
@@ -194,7 +194,7 @@ public partial class ClamChartView : ChartViewBase
         {
             if (!String.IsNullOrEmpty(EmptyText))
             {
-                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, ChartStyle);
+                painter.DrawEmptyText(canvas, EmptyText, ChartLayout.Bounds, EffectiveStyle);
             }
 
             return;
@@ -203,7 +203,7 @@ public partial class ClamChartView : ChartViewBase
         UpdateColors();
         interaction.TooltipVisible = TooltipVisible;
         Interpolator.Easing = AnimationEasing;
-        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, ChartStyle, interaction, new CartesianRenderState(ThresholdsMode, attachedAnnotations, Downsampling, EffectPhase), width, height);
+        painter.Render(canvas, ChartLayout, Interpolator, attached, colors, EffectiveStyle, interaction, new CartesianRenderState(ThresholdsMode, attachedAnnotations, Downsampling, EffectPhase), width, height);
     }
 
     internal override string? CreateAutomationSummary(ChartSummaryText text)
@@ -275,7 +275,7 @@ public partial class ClamChartView : ChartViewBase
         return count;
     }
 
-    private CartesianRenderer EnsureRenderer() => renderer ??= new CartesianRenderer(ChartStyle.FontFamily);
+    private CartesianRenderer EnsureRenderer() => renderer ??= new CartesianRenderer(EffectiveStyle.FontFamily);
 
     private bool HasBarSeries()
     {
@@ -306,7 +306,7 @@ public partial class ClamChartView : ChartViewBase
     private void UpdateColors()
     {
         colors.Clear();
-        var palette = Palette ?? ChartStyle.Palette;
+        var palette = EffectiveStyle.Palette;
         for (var i = 0; i < attached.Count; i++)
         {
             var series = attached[i];
@@ -320,7 +320,7 @@ public partial class ClamChartView : ChartViewBase
             }
             else
             {
-                colors.Add(ChartStyle.OtherColor.ToSKColor());
+                colors.Add(EffectiveStyle.OtherColor.ToSKColor());
                 if (!series.OtherColorReported)
                 {
                     series.OtherColorReported = true;

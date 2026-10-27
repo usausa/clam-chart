@@ -7,6 +7,7 @@ using Android.Content.PM;
 using Android.OS;
 
 using AndroidX.Activity;
+using AndroidX.Core.View;
 
 [Activity(
     Name = "clamchart.example.MainActivity",
@@ -23,6 +24,11 @@ public sealed class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+
+        if ((Window is { } window) && (window.DecorView is { } decorView) && (WindowCompat.GetInsetsController(window, decorView) is { } controller))
+        {
+            controller.AppearanceLightStatusBars = true;
+        }
 
         backPressedCallback = new BackPressedCallback(this);
         OnBackPressedDispatcher.AddCallback(this, backPressedCallback);

@@ -78,7 +78,7 @@ public abstract partial class ChartViewBase
         var padding = EffectiveContentPadding;
         var bounds = new ChartRect(padding.Left, padding.Top, Math.Max(0, width - padding.HorizontalThickness), Math.Max(0, height - padding.VerticalThickness));
         skeletonPainter ??= new SkeletonPainter();
-        skeletonPainter.Draw(canvas, bounds, SkeletonShape, ChartStyle, IsSnapshot ? Double.NaN : SkeletonPhase);
+        skeletonPainter.Draw(canvas, bounds, SkeletonShape, EffectiveStyle, IsSnapshot ? Double.NaN : SkeletonPhase);
     }
 
     private void ReleaseSkeleton()

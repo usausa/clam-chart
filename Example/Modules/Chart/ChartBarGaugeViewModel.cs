@@ -66,15 +66,21 @@ public sealed partial class ChartBarGaugeViewModel : ChartViewModelBase
     public partial ChartBarGaugeMode DisplayMode { get; set; }
 
     [ObservableProperty]
+    public partial ChartFillMode FillMode { get; set; }
+
+    [ObservableProperty]
     public partial ChartSortMode SortMode { get; set; }
 
     public IObserveCommand SelectDisplayModeCommand { get; }
+
+    public IObserveCommand SelectFillModeCommand { get; }
 
     public IObserveCommand SelectSortCommand { get; }
 
     public ChartBarGaugeViewModel()
     {
         SelectDisplayModeCommand = MakeDelegateCommand<ChartBarGaugeMode>(x => DisplayMode = x);
+        SelectFillModeCommand = MakeDelegateCommand<ChartFillMode>(x => FillMode = x);
         SelectSortCommand = MakeDelegateCommand<ChartSortMode>(x => SortMode = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)

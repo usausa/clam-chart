@@ -94,10 +94,12 @@ public sealed class ClamStatViewRenderingTests
     {
         // Arrange
         using var yellow = Stat(42);
-        yellow.ColorMode = ChartStatColorMode.BackgroundGradient;
+        yellow.ColorMode = ChartStatColorMode.Background;
+        yellow.FillMode = ChartFillMode.Gradient;
         yellow.Fill = Color.FromArgb("#FADE2A");
         using var blue = Stat(42);
-        blue.ColorMode = ChartStatColorMode.BackgroundGradient;
+        blue.ColorMode = ChartStatColorMode.Background;
+        blue.FillMode = ChartFillMode.Gradient;
         blue.Fill = Color.FromArgb("#5794F2");
 
         // Act
@@ -115,11 +117,14 @@ public sealed class ClamStatViewRenderingTests
     {
         // Arrange
         using var light = Stat(42);
-        light.ColorMode = ChartStatColorMode.BackgroundGradient;
+        light.ColorMode = ChartStatColorMode.Background;
+        light.FillMode = ChartFillMode.Gradient;
         light.Fill = Color.FromArgb("#2A78D6");
         using var dark = Stat(42);
-        dark.ChartStyle = ChartStyles.Dark;
-        dark.ColorMode = ChartStatColorMode.BackgroundGradient;
+        dark.ApplyStyle(ChartStyles.Dark);
+        dark.GradientStrength = 1;
+        dark.ColorMode = ChartStatColorMode.Background;
+        dark.FillMode = ChartFillMode.Gradient;
         dark.Fill = Color.FromArgb("#2A78D6");
 
         // Act

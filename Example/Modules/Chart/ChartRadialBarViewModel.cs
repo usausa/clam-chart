@@ -42,15 +42,21 @@ public sealed partial class ChartRadialBarViewModel : ChartViewModelBase
     public partial ChartRadialBarMode DisplayMode { get; set; }
 
     [ObservableProperty]
+    public partial ChartFillMode FillMode { get; set; }
+
+    [ObservableProperty]
     public partial ChartCapStyle CapStyle { get; set; }
 
     public IObserveCommand SelectDisplayModeCommand { get; }
+
+    public IObserveCommand SelectFillModeCommand { get; }
 
     public IObserveCommand SelectCapCommand { get; }
 
     public ChartRadialBarViewModel()
     {
         SelectDisplayModeCommand = MakeDelegateCommand<ChartRadialBarMode>(x => DisplayMode = x);
+        SelectFillModeCommand = MakeDelegateCommand<ChartFillMode>(x => FillMode = x);
         SelectCapCommand = MakeDelegateCommand<ChartCapStyle>(x => CapStyle = x);
         timer = Microsoft.Maui.Dispatching.Dispatcher.GetForCurrentThread()?.CreateTimer();
         if (timer is not null)

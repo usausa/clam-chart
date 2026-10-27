@@ -26,6 +26,8 @@ internal sealed partial class CartesianRenderer
 
     private const double ScatterFillOpacity = 0.5;
 
+    private const double DefaultMarkerSize = 8;
+
     private const float FadeStartScale = 0.6f;
 
     private readonly SKPathEffect thresholdDash = SKPathEffect.CreateDash([ThresholdDash, ThresholdDash], 0);
@@ -263,7 +265,7 @@ internal sealed partial class CartesianRenderer
         var count = Project(layout, display, geometry, layout.GetValueAxis(scatter.YAxis), entrance);
         var horizontal = layout.Orientation == ChartOrientation.Horizontal;
         var scale = entrance == ChartEntranceAnimation.Fade ? FadeStartScale + ((1 - FadeStartScale) * (float)display.Ease(display.Progress)) : 1;
-        var radius = (float)(scatter.MarkerSize ?? style.MarkerSize) * scale / 2;
+        var radius = (float)scatter.MarkerSize * scale / 2;
         var fill = scatter.FillOpacity ?? ScatterFillOpacity;
         var coloring = IsColoring(layout, state, scatter.YAxis);
         var values = geometry.Value;
@@ -351,7 +353,7 @@ internal sealed partial class CartesianRenderer
         }
 
         var scatter = item as ScatterSeries;
-        var size = scatter?.MarkerSize ?? style.MarkerSize;
+        var size = scatter?.MarkerSize ?? DefaultMarkerSize;
         var shape = scatter?.MarkerShape ?? ChartMarkerShape.Circle;
         var point = LinePathBuilder.ToPoint((float)layout.XAxis.ToDisplayPixel(geometry.X[index]), (float)axis.ToDisplayPixel(geometry.End[index]), layout.Orientation == ChartOrientation.Horizontal);
         var color = GetPointColor(layout, state, style, item.YAxis, geometry.Value[index], colors[lead]);

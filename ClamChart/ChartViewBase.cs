@@ -15,9 +15,8 @@ using SkiaSharp.Views.Maui.Controls;
 
 public abstract partial class ChartViewBase : SKCanvasView, IDisposable
 {
-    public static readonly BindableProperty ChartStyleProperty = BindableProperty.Create(nameof(ChartStyle), typeof(ChartStyle), typeof(ChartViewBase), ChartStyles.Light, validateValue: static (_, value) => ChartStyle.ValidateValue(value), propertyChanged: OnStyleChanged);
     public static readonly BindableProperty DensityProperty = BindableProperty.Create(nameof(Density), typeof(ChartDensity), typeof(ChartViewBase), ChartDensity.Auto, propertyChanged: OnLayoutInputChanged);
-    public static readonly BindableProperty PaletteProperty = BindableProperty.Create(nameof(Palette), typeof(IReadOnlyList<Color>), typeof(ChartViewBase), propertyChanged: OnRenderInputChanged);
+    public static readonly BindableProperty PaletteProperty = BindableProperty.Create(nameof(Palette), typeof(IReadOnlyList<Color>), typeof(ChartViewBase), ChartPalettes.DefaultLight, propertyChanged: OnStyleRenderChanged);
     public static readonly BindableProperty ContentPaddingProperty = BindableProperty.Create(nameof(ContentPadding), typeof(Thickness?), typeof(ChartViewBase), validateValue: static (_, value) => ValidatePadding(value, nameof(ContentPadding)), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty CultureProperty = BindableProperty.Create(nameof(Culture), typeof(CultureInfo), typeof(ChartViewBase), propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty EmptyTextProperty = BindableProperty.Create(nameof(EmptyText), typeof(string), typeof(ChartViewBase), propertyChanged: OnRenderInputChanged);
@@ -32,12 +31,6 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
 
     public event EventHandler<ChartFrameEventArgs>? FrameRendered;
 
-    public ChartStyle ChartStyle
-    {
-        get => (ChartStyle)GetValue(ChartStyleProperty);
-        set => SetValue(ChartStyleProperty, value);
-    }
-
     public ChartDensity Density
     {
         get => (ChartDensity)GetValue(DensityProperty);
@@ -46,9 +39,9 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
 
     public ChartDensity EffectiveDensity => ResolveDensity();
 
-    public IReadOnlyList<Color>? Palette
+    public IReadOnlyList<Color> Palette
     {
-        get => (IReadOnlyList<Color>?)GetValue(PaletteProperty);
+        get => (IReadOnlyList<Color>)GetValue(PaletteProperty);
         set => SetValue(PaletteProperty, value);
     }
 
@@ -76,7 +69,13 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     internal virtual int RenderedPointCount => 0;
 
     internal virtual ChartDensity ResolveDensity() =>
-        Density == ChartDensity.Auto ? DensityResolver.Resolve(LayoutWidth, LayoutHeight, ChartStyle.CompactSize, ChartStyle.MinimalSize) : Density;
+        Density == ChartDensity.Auto ? DensityResolver.Resolve(LayoutWidth, LayoutHeight, EffectiveStyle.CompactSize, EffectiveStyle.MinimalSize) : Density;
+
+    internal ChartStyle EffectiveStyle
+    {
+        get => field ??= BuildStyle();
+        private set;
+    }
 
     internal static Thickness GetDensityPadding(ChartDensity density) =>
         new(density switch
@@ -183,7 +182,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     public void Invalidate()
     {
         ThrowIfUnavailable();
-        ChartStyle.Validate();
+        EffectiveStyle = null!;
         ResetRenderer();
         layoutDirty = true;
         InvalidateCanvas();
@@ -274,6 +273,13 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
     internal static void OnStyleChanged(BindableObject bindable, object oldValue, object newValue) =>
         ((ChartViewBase)bindable).InvalidateStyle();
 
+    internal static void OnStyleRenderChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (ChartViewBase)bindable;
+        view.EffectiveStyle = null!;
+        view.InvalidateRender();
+    }
+
     internal void InvalidateData()
     {
         if (!BeginChange())
@@ -321,6 +327,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
 
     internal void InvalidateStyle()
     {
+        EffectiveStyle = null!;
         if (!BeginChange())
         {
             return;

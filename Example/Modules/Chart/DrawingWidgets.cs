@@ -33,7 +33,7 @@ internal static class DrawingWidgets
         {
             var options = new RadialBarDrawOptions { DisplayMode = mode, CapStyle = ChartCapStyle.Round, Thickness = 14, SegmentCount = 24, BarGlow = true, IsDark = dark };
             var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), [percent], options, cache);
-            DrawCenter(canvas, hole, FormatPercent(percent), GetStyle(dark).PrimaryTextColor.ToSKColor());
+            DrawCenter(canvas, hole, FormatPercent(percent), GetStyle(dark).PrimaryText);
         });
 
     public static byte[] Activity(double[] values, ChartRadialBarMode mode, bool dark, float scale, ChartDrawingCache cache) =>
@@ -48,7 +48,7 @@ internal static class DrawingWidgets
                 Spacing = 3,
                 SegmentCount = 30,
                 OverflowMode = ChartOverflowMode.Wrap,
-                Colors = [style.CriticalColor.ToSKColor(), style.GoodColor.ToSKColor(), style.Palette[0].ToSKColor()],
+                Colors = [style.Critical, style.Good, style.Palette[0].ToSKColor()],
                 IsDark = dark
             };
             ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, Square - Inset), values, options, cache);
@@ -70,7 +70,7 @@ internal static class DrawingWidgets
                 IsDark = dark
             };
             var hole = ChartDrawing.DrawRadialBar(canvas, new SKRect(Inset, Inset, Square - Inset, HalfHeight - Inset), [percent], options, cache);
-            DrawGauge(canvas, hole, FormatPercent(percent), style.PrimaryTextColor.ToSKColor());
+            DrawGauge(canvas, hole, FormatPercent(percent), style.PrimaryText);
         });
 
     public static byte[] Columns(double[] values, ChartBarGaugeMode mode, bool dark, float scale, ChartDrawingCache cache) =>
@@ -98,7 +98,7 @@ internal static class DrawingWidgets
             using var font = CreateFont(typeface, LabelSize);
             using var paint = new SKPaint();
             paint.IsAntialias = true;
-            paint.Color = style.SecondaryTextColor.ToSKColor();
+            paint.Color = style.SecondaryText;
             var size = (GoalsHeight - (BarSpacing * (values.Length - 1))) / values.Length;
             for (var i = 0; i < values.Length; i++)
             {
@@ -117,18 +117,24 @@ internal static class DrawingWidgets
             using var font = CreateFont(typeface, TrendSize);
             using var paint = new SKPaint();
             paint.IsAntialias = true;
-            paint.Color = style.PrimaryTextColor.ToSKColor();
+            paint.Color = style.PrimaryText;
             canvas.DrawText(values[^1].ToString("0.0", CultureInfo.InvariantCulture), Wide, GetBaseline(font, TrendHeight / 2), SKTextAlign.Right, font, paint);
         });
 
-    private static ChartStyle GetStyle(bool dark) => dark ? ChartStyles.Dark : ChartStyles.Light;
+    private static readonly WidgetTheme Light = new(new SKColor(0x0B, 0x0B, 0x0B), new SKColor(0x52, 0x51, 0x4E), new SKColor(0x56, 0xA6, 0x4B), new SKColor(0xF2, 0xCC, 0x0C), new SKColor(0xE0, 0x2F, 0x44), ChartPalettes.DefaultLight);
 
-    private static ChartDrawingThreshold[] GetThresholds(ChartStyle style) =>
+    private static readonly WidgetTheme Dark = new(new SKColor(0xF0, 0xEF, 0xEC), new SKColor(0xC3, 0xC2, 0xB7), new SKColor(0x73, 0xBF, 0x69), new SKColor(0xFA, 0xDE, 0x2A), new SKColor(0xF2, 0x49, 0x5C), ChartPalettes.DefaultDark);
+
+    private static WidgetTheme GetStyle(bool dark) => dark ? Dark : Light;
+
+    private static ChartDrawingThreshold[] GetThresholds(WidgetTheme theme) =>
     [
-        new(Double.NegativeInfinity, style.GoodColor.ToSKColor()),
-        new(60, style.WarningColor.ToSKColor()),
-        new(85, style.CriticalColor.ToSKColor())
+        new(Double.NegativeInfinity, theme.Good),
+        new(60, theme.Warning),
+        new(85, theme.Critical)
     ];
+
+    private readonly record struct WidgetTheme(SKColor PrimaryText, SKColor SecondaryText, SKColor Good, SKColor Warning, SKColor Critical, IReadOnlyList<Color> Palette);
 
     private static string FormatPercent(double value) => value.ToString("0", CultureInfo.InvariantCulture) + "%";
 
