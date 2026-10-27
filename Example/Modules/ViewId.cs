@@ -25,6 +25,5 @@ public enum ViewId
     ChartMonitor,
     ChartLive,
     ChartDashboard,
-    ChartDensity,
     ChartPerformance
 }

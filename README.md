@@ -11,9 +11,9 @@ Lines, areas, bars, range bars, scatter and bubble plots, pies, radars, heatmaps
 |:-:|:-:|:-:|
 | <img src="Document/line.png" width="240" /> | <img src="Document/bar.png" width="240" /> | <img src="Document/axes.png" width="240" /> |
 
-| 🍩 Donut and selection | ✨ Sparklines in a list | 📐 Sizes and density |
+| 🍩 Donut and selection | ✨ Sparklines in a list | 🔥 Heatmaps |
 |:-:|:-:|:-:|
-| <img src="Document/pie.png" width="240" /> | <img src="Document/sparkline.png" width="240" /> | <img src="Document/density.png" width="240" /> |
+| <img src="Document/pie.png" width="240" /> | <img src="Document/sparkline.png" width="240" /> | <img src="Document/heatmap.png" width="240" /> |
 
 | 🔢 KPI tiles | 📶 Bar gauges | ⭕ Radial bars |
 |:-:|:-:|:-:|
@@ -106,7 +106,7 @@ FallbackFonts.Typefaces = [SKTypeface.FromStream(await FileSystem.OpenAppPackage
 | Labels | Legend as a list or a table with last, minimum, maximum and mean, sortable by a header, data labels, tooltip and axis labels, with a format, a converter or a delegate |
 | Size | `Density` thins the axes, the legend and the labels as the chart gets smaller |
 
-The default look is quiet: a transparent background, hairline grids, thin lines, light fills and gaps between segments that are really transparent, so a chart can sit on a card, a photo or a map.  
+The default look is quiet, with a transparent background and real gaps, so a chart can sit on a card, a photo or a map.  
 Sizes are DIP and angles are degrees clockwise from 12 o'clock.  
 
 Merge the theme of the library and base an implicit style on it; every chart then follows the app theme.  
@@ -125,7 +125,7 @@ Every property except the read-only `EffectiveDensity` is a bindable property, t
 An `ObservableCollection` animates its changes: `Add` and `RemoveAt(0)` in a row make the line flow, and an item that raises `PropertyChanged` moves its point.  
 `SelectedItem` and `SelectedIndex` are TwoWay, `TrackedItem` and `TrackedIndex` report the point under the trackball to the view model, and `ChartSeries.IsVisible` follows the legend.  
 Each event has a matching command: `ItemTappedCommand`, `ChartTappedCommand`, `SelectionChangedCommand`, `TrackingChangedCommand` and `LegendItemTappedCommand`.  
-`Example/Modules/Chart` contains screens for the chart types (lines, bars, a pie, sparklines, KPI tiles, bar gauges, radial bars, scatter plots, range bars, bubbles, a radar, heatmaps and a state timeline), the features (a time series, two value axes, thresholds, palettes, overlays and drawing without a view), combined pages (monitoring panels, a live stream and dashboards) and checks (the density and the drawing time); the menu colors them by group.  
+`Example/Modules/Chart` has a screen per chart type, per feature, combined pages and a draw time check; the menu colors them by group.  
 
 ```csharp
 public sealed class TrafficViewModel : ObservableObject

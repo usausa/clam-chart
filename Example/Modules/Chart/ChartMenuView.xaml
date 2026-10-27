@@ -130,13 +130,8 @@
         <Button Grid.Row="12" Grid.Column="0"
                 Style="{StaticResource ToolMenuButton}"
                 Command="{Binding ForwardCommand}"
-                CommandParameter="{x:Static modules:ViewId.ChartDensity}"
-                Text="23.Density" />
-        <Button Grid.Row="12" Grid.Column="1"
-                Style="{StaticResource ToolMenuButton}"
-                Command="{Binding ForwardCommand}"
                 CommandParameter="{x:Static modules:ViewId.ChartPerformance}"
-                Text="24.Performance" />
+                Text="23.Performance" />
     </Grid>
 
 </ContentView>
