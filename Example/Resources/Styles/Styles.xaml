@@ -446,6 +446,80 @@
         <Setter Property="Palette" Value="{x:Static clam:ChartPalettes.DefaultDark}" />
     </Style>
 
+    <!-- ================================================================================ -->
+    <!-- Board -->
+    <!-- ================================================================================ -->
+
+    <Color x:Key="BoardBackColor">#111318</Color>
+    <Color x:Key="BoardPanelColor">#181B22</Color>
+    <Color x:Key="BoardLineColor">#2A2F3A</Color>
+    <Color x:Key="BoardTitleColor">#9AA4B2</Color>
+
+    <Style x:Key="BoardScroll"
+           TargetType="ScrollView">
+        <Setter Property="BackgroundColor" Value="{StaticResource BoardBackColor}" />
+    </Style>
+
+    <Style x:Key="BoardStack"
+           TargetType="VerticalStackLayout">
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Spacing" Value="4" />
+    </Style>
+
+    <Style x:Key="BoardTileGrid"
+           TargetType="Grid">
+        <Setter Property="ColumnSpacing" Value="4" />
+    </Style>
+
+    <Style x:Key="BoardPanel"
+           TargetType="Border">
+        <Setter Property="Padding" Value="6,4" />
+        <Setter Property="BackgroundColor" Value="{StaticResource BoardPanelColor}" />
+        <Setter Property="Stroke" Value="{StaticResource BoardLineColor}" />
+        <Setter Property="StrokeThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="BoardPanelGrid"
+           TargetType="Grid">
+        <Setter Property="RowSpacing" Value="2" />
+    </Style>
+
+    <Style x:Key="BoardTitleLabel"
+           TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource BoardTitleColor}" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="BoardTile"
+           TargetType="clam:ClamStatView"
+           BasedOn="{StaticResource ClamChartStatTheme}">
+        <Setter Property="HeightRequest" Value="86" />
+        <Setter Property="ColorMode" Value="Background" />
+        <Setter Property="ContentPadding" Value="6" />
+        <Setter Property="FillMode" Value="Gradient" />
+        <Setter Property="GradientStrength" Value="1" />
+        <Setter Property="LayoutMode" Value="Horizontal" />
+        <Setter Property="TrendPlacement" Value="Background" />
+        <Setter Property="ValueFontSize" Value="20" />
+    </Style>
+
+    <Style x:Key="BoardChart"
+           TargetType="clam:ClamChartView"
+           BasedOn="{StaticResource ClamChartTheme}">
+        <Setter Property="ContentPadding" Value="0" />
+        <Setter Property="PrimaryTextColor" Value="#F0EFEC" />
+        <Setter Property="SecondaryTextColor" Value="#C3C2B7" />
+        <Setter Property="TooltipBackground" Value="#F01F1F1D" />
+        <Setter Property="TooltipTextColor" Value="#F0EFEC" />
+        <Setter Property="TooltipBorderColor" Value="#1AF0EFEC" />
+        <Setter Property="TrackColor" Value="#12FFFFFF" />
+        <Setter Property="TrackballMode" Value="LongPress" />
+        <Setter Property="TrackballSnapEnabled" Value="False" />
+        <Setter Property="TrackingGroup" Value="monitor" />
+        <Setter Property="TrackingGroupMode" Value="Tooltip" />
+        <Setter Property="XKey" Value="time" />
+    </Style>
+
     <Style x:Key="ChartStack"
            TargetType="VerticalStackLayout">
         <Setter Property="Padding" Value="8" />

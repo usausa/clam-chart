@@ -76,7 +76,7 @@
                                                               Dark=#FF9830}"
                                        FillMode="Gradient"
                                        LayoutMode="{Binding LayoutMode}"
-                                       Title="電力" TrendPlacement="Background"
+                                       Title="電力" TrendFadeEnabled="True" TrendPlacement="Background"
                                        TrendValues="{Binding PowerTrend}"
                                        Unit="W" ValueFormat="N1" />
                 </Border>

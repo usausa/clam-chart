@@ -197,12 +197,55 @@ public sealed class ClamStatViewRenderingTests
     }
 
     [Fact]
-    public void BackgroundTrendFadesTowardsTheTop()
+    public void BackgroundTrendFillIsFlatOnAGradientTile()
+    {
+        // Arrange
+        using var view = Stat(10);
+        view.ColorMode = ChartStatColorMode.Background;
+        view.FillMode = ChartFillMode.Gradient;
+        view.Fill = Color.FromArgb("#73BF69");
+        view.TrendPlacement = ChartTrendPlacement.Background;
+        view.TrendValues = [10, 10];
+
+        // Act
+        using var bitmap = view.Paint(200, 120);
+
+        // Assert
+        var bounds = view.ChartLayout.TrendBounds;
+        var upper = GetPixel(bitmap, bounds.Right - 20, bounds.Y + 50);
+        var lower = GetPixel(bitmap, bounds.Right - 20, bounds.Y + 64);
+        Assert.Equal(upper, lower, ColorComparer.Loose);
+    }
+
+    [Fact]
+    public void BackgroundTrendKeepsTheLineToTheTop()
     {
         // Arrange
         using var view = Stat(10);
         view.TrendKind = ChartSparklineKind.Line;
         view.TrendPlacement = ChartTrendPlacement.Background;
+        view.TrendValues = [0, 10];
+
+        // Act
+        using var bitmap = view.Paint(200, 120);
+
+        // Assert
+        var layout = view.TrendLayout;
+        var low = GetPixel(bitmap, layout.ToX(0.1, layout.Scale), layout.ToY(1, layout.Scale));
+        var high = GetPixel(bitmap, layout.ToX(0.9, layout.Scale), layout.ToY(9, layout.Scale));
+        Assert.Equal(new ChartRect(0, 48, 200, 72), view.ChartLayout.TrendBounds);
+        Assert.True(low.Alpha > 200);
+        Assert.True(high.Alpha > 200);
+    }
+
+    [Fact]
+    public void BackgroundTrendFadesTowardsTheTopWhenEnabled()
+    {
+        // Arrange
+        using var view = Stat(10);
+        view.TrendKind = ChartSparklineKind.Line;
+        view.TrendPlacement = ChartTrendPlacement.Background;
+        view.TrendFadeEnabled = true;
         view.TrendValues = [0, 10];
 
         // Act

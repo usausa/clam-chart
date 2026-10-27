@@ -18,61 +18,49 @@
              shell:ShellProperty.Function4Enabled="True">
 
     <Grid>
-        <ScrollView>
-            <Grid Style="{StaticResource StatGrid}"
-                  RowDefinitions="72,Auto,Auto,Auto,Auto"
-                  ColumnDefinitions="*,*,*">
-                <Border Grid.Row="0" Grid.Column="0"
-                        Style="{StaticResource StatBorder}">
-                    <clam:ClamStatView Value="{Binding Cpu}"
-                                       ColorMode="Background"
-                                       Fill="{AppThemeBinding Light=#3274D9,
-                                                              Dark=#5794F2}"
-                                       FillMode="Gradient" Title="CPU" TrendPlacement="Background"
+        <ScrollView Style="{StaticResource BoardScroll}">
+            <VerticalStackLayout Style="{StaticResource BoardStack}">
+                <Grid Style="{StaticResource BoardTileGrid}"
+                      ColumnDefinitions="*,*,*">
+                    <clam:ClamStatView Grid.Column="0"
+                                       Style="{StaticResource BoardTile}"
+                                       Value="{Binding Cpu}"
+                                       Fill="#5794F2" Title="CPU"
                                        TrendValues="{Binding CpuTrend}"
                                        Unit="%" ValueFormat="N1" />
-                </Border>
-                <Border Grid.Row="0" Grid.Column="1"
-                        Style="{StaticResource StatBorder}">
-                    <clam:ClamStatView Value="{Binding Memory}"
-                                       ColorMode="Background"
-                                       Fill="{AppThemeBinding Light=#3274D9,
-                                                              Dark=#5794F2}"
-                                       FillMode="Gradient" Title="Memory" TrendPlacement="Background"
+                    <clam:ClamStatView Grid.Column="1"
+                                       Style="{StaticResource BoardTile}"
+                                       Value="{Binding Memory}"
+                                       Fill="#B877D9" Title="Memory"
                                        TrendValues="{Binding MemoryTrend}"
                                        Unit="%" ValueFormat="N1" />
-                </Border>
-                <Border Grid.Row="0" Grid.Column="2"
-                        Style="{StaticResource StatBorder}">
-                    <clam:ClamStatView Value="{Binding Temperature}"
-                                       ColorMode="Background"
-                                       Fill="{AppThemeBinding Light=#E02F44,
-                                                              Dark=#F2495C}"
-                                       FillMode="Gradient" Title="Temp" TrendPlacement="Background"
+                    <clam:ClamStatView Grid.Column="2"
+                                       Style="{StaticResource BoardTile}"
+                                       Value="{Binding Temperature}"
+                                       Fill="#F2495C" Title="Temp"
                                        TrendValues="{Binding TemperatureTrend}"
                                        Unit="°C" ValueFormat="N0" />
-                </Border>
-                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                        Style="{StaticResource StatBorder}">
-                    <Grid Style="{StaticResource PanelGrid}"
+                </Grid>
+                <Border Style="{StaticResource BoardPanel}">
+                    <Grid Style="{StaticResource BoardPanelGrid}"
                           RowDefinitions="Auto,500">
                         <Label Grid.Row="0"
-                               Style="{StaticResource PanelTitleLabel}"
+                               Style="{StaticResource BoardTitleLabel}"
                                Text="CPU load (%)" />
                         <clam:ClamChartView Grid.Row="1"
-                                            ContentPadding="0" HapticFeedbackEnabled="True"
+                                            Style="{StaticResource BoardChart}"
+                                            HapticFeedbackEnabled="True"
                                             LegendMode="{Binding LegendMode}"
                                             LegendSortEnabled="True" LegendToggleEnabled="True" LegendValues="Last,Max,Mean"
-                                            Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.BlueShadesLight},
-                                                                      Dark={x:Static clam:ChartPalettes.BlueShadesDark}}"
-                                            TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor" TrackingGroupMode="Tooltip"
-                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}"
-                                            XKey="time">
+                                            Palette="{x:Static clam:ChartPalettes.BlueShadesDark}"
+                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}">
                             <clam:ClamChartView.XAxis>
-                                <clam:DateTimeAxis WindowSize="{Binding Window}" />
+                                <clam:DateTimeAxis GridLineColor="{StaticResource BoardLineColor}"
+                                                   WindowSize="{Binding Window}" />
                             </clam:ClamChartView.XAxis>
                             <clam:ClamChartView.YAxis>
-                                <clam:NumericAxis Minimum="0" Maximum="100" />
+                                <clam:NumericAxis Minimum="0" Maximum="100"
+                                                  GridLineColor="{StaticResource BoardLineColor}" />
                             </clam:ClamChartView.YAxis>
                             <clam:LineSeries ItemsSource="{Binding Samples}"
                                              MarkerMode="None" Title="cpu0" ValueFormat="{}{0:N1}%" YKey="cpu0" />
@@ -93,27 +81,25 @@
                         </clam:ClamChartView>
                     </Grid>
                 </Border>
-                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-                        Style="{StaticResource StatBorder}">
-                    <Grid Style="{StaticResource PanelGrid}"
+                <Border Style="{StaticResource BoardPanel}">
+                    <Grid Style="{StaticResource BoardPanelGrid}"
                           RowDefinitions="Auto,300">
                         <Label Grid.Row="0"
-                               Style="{StaticResource PanelTitleLabel}"
+                               Style="{StaticResource BoardTitleLabel}"
                                Text="Temperature (°C)" />
                         <clam:ClamChartView Grid.Row="1"
-                                            ContentPadding="0"
+                                            Style="{StaticResource BoardChart}"
                                             LegendMode="{Binding LegendMode}"
                                             LegendSortEnabled="True" LegendValues="Last"
-                                            Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.RedShadesLight},
-                                                                      Dark={x:Static clam:ChartPalettes.RedShadesDark}}"
-                                            TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor" TrackingGroupMode="Tooltip"
-                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}"
-                                            XKey="time">
+                                            Palette="{x:Static clam:ChartPalettes.RedShadesDark}"
+                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}">
                             <clam:ClamChartView.XAxis>
-                                <clam:DateTimeAxis WindowSize="{Binding Window}" />
+                                <clam:DateTimeAxis GridLineColor="{StaticResource BoardLineColor}"
+                                                   WindowSize="{Binding Window}" />
                             </clam:ClamChartView.XAxis>
                             <clam:ClamChartView.YAxis>
-                                <clam:NumericAxis Minimum="0" Maximum="100" />
+                                <clam:NumericAxis Minimum="0" Maximum="100"
+                                                  GridLineColor="{StaticResource BoardLineColor}" />
                             </clam:ClamChartView.YAxis>
                             <clam:LineSeries ItemsSource="{Binding Samples}"
                                              MarkerMode="None" Title="Package" ValueFormat="{}{0:N0} °C" YKey="package" />
@@ -126,27 +112,25 @@
                         </clam:ClamChartView>
                     </Grid>
                 </Border>
-                <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
-                        Style="{StaticResource StatBorder}">
-                    <Grid Style="{StaticResource PanelGrid}"
+                <Border Style="{StaticResource BoardPanel}">
+                    <Grid Style="{StaticResource BoardPanelGrid}"
                           RowDefinitions="Auto,240">
                         <Label Grid.Row="0"
-                               Style="{StaticResource PanelTitleLabel}"
+                               Style="{StaticResource BoardTitleLabel}"
                                Text="Network (KB/s)" />
                         <clam:ClamChartView Grid.Row="1"
-                                            ContentPadding="0"
+                                            Style="{StaticResource BoardChart}"
                                             LegendMode="{Binding LegendMode}"
                                             LegendSortEnabled="True" LegendValues="Last,Max"
-                                            Palette="{AppThemeBinding Light={x:Static clam:ChartPalettes.PurpleShadesLight},
-                                                                      Dark={x:Static clam:ChartPalettes.PurpleShadesDark}}"
-                                            TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor" TrackingGroupMode="Tooltip"
-                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}"
-                                            XKey="time">
+                                            Palette="{x:Static clam:ChartPalettes.PurpleShadesDark}"
+                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}">
                             <clam:ClamChartView.XAxis>
-                                <clam:DateTimeAxis WindowSize="{Binding Window}" />
+                                <clam:DateTimeAxis GridLineColor="{StaticResource BoardLineColor}"
+                                                   WindowSize="{Binding Window}" />
                             </clam:ClamChartView.XAxis>
                             <clam:ClamChartView.YAxis>
-                                <clam:NumericAxis Minimum="0" />
+                                <clam:NumericAxis Minimum="0"
+                                                  GridLineColor="{StaticResource BoardLineColor}" />
                             </clam:ClamChartView.YAxis>
                             <clam:LineSeries ItemsSource="{Binding Samples}"
                                              LiveIndicatorVisible="True" MarkerMode="None" Title="wlan0 rx" ValueFormat="{}{0:N1} KB/s"
@@ -157,33 +141,30 @@
                         </clam:ClamChartView>
                     </Grid>
                 </Border>
-                <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
-                        Style="{StaticResource StatBorder}">
-                    <Grid Style="{StaticResource PanelGrid}"
+                <Border Style="{StaticResource BoardPanel}">
+                    <Grid Style="{StaticResource BoardPanelGrid}"
                           RowDefinitions="Auto,220"
                           ColumnDefinitions="*,Auto">
                         <Label Grid.Row="0" Grid.Column="0"
-                               Style="{StaticResource PanelTitleLabel}"
+                               Style="{StaticResource BoardTitleLabel}"
                                Text="Run queue" />
                         <Label Grid.Row="0" Grid.Column="1"
-                               Style="{StaticResource PanelTitleLabel}"
+                               Style="{StaticResource BoardTitleLabel}"
                                Text="{Binding RunQueue, StringFormat='{0:N0}'}" />
                         <clam:ClamChartView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                            ContentPadding="0" TrackballMode="LongPress" TrackballSnapEnabled="False" TrackingGroup="monitor"
-                                            TrackingGroupMode="Tooltip"
-                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}"
-                                            XKey="time">
+                                            Style="{StaticResource BoardChart}"
+                                            ValueAccessors="{x:Static models:MonitorSample.Accessors}">
                             <clam:ClamChartView.XAxis>
-                                <clam:DateTimeAxis WindowSize="{Binding Window}" />
+                                <clam:DateTimeAxis GridLineColor="{StaticResource BoardLineColor}"
+                                                   WindowSize="{Binding Window}" />
                             </clam:ClamChartView.XAxis>
                             <clam:BarSeries ItemsSource="{Binding Samples}"
-                                            Color="{AppThemeBinding Light=#FF780A,
-                                                                    Dark=#FF9830}"
+                                            Color="#FF9830"
                                             Title="Run queue" ValueFormat="{}{0:N0}" YKey="queue" />
                         </clam:ClamChartView>
                     </Grid>
                 </Border>
-            </Grid>
+            </VerticalStackLayout>
         </ScrollView>
 
         <cmc:BottomSheetView Style="{StaticResource SettingSheet}"

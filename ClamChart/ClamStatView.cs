@@ -29,6 +29,7 @@ public partial class ClamStatView : ChartViewBase
     public static readonly BindableProperty TrendValuesProperty = BindableProperty.Create(nameof(TrendValues), typeof(IEnumerable<double>), typeof(ClamStatView), propertyChanged: OnTrendValuesChanged);
     public static readonly BindableProperty TrendKindProperty = BindableProperty.Create(nameof(TrendKind), typeof(ChartSparklineKind), typeof(ClamStatView), ChartSparklineKind.Area, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty TrendPlacementProperty = BindableProperty.Create(nameof(TrendPlacement), typeof(ChartTrendPlacement), typeof(ClamStatView), ChartTrendPlacement.Bottom, propertyChanged: OnLayoutInputChanged);
+    public static readonly BindableProperty TrendFadeEnabledProperty = BindableProperty.Create(nameof(TrendFadeEnabled), typeof(bool), typeof(ClamStatView), false, propertyChanged: OnRenderInputChanged);
     public static readonly BindableProperty ThresholdsProperty = BindableProperty.Create(nameof(Thresholds), typeof(IList<ChartThreshold>), typeof(ClamStatView), defaultValueCreator: static _ => new ObservableCollection<ChartThreshold>(), validateValue: static (_, value) => ValidateThresholds(value, nameof(Thresholds)), propertyChanged: OnThresholdsChanged);
     public static readonly BindableProperty ColorModeProperty = BindableProperty.Create(nameof(ColorMode), typeof(ChartStatColorMode), typeof(ClamStatView), ChartStatColorMode.None, propertyChanged: OnLayoutInputChanged);
     public static readonly BindableProperty FillProperty = BindableProperty.Create(nameof(Fill), typeof(Color), typeof(ClamStatView), propertyChanged: OnRenderInputChanged);
@@ -145,6 +146,12 @@ public partial class ClamStatView : ChartViewBase
     {
         get => (ChartTrendPlacement)GetValue(TrendPlacementProperty);
         set => SetValue(TrendPlacementProperty, value);
+    }
+
+    public bool TrendFadeEnabled
+    {
+        get => (bool)GetValue(TrendFadeEnabledProperty);
+        set => SetValue(TrendFadeEnabledProperty, value);
     }
 
 #pragma warning disable CA2227
@@ -298,7 +305,7 @@ public partial class ClamStatView : ChartViewBase
         CountUp.Easing = AnimationEasing;
         trend.Interpolator.Easing = AnimationEasing;
         var pulse = AlertAnimationEnabled && critical ? AlertPulse.GetOpacity(EffectPhase) : 1;
-        var state = new StatRenderState(ColorMode, stateColor, Fill, palette.Count > 0 ? palette[0] : EffectiveStyle.OtherColor, CountUp, formatting, !Double.IsFinite(Value), AccentTextColor, GradientStrength, pulse);
+        var state = new StatRenderState(ColorMode, stateColor, Fill, palette.Count > 0 ? palette[0] : EffectiveStyle.OtherColor, CountUp, formatting, !Double.IsFinite(Value), AccentTextColor, GradientStrength, TrendFadeEnabled, pulse);
         painter.Render(canvas, ChartLayout, state, trend, EffectiveStyle);
     }
 

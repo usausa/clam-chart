@@ -93,10 +93,17 @@ internal sealed class StatRenderer : IDisposable
         }
 
         var line = gradientMode ? Brighten(accent, OnColorLineBrighten) : accent;
-        var trendPaint = gradientMode ? new SparklinePaint(line, line, ChartColor.Fade(SKColors.White, OnColorFillOpacity), 1) : new SparklinePaint(line, style.CriticalColor.ToSKColor(), ChartColor.Fade(line, TrendFillOpacity), 1);
+        var trendPaint = gradientMode ? new SparklinePaint(line, line, ChartColor.Fade(SKColors.White, OnColorFillOpacity), 1, true) : new SparklinePaint(line, style.CriticalColor.ToSKColor(), ChartColor.Fade(line, TrendFillOpacity), 1);
         if (layout.HasTrend && (layout.TrendPlacement == ChartTrendPlacement.Background))
         {
-            DrawFadedTrend(canvas, layout.TrendBounds, core, trendPaint, style);
+            if (state.TrendFadeEnabled)
+            {
+                DrawFadedTrend(canvas, layout.TrendBounds, core, trendPaint, style);
+            }
+            else
+            {
+                trend.Render(canvas, core.Layout, core.Interpolator, core.Values, trendPaint, style, false);
+            }
         }
 
         var indicator = state.ColorMode == ChartStatColorMode.Indicator ? state.Pulse : 1;

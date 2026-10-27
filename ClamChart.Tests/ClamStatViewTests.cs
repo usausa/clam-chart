@@ -18,6 +18,7 @@ public sealed class ClamStatViewTests
         Assert.True(view.IncreaseIsGood);
         Assert.Equal(ChartSparklineKind.Area, view.TrendKind);
         Assert.Equal(ChartTrendPlacement.Bottom, view.TrendPlacement);
+        Assert.False(view.TrendFadeEnabled);
         Assert.Equal(ChartStatColorMode.None, view.ColorMode);
         Assert.Equal(ChartStatLayoutMode.Auto, view.LayoutMode);
         Assert.Null(view.Fill);

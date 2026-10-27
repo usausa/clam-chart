@@ -93,7 +93,7 @@ internal sealed partial class SparklineRenderer : IDisposable
                     }
                     else
                     {
-                        FillArea(canvas, layout, scale, count, smooth, paint.Area, fill * weak, null, style.FillMode == ChartFillMode.Gradient);
+                        FillArea(canvas, layout, scale, count, smooth, paint.Area, fill * weak, null, !paint.FlatArea && (style.FillMode == ChartFillMode.Gradient));
                     }
                 }
 
