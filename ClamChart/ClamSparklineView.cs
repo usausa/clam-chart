@@ -184,7 +184,7 @@ public partial class ClamSparklineView : ChartViewBase
     public ClamSparklineView()
     {
         core = new SparklineCore(this, DataAnimationName, InvalidateData, CreateReader);
-        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged, true);
         thresholdsWatcher.Watch(Thresholds);
     }
 

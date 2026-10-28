@@ -258,7 +258,7 @@ Tracking ends when the finger is released, a second finger touches, the finger l
 | `Bands` | Each step up to the next threshold filled with its color at 15%, under the series |
 | `ColorSeries` | Lines and areas on the primary value axis are colored by the region of their values with hard edges; bars, markers, scatter points and tooltip dots take the color of the threshold at their value, and the legend keeps the series colors |
 
-Changes of a notifying list of thresholds are followed while the chart is attached; after changing a threshold in place, call `Invalidate()`.  
+Changes of a notifying list of thresholds are followed while the chart is attached, and so are changes of the properties of a `ChartThreshold` in it, since `ChartThreshold` is an `Element` whose properties are bindable.  
 
 ### 📣 Events
 
@@ -709,7 +709,7 @@ The value counts up from the shown value when it changes, and counting allocates
 | `Label` | `string?` | `null` | Text above the right end of the threshold line of `ClamChartView` in `Lines` mode |
 
 The threshold with the largest `Value` at or below the value applies, and the later one wins a tie.  
-Changes of a notifying list are followed; after changing a threshold in place, call `Invalidate()`.  
+Changes of a notifying list are followed, and so are changes of the properties of a `ChartThreshold` in it, since `ChartThreshold` is an `Element` whose properties are bindable.  
 
 ## 📶 ClamBarGaugeView
 

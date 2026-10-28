@@ -186,9 +186,9 @@ public partial class ClamStateTimelineView : ChartViewBase
     {
         source = new ChartDataSource(InvalidateData);
         dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
-        mappingsWatcher = new ChartCollectionWatcher(OnListChanged);
+        mappingsWatcher = new ChartCollectionWatcher(OnListChanged, true);
         mappingsWatcher.Watch(ValueMappings);
-        thresholdsWatcher = new ChartCollectionWatcher(OnListChanged);
+        thresholdsWatcher = new ChartCollectionWatcher(OnListChanged, true);
         thresholdsWatcher.Watch(Thresholds);
     }
 

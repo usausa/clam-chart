@@ -99,7 +99,7 @@ public partial class ClamChartView : ChartViewBase
     {
         dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
         selectionAnimator = new ChartAnimator(this, SelectionAnimationName, OnSelectionProgress);
-        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged, true);
         thresholdsWatcher.Watch(Thresholds);
         ObserveSeries(Series);
         ObserveAnnotations(Annotations);

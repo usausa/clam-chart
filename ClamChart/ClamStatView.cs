@@ -202,7 +202,7 @@ public partial class ClamStatView : ChartViewBase
     {
         trend = new SparklineCore(this, TrendAnimationName, InvalidateData);
         CountUp = new ChartCountUp(this, ValueAnimationName);
-        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged, true);
         thresholdsWatcher.Watch(Thresholds);
     }
 

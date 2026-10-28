@@ -253,7 +253,7 @@ public partial class ClamBarGaugeView : ChartViewBase
     {
         source = new ChartDataSource(InvalidateData);
         dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
-        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged, true);
         thresholdsWatcher.Watch(Thresholds);
     }
 

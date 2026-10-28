@@ -1,12 +1,35 @@
 namespace ClamChart;
 
-public sealed class ChartValueMapping
+public sealed class ChartValueMapping : Element
 {
-    public object? Value { get; set; }
+    public static readonly BindableProperty ValueProperty = BindableProperty.Create(nameof(Value), typeof(object), typeof(ChartValueMapping));
+    public static readonly BindableProperty TextProperty = BindableProperty.Create(nameof(Text), typeof(string), typeof(ChartValueMapping));
+    public static readonly BindableProperty ColorProperty = BindableProperty.Create(nameof(Color), typeof(Color), typeof(ChartValueMapping));
+    public static readonly BindableProperty LevelProperty = BindableProperty.Create(nameof(Level), typeof(ChartThresholdLevel), typeof(ChartValueMapping));
 
-    public string? Text { get; set; }
+#pragma warning disable CA1721
+    public object? Value
+    {
+        get => GetValue(ValueProperty);
+        set => SetValue(ValueProperty, value);
+    }
+#pragma warning restore CA1721
 
-    public Color? Color { get; set; }
+    public string? Text
+    {
+        get => (string?)GetValue(TextProperty);
+        set => SetValue(TextProperty, value);
+    }
 
-    public ChartThresholdLevel Level { get; set; }
+    public Color? Color
+    {
+        get => (Color?)GetValue(ColorProperty);
+        set => SetValue(ColorProperty, value);
+    }
+
+    public ChartThresholdLevel Level
+    {
+        get => (ChartThresholdLevel)GetValue(LevelProperty);
+        set => SetValue(LevelProperty, value);
+    }
 }

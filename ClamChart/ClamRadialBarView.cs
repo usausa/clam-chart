@@ -271,7 +271,7 @@ public partial class ClamRadialBarView : ChartViewBase
         dataAnimator = new ChartAnimator(this, DataAnimationName, OnDataProgress);
         selectionAnimator = new ChartAnimator(this, SelectionAnimationName, OnSelectionProgress);
         CenterCount = new ChartCountUp(this, CenterAnimationName);
-        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged);
+        thresholdsWatcher = new ChartCollectionWatcher(OnThresholdsCollectionChanged, true);
         thresholdsWatcher.Watch(Thresholds);
     }
 
