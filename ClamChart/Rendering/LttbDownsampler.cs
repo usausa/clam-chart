@@ -47,7 +47,7 @@ internal static class LttbDownsampler
         return write;
     }
 
-    private static bool IsPoint(Span<float> along, Span<float> across, int index) =>
+    private static bool IsPoint(ReadOnlySpan<float> along, ReadOnlySpan<float> across, int index) =>
         Single.IsFinite(along[index]) && Single.IsFinite(across[index]);
 
     private static void Copy(Span<float> along, Span<float> across, Span<float> baseline, int from, int to)

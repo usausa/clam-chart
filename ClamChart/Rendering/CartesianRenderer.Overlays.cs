@@ -297,7 +297,7 @@ internal sealed partial class CartesianRenderer
         }
     }
 
-    private void SortBySize(Span<double> sizes, int count)
+    private void SortBySize(ReadOnlySpan<double> sizes, int count)
     {
         Ensure(ref orderKeys, count);
         Ensure(ref drawOrder, count);

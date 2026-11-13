@@ -887,7 +887,7 @@ internal sealed partial class CartesianRenderer : IDisposable
         }
     }
 
-    private void DrawLiveIndicator(SKCanvas canvas, CartesianLayout layout, LineSeries line, Span<double> values, int count, float radius, float knockout, SKColor seriesColor, double alpha, ChartStyle style, CartesianRenderState state, float width, float height)
+    private void DrawLiveIndicator(SKCanvas canvas, CartesianLayout layout, LineSeries line, ReadOnlySpan<double> values, int count, float radius, float knockout, SKColor seriesColor, double alpha, ChartStyle style, CartesianRenderState state, float width, float height)
     {
         var last = count - 1;
         while ((last >= 0) && (!Single.IsFinite(along[last]) || !Single.IsFinite(across[last])))
@@ -1235,10 +1235,9 @@ internal sealed partial class CartesianRenderer : IDisposable
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < legend.Items.Count; i++)
         {
-            var item = legend.Items[i];
-            var source = series[item.SeriesIndex];
-            var color = source.IsVisible ? colors[item.SeriesIndex] : colors[item.SeriesIndex].WithAlpha((byte)Math.Round(colors[item.SeriesIndex].Alpha * style.DimmedOpacity));
-            var marker = item.Marker;
+            var (seriesIndex, _, marker, chartRect, textMaxWidth, _) = legend.Items[i];
+            var source = series[seriesIndex];
+            var color = source.IsVisible ? colors[seriesIndex] : colors[seriesIndex].WithAlpha((byte)Math.Round(colors[seriesIndex].Alpha * style.DimmedOpacity));
             if (source.Kind == ChartSeriesKind.Line)
             {
                 canvas.DrawLine((float)marker.X, (float)marker.CenterY, (float)marker.Right, (float)marker.CenterY, paints.Stroke(color, LegendLineThickness));
@@ -1249,7 +1248,7 @@ internal sealed partial class CartesianRenderer : IDisposable
             }
 
             var textColor = source.IsVisible ? style.SecondaryTextColor : style.MutedTextColor;
-            DrawText(canvas, source.Title ?? String.Empty, item.Text, style.LegendFontSize, item.TextMaxWidth, textColor.ToSKColor(), style);
+            DrawText(canvas, source.Title ?? String.Empty, chartRect, style.LegendFontSize, textMaxWidth, textColor.ToSKColor(), style);
         }
 
         if (legend.OverflowCount > 0)
