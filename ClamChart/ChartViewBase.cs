@@ -271,7 +271,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         ((ChartViewBase)bindable).InvalidateRender();
 
     internal static void OnStyleChanged(BindableObject bindable, object oldValue, object newValue) =>
-        ((ChartViewBase)bindable).InvalidateStyle();
+        ((ChartViewBase)bindable).InvalidateEffectiveStyle();
 
     internal static void OnStyleRenderChanged(BindableObject bindable, object oldValue, object newValue)
     {
@@ -325,7 +325,7 @@ public abstract partial class ChartViewBase : SKCanvasView, IDisposable
         }
     }
 
-    internal void InvalidateStyle()
+    internal void InvalidateEffectiveStyle()
     {
         EffectiveStyle = null!;
         if (!BeginChange())

@@ -6,15 +6,18 @@ public sealed partial class ChartPaletteViewModel : ChartViewModelBase
 {
     private static readonly string[] Quarter = ["Q1", "Q2", "Q3", "Q4"];
 
-    public IReadOnlyList<ServiceLoad> Quarters { get; } = [.. Quarter.Select(static x => new ServiceLoad
-    {
-        Label = x,
-        Web = Math.Round(SampleData.Next(30, 70)),
-        Api = Math.Round(SampleData.Next(30, 70)),
-        Db = Math.Round(SampleData.Next(30, 70)),
-        Batch = Math.Round(SampleData.Next(30, 70)),
-        Cache = Math.Round(SampleData.Next(30, 70))
-    })];
+    public IReadOnlyList<ServiceLoad> Quarters { get; } =
+    [
+        .. Quarter.Select(static x => new ServiceLoad
+        {
+            Label = x,
+            Web = Math.Round(SampleData.Next(30, 70)),
+            Api = Math.Round(SampleData.Next(30, 70)),
+            Db = Math.Round(SampleData.Next(30, 70)),
+            Batch = Math.Round(SampleData.Next(30, 70)),
+            Cache = Math.Round(SampleData.Next(30, 70))
+        })
+    ];
 
     public IReadOnlyList<ServiceLoad> Months { get; } = CreateMonths();
 

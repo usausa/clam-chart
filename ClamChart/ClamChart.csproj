@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+    <TargetFrameworks>net11.0;net11.0-android;net10.0;net10.0-android</TargetFrameworks>
     <UseMaui>true</UseMaui>
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
@@ -28,11 +28,17 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)', 2)) == '11.0'">
+    <PackageReference Include="Microsoft.Maui.Controls" Version="11.0.10" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)', 2)) == '10.0'">
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.130" />
+  </ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.120" />
-    <PackageReference Include="SkiaExtension" Version="1.4.0" />
-    <PackageReference Include="SkiaSharp" Version="4.156.0" />
-    <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="4.156.0" />
+    <PackageReference Include="SkiaExtension" Version="2.0.0" />
+    <PackageReference Include="SkiaSharp" Version="4.156.1" />
+    <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="4.156.1" />
   </ItemGroup>
 
 </Project>
