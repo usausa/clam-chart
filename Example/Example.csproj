@@ -9,7 +9,6 @@
     <MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
     <MauiStrictXamlCompilation>true</MauiStrictXamlCompilation>
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
-    <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
 
     <!-- Display name -->
     <ApplicationTitle>ClamChart</ApplicationTitle>
