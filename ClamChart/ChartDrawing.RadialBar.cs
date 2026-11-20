@@ -29,7 +29,7 @@ public static partial class ChartDrawing
         var spacing = GetLength(options.Spacing);
         var area = new ChartRect(bounds.Left, bounds.Top, bounds.Width, bounds.Height);
         var steps = RentSteps(options.Thresholds, out var stepCount);
-        var fit = RadialBarLayout.FitRings(area, startAngle, sweepAngle, innerRadius, options.Thickness is { } width ? GetLength(width) : null, spacing, values.Length, options.BarGlow, options.CapStyle, options.ThresholdMarkersVisible && (stepCount > 0));
+        var fit = RadialBarLayout.FitRings(area, startAngle, sweepAngle, innerRadius, options.Thickness is { } width ? GetLength(width) : null, spacing, values.Length, options.BarGlow, options.CapStyle, options.DisplayMode, options.ThresholdMarkersVisible && (stepCount > 0));
         if ((fit.Radius <= 0) || (fit.Thickness <= 0))
         {
             ReturnSteps(steps);

@@ -799,7 +799,7 @@ The first item is the outermost ring.
 | `RingThickness` | `double?` | `null` | ✓ | Thickness of each ring, greater than 0; `null` divides the area outside `InnerRadius`, up to 1/6 of the radius |
 | `RingSpacing` | `double` | `4` | ✓ | Space between the rings, zero or more |
 | `CapStyle` | `ChartCapStyle` | `Flat` | ✓ | Ends of the rings and the track |
-| `DisplayMode` | `ChartRadialBarMode` | `Basic` | ✓ | Drawing of the rings |
+| `DisplayMode` | `ChartRadialBarMode` | `Basic` | ✓ | Drawing of the rings; `OverflowMode` and the `FillMode` and `CapStyle` of the rings work in `Basic` only, while the threshold ring follows `FillMode` in both |
 | `SegmentCount` | `int` | `20` | ✓ | Cells of a ring in `Segmented`, 1 or more; fewer on short rings |
 | `TrackVisible` | `bool` | `true` | ✓ | Draws the rest of each ring in `TrackColor` |
 | `BarGlow` | `bool` | `false` | ✓ | Makes the value of each ring glow, like the bar glow of the Grafana gauge |
@@ -841,7 +841,7 @@ The first item is the outermost ring.
 
 | Item | Rule |
 |---|---|
-| Size | The rings take the largest radius whose arc fits outside the legend. The automatic thickness divides the area between `InnerRadius` and the edge among the rings, up to 1/6 of the radius. Round ends on a partial sweep leave room for the ends, and a glow leaves 2% of the shorter side around the rings, as in Grafana |
+| Size | The rings take the largest radius whose arc fits outside the legend. The automatic thickness divides the area between `InnerRadius` and the edge among the rings, up to 1/6 of the radius. Round ends of `Basic` on a partial sweep leave room for the ends, and a glow leaves 2% of the shorter side around the rings, as in Grafana |
 | Ratio | (value − `Minimum`) / (maximum − `Minimum`), where the maximum is the item's, otherwise `Maximum`. `Clamp` keeps it from 0 to 1. `Wrap` draws the part over the maximum on top of the first lap in the ring color with 15 less lightness, showing only what is left of the last lap. An item without a value or with an empty range draws only the track |
 | Colors | The item color (`ColorKey`, `ChartEntry.Color`), then the palette in ring order, and the threshold color at the value when thresholds are set; rings beyond the palette use `OtherColor` with a warning |
 | Track | From the end of the value to the end of the sweep, with the same ends, in `TrackColor` or a neutral gray (black at 7% in light, white at 7% in dark) |

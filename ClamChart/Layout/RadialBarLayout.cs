@@ -282,7 +282,7 @@ internal sealed class RadialBarLayout
         RingBounds = new ChartRect(left ? area.X + width + LegendGap : area.X, area.Y, area.Width - width - LegendGap, area.Height);
     }
 
-    public static RingFit FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, bool barGlow, ChartCapStyle capStyle, bool markers)
+    public static RingFit FitRings(ChartRect area, double startAngle, double sweepAngle, double innerRadius, double? ringThickness, double spacing, int count, bool barGlow, ChartCapStyle capStyle, ChartRadialBarMode displayMode, bool markers)
     {
         if (barGlow)
         {
@@ -293,7 +293,7 @@ internal sealed class RadialBarLayout
         var (left, top, right, bottom) = PieLayout.GetUnitBounds(startAngle, sweepAngle, innerRadius);
         var radius = GetRadius(area, left, top, right, bottom);
         var thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
-        if ((capStyle == ChartCapStyle.Round) && (sweepAngle < 360))
+        if ((capStyle == ChartCapStyle.Round) && (displayMode != ChartRadialBarMode.Segmented) && (sweepAngle < 360))
         {
             radius = Math.Max(0, radius - (thickness / 2));
             thickness = ResolveThickness(radius, innerRadius, ringThickness, spacing, count);
@@ -333,7 +333,7 @@ internal sealed class RadialBarLayout
     }
 
     private void PlaceRings(RadialBarLayoutOptions options) =>
-        (CenterX, CenterY, OuterRadius, Thickness, MarkerRadius, MarkerWidth) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, BarGlow, CapStyle, options.ThresholdMarkers && (rows.Count > 0));
+        (CenterX, CenterY, OuterRadius, Thickness, MarkerRadius, MarkerWidth) = FitRings(RingBounds, StartAngle, SweepAngle, options.InnerRadius, options.RingThickness, Spacing, rows.Count, BarGlow, CapStyle, DisplayMode, options.ThresholdMarkers && (rows.Count > 0));
 
     private static double GetRadius(ChartRect area, double left, double top, double right, double bottom) =>
         Math.Max(0, Math.Min(area.Width / Math.Max(right - left, MinExtent), area.Height / Math.Max(bottom - top, MinExtent)));

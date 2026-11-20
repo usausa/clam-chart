@@ -77,6 +77,21 @@ public sealed class ChartDrawingRadialBarTests
     }
 
     [Fact]
+    public void SegmentsIgnoreRoundEndsOnAPartialSweep()
+    {
+        // Arrange
+        var flat = new RadialBarDrawOptions { StartAngle = 250, SweepAngle = 220, DisplayMode = ChartRadialBarMode.Segmented };
+        var round = flat with { CapStyle = ChartCapStyle.Round };
+
+        // Act
+        using var expected = Draw(Size, Size, canvas => ChartDrawing.DrawRadialBar(canvas, new SKRect(0, 0, (float)Size, (float)Size), [70, 30], flat));
+        using var actual = Draw(Size, Size, canvas => ChartDrawing.DrawRadialBar(canvas, new SKRect(0, 0, (float)Size, (float)Size), [70, 30], round));
+
+        // Assert
+        Assert.Equal(0, CountDifferences(expected, actual));
+    }
+
+    [Fact]
     public void WrappedValuesMatchTheView()
     {
         // Arrange

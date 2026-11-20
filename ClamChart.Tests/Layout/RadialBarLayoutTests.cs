@@ -206,6 +206,20 @@ public sealed class RadialBarLayoutTests
     }
 
     [Fact]
+    public void OnlyRoundEndsThatAreDrawnShrinkAPartialRing()
+    {
+        // Act
+        var flat = Layout([Entry(0, "A", 50)], new RadialBarLayoutOptions { StartAngle = 250, SweepAngle = 220 }, 640, 240);
+        var round = Layout([Entry(0, "A", 50)], new RadialBarLayoutOptions { StartAngle = 250, SweepAngle = 220, CapStyle = ChartCapStyle.Round }, 640, 240);
+        var segmented = Layout([Entry(0, "A", 50)], new RadialBarLayoutOptions { StartAngle = 250, SweepAngle = 220, CapStyle = ChartCapStyle.Round, DisplayMode = ChartRadialBarMode.Segmented }, 640, 240);
+
+        // Assert
+        Assert.True(round.OuterRadius < flat.OuterRadius);
+        Assert.Equal(flat.OuterRadius, segmented.OuterRadius, Precision);
+        Assert.Equal(flat.Thickness, segmented.Thickness, Precision);
+    }
+
+    [Fact]
     public void GlowLeavesRoomAroundTheRings()
     {
         // Act
